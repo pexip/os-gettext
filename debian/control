@@ -1,11 +1,13 @@
 Source: gettext
 Section: devel
 Priority: optional
-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Maintainer: Pexip AS <packaging@pexip.com>
+XSBC-Pexip-Original-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
 XSBC-Original-Maintainer: Santiago Vila <sanvila@debian.org>
 Standards-Version: 3.9.1
 Build-Depends: libexpat1-dev, fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, git (>= 1:1.7.0.5), libunistring-dev
 Homepage: http://www.gnu.org/software/gettext/
+XS-Pexip-Upstream: http://archive.ubuntu.com/ubuntu/ precise
 
 Package: gettext-base
 Section: utils

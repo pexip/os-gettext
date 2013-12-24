@@ -1,3 +1,9 @@
+gettext (0.18.1.1-5ubuntu3pexip1) pexip; urgency=low
+
+  * Prepare Pexip packaging
+
+ -- John-Mark Bell <jmb@pexip.com>  Tue, 24 Dec 2013 19:18:10 +0000
+
 gettext (0.18.1.1-5ubuntu3) precise; urgency=low
 
   * No-change rebuild to drop spurious libsfgcc1 dependency on armhf.
