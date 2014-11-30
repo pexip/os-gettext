@@ -1,4 +1,5 @@
 #! /bin/sh
+. "${srcdir=.}/init.sh"; path_prepend_ . ../src
 
 # Test of gettext facilities in the Java language.
 # Assumes an fr_FR locale is installed.
@@ -6,9 +7,6 @@
 
 # Note: This test fails when using gcj from GCC 3.1 and GCC 3.2, due to a bug
 # (libgcj/6576). It is fixed in GCC 3.3.
-
-tmpfiles=""
-trap 'rm -fr $tmpfiles' 1 2 3 15
 
 # Test whether we can build and test Java programs.
 test "${JAVA_CHOICE}" != no || {
@@ -24,7 +22,6 @@ test "${TESTJAVA}" = yes || {
   exit 77
 }
 
-tmpfiles="$tmpfiles Program.java"
 cat <<\EOF > Program.java
 import java.util.*;
 import java.io.*;
@@ -62,19 +59,14 @@ cat <<\EOF >> Program.java
 }
 EOF
 
-tmpfiles="$tmpfiles Program.class prog.err"
-: ${JAVACOMP="/bin/sh ../javacomp.sh"}
-CLASSPATH=../../gettext-runtime/intl-java/libintl.jar ${JAVACOMP} -d . Program.java 2>prog.err \
+: ${JAVACOMP="/bin/sh ../../javacomp.sh"}
+CLASSPATH=../../../gettext-runtime/intl-java/libintl.jar ${JAVACOMP} -d . Program.java 2>prog.err \
   || { cat prog.err 1>&2; exit 1; }
 
-tmpfiles="$tmpfiles prog.tmp prog.pot"
 : ${XGETTEXT=xgettext}
-${XGETTEXT} -o prog.tmp --omit-header --no-location Program.java
-test $? = 0 || { rm -fr $tmpfiles; exit 1; }
-LC_ALL=C tr -d '\r' < prog.tmp > prog.pot
-test $? = 0 || { rm -fr $tmpfiles; exit 1; }
+${XGETTEXT} -o prog.tmp --omit-header --no-location Program.java || exit 1
+LC_ALL=C tr -d '\r' < prog.tmp > prog.pot || exit 1
 
-tmpfiles="$tmpfiles prog.ok"
 cat <<EOF > prog.ok
 msgid "'Your command, please?', asked the waiter."
 msgstr ""
@@ -105,7 +97,6 @@ EOF
 : ${DIFF=diff}
 ${DIFF} prog.ok prog.pot || exit 1
 
-tmpfiles="$tmpfiles fr.po"
 cat <<\EOF > fr.po
 msgid ""
 msgstr ""
@@ -142,17 +133,13 @@ msgid "{0} is replaced by {1}."
 msgstr "Le nouveau {1} remplace le vieux {0}."
 EOF
 
-tmpfiles="$tmpfiles fr.po.tmp fr.po.new"
 : ${MSGMERGE=msgmerge}
-${MSGMERGE} -q -o fr.po.tmp fr.po prog.pot
-test $? = 0 || { rm -fr $tmpfiles; exit 1; }
-LC_ALL=C tr -d '\r' < fr.po.tmp > fr.po.new
-test $? = 0 || { rm -fr $tmpfiles; exit 1; }
+${MSGMERGE} -q -o fr.po.tmp fr.po prog.pot || exit 1
+LC_ALL=C tr -d '\r' < fr.po.tmp > fr.po.new || exit 1
 
 : ${DIFF=diff}
 ${DIFF} fr.po fr.po.new || exit 1
 
-tmpfiles="$tmpfiles prog_fr.class"
 : ${MSGFMT=msgfmt}
 ${MSGFMT} -j -d . -r prog -l fr fr.po || exit 1
 
@@ -160,7 +147,7 @@ ${MSGFMT} -j -d . -r prog -l fr fr.po || exit 1
 : ${LOCALE_FR=fr_FR}
 : ${LOCALE_FR_UTF8=fr_FR.UTF-8}
 if test $LOCALE_FR != none; then
-  LC_ALL=$LOCALE_FR ./testlocale
+  LC_ALL=$LOCALE_FR ../testlocale
   case $? in
     0) ;;
     77) LOCALE_FR=none;;
@@ -168,7 +155,7 @@ if test $LOCALE_FR != none; then
   esac
 fi
 if test $LOCALE_FR_UTF8 != none; then
-  LC_ALL=$LOCALE_FR_UTF8 ./testlocale
+  LC_ALL=$LOCALE_FR_UTF8 ../testlocale
   case $? in
     0) ;;
     77) LOCALE_FR_UTF8=none;;
@@ -181,10 +168,9 @@ if test $LOCALE_FR = none && test $LOCALE_FR_UTF8 = none; then
   else
     echo "Skipping test: no french locale is supported"
   fi
-  rm -fr $tmpfiles; exit 77
+  exit 77
 fi
 
-tmpfiles="$tmpfiles prog.ok prog.oku prog.out"
 : ${DIFF=diff}
 cat <<\EOF > prog.ok
 «Votre commande, s'il vous plait», dit le garçon.
@@ -203,16 +189,16 @@ EOF
 
 : ${LOCALE_FR=fr_FR}
 : ${LOCALE_FR_UTF8=fr_FR.UTF-8}
-: ${JAVAEXEC="/bin/sh ../javaexec.sh"}
+: ${JAVAEXEC="/bin/sh ../../javaexec.sh"}
 if test $LOCALE_FR != none; then
-  LANGUAGE= LC_ALL=$LOCALE_FR CLASSPATH=.:../../gettext-runtime/intl-java/libintl.jar ${JAVAEXEC} Program 2 ISO-8859-1 > prog.out || exit 1
+  prepare_locale_ fr $LOCALE_FR
+  LANGUAGE= LC_ALL=$LOCALE_FR CLASSPATH=.:../../../gettext-runtime/intl-java/libintl.jar ${JAVAEXEC} Program 2 ISO-8859-1 > prog.out || exit 1
   ${DIFF} prog.ok prog.out || exit 1
 fi
 if test $LOCALE_FR_UTF8 != none; then
-  LANGUAGE= LC_ALL=$LOCALE_FR_UTF8 CLASSPATH=.:../../gettext-runtime/intl-java/libintl.jar ${JAVAEXEC} Program 2 UTF-8 > prog.out || exit 1
+  prepare_locale_ fr $LOCALE_FR_UTF8
+  LANGUAGE= LC_ALL=$LOCALE_FR_UTF8 CLASSPATH=.:../../../gettext-runtime/intl-java/libintl.jar ${JAVAEXEC} Program 2 UTF-8 > prog.out || exit 1
   ${DIFF} prog.oku prog.out || exit 1
 fi
-
-rm -fr $tmpfiles
 
 exit 0

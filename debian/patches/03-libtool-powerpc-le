@@ -1,0 +1,147 @@
+Description: Add support for little-endian powerpc Linux
+ Derived from a libtool patch by Alan Modra.
+Author: Alan Modra <amodra@gmail.com>
+Author: Colin Watson <cjwatson@ubuntu.com>
+Forwarded: not-needed
+Last-Update: 2013-12-15
+
+--- a/m4/libtool.m4
++++ b/m4/libtool.m4
+@@ -1312,7 +1312,7 @@
+   rm -rf conftest*
+   ;;
+ 
+-x86_64-*kfreebsd*-gnu|x86_64-*linux*|ppc*-*linux*|powerpc*-*linux*| \
++x86_64-*kfreebsd*-gnu|x86_64-*linux*|powerpc*-*linux*| \
+ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+   # Find out which ABI we are using.
+   echo 'int i;' > conftest.$ac_ext
+@@ -1326,7 +1326,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_i386"
+ 	    ;;
+-	  ppc64-*linux*|powerpc64-*linux*)
++	  powerpc64le-*)
++	    LD="${LD-ld} -m elf32lppclinux"
++	    ;;
++	  powerpc64-*)
+ 	    LD="${LD-ld} -m elf32ppclinux"
+ 	    ;;
+ 	  s390x-*linux*)
+@@ -1345,7 +1348,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  ppc*-*linux*|powerpc*-*linux*)
++	  powerpcle-*)
++	    LD="${LD-ld} -m elf64lppc"
++	    ;;
++	  powerpc-*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
+--- a/gettext-runtime/configure
++++ b/gettext-runtime/configure
+@@ -9313,7 +9313,7 @@
+   rm -rf conftest*
+   ;;
+ 
+-x86_64-*kfreebsd*-gnu|x86_64-*linux*|ppc*-*linux*|powerpc*-*linux*| \
++x86_64-*kfreebsd*-gnu|x86_64-*linux*|powerpc*-*linux*| \
+ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+   # Find out which ABI we are using.
+   echo 'int i;' > conftest.$ac_ext
+@@ -9331,7 +9331,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_i386"
+ 	    ;;
+-	  ppc64-*linux*|powerpc64-*linux*)
++	  powerpc64le-*)
++	    LD="${LD-ld} -m elf32lppclinux"
++	    ;;
++	  powerpc64-*)
+ 	    LD="${LD-ld} -m elf32ppclinux"
+ 	    ;;
+ 	  s390x-*linux*)
+@@ -9350,7 +9353,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  ppc*-*linux*|powerpc*-*linux*)
++	  powerpcle-*)
++	    LD="${LD-ld} -m elf64lppc"
++	    ;;
++	  powerpc-*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
+--- a/gettext-runtime/libasprintf/configure
++++ b/gettext-runtime/libasprintf/configure
+@@ -7524,7 +7524,7 @@
+   rm -rf conftest*
+   ;;
+ 
+-x86_64-*kfreebsd*-gnu|x86_64-*linux*|ppc*-*linux*|powerpc*-*linux*| \
++x86_64-*kfreebsd*-gnu|x86_64-*linux*|powerpc*-*linux*| \
+ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+   # Find out which ABI we are using.
+   echo 'int i;' > conftest.$ac_ext
+@@ -7542,7 +7542,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_i386"
+ 	    ;;
+-	  ppc64-*linux*|powerpc64-*linux*)
++	  powerpc64le-*)
++	    LD="${LD-ld} -m elf32lppclinux"
++	    ;;
++	  powerpc64-*)
+ 	    LD="${LD-ld} -m elf32ppclinux"
+ 	    ;;
+ 	  s390x-*linux*)
+@@ -7561,7 +7564,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  ppc*-*linux*|powerpc*-*linux*)
++	  powerpcle-*)
++	    LD="${LD-ld} -m elf64lppc"
++	    ;;
++	  powerpc-*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
+--- a/gettext-tools/configure
++++ b/gettext-tools/configure
+@@ -11324,7 +11324,7 @@
+   rm -rf conftest*
+   ;;
+ 
+-x86_64-*kfreebsd*-gnu|x86_64-*linux*|ppc*-*linux*|powerpc*-*linux*| \
++x86_64-*kfreebsd*-gnu|x86_64-*linux*|powerpc*-*linux*| \
+ s390*-*linux*|s390*-*tpf*|sparc*-*linux*)
+   # Find out which ABI we are using.
+   echo 'int i;' > conftest.$ac_ext
+@@ -11342,7 +11342,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_i386"
+ 	    ;;
+-	  ppc64-*linux*|powerpc64-*linux*)
++	  powerpc64le-*)
++	    LD="${LD-ld} -m elf32lppclinux"
++	    ;;
++	  powerpc64-*)
+ 	    LD="${LD-ld} -m elf32ppclinux"
+ 	    ;;
+ 	  s390x-*linux*)
+@@ -11361,7 +11364,10 @@
+ 	  x86_64-*linux*)
+ 	    LD="${LD-ld} -m elf_x86_64"
+ 	    ;;
+-	  ppc*-*linux*|powerpc*-*linux*)
++	  powerpcle-*)
++	    LD="${LD-ld} -m elf64lppc"
++	    ;;
++	  powerpc-*)
+ 	    LD="${LD-ld} -m elf64ppc"
+ 	    ;;
+ 	  s390*-*linux*|s390*-*tpf*)
