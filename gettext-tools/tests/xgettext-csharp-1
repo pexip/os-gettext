@@ -22,13 +22,17 @@ class TestCase {
     // commented out through #if
     String test5 = rm.GetString("Test String 5");
 #endif
+    // verbatim string
+    String test5 = rm.GetString(@"first line
+second line
+third line");
   }
 }
 EOF
 
 : ${XGETTEXT=xgettext}
-${XGETTEXT} --omit-header --no-location -c -d xg-cs-1.tmp xg-cs-1.cs || exit 1
-LC_ALL=C tr -d '\r' < xg-cs-1.tmp.po > xg-cs-1.po || exit 1
+${XGETTEXT} --omit-header --no-location -c -d xg-cs-1.tmp xg-cs-1.cs || Exit 1
+LC_ALL=C tr -d '\r' < xg-cs-1.tmp.po > xg-cs-1.po || Exit 1
 
 cat <<EOF > xg-cs-1.ok
 #. standard usage
@@ -49,6 +53,13 @@ msgstr ""
 
 #. commented out through #if
 msgid "Test String 5"
+msgstr ""
+
+#. verbatim string
+msgid ""
+"first line\n"
+"second line\n"
+"third line"
 msgstr ""
 EOF
 

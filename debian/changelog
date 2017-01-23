@@ -1,3 +1,81 @@
+gettext (0.19.8.1-2) unstable; urgency=medium
+
+  * Use debhelper more.
+  * Try to support cross-builds. Closes: #833894.
+  * Disable OpenMP support on m68k and sh4. Closes: #846932.
+
+ -- Santiago Vila <sanvila@debian.org>  Mon, 23 Jan 2017 23:11:50 +0100
+
+gettext (0.19.8.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop 02-msgfmt-default-little-endian. Adopted upstream.
+  * Regression regarding Glade support should be fixed. Closes: #824642.
+  * Make debian/rules shorter by using some debhelper commands.
+  * Rename some debian/* files to adopt debhelper naming scheme.
+
+ -- Santiago Vila <sanvila@debian.org>  Mon, 13 Jun 2016 01:06:00 +0200
+
+gettext (0.19.7-2) unstable; urgency=high
+
+  * Install version specific data files from /usr/share/gettext-VERSION.
+    This should fix glade support. Thanks to Daiki Ueno. Closes: #809846. 
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 05 Jan 2016 00:55:00 +0100
+
+gettext (0.19.7-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop libexpat1-dev from Build-Depends, following upstream.
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 29 Dec 2015 18:27:12 +0100
+
+gettext (0.19.6-1) unstable; urgency=medium
+
+  * New upstream release.
+  * Drop debian/patches/03-fix-gettextize-version. No longer needed.
+  * Drop dependency of gettext-base on libasprintf0v5 as it dates from
+    a split made in release 0.18.1.1-6.
+  * Keep curl and friends in Recommends, for translators.
+    Move autopoint, libasprintf-dev and libgettextpo-dev to Suggests.
+  * Downgrade libasprintf0v5 to optional.
+  * Add debian/upstream/signing-key.asc and improve debian/watch file.
+  * Makefile.in.in has now a general mechanism to set the header of
+    a POT file, using $(DOMAIN).pot-update. This could be used to set
+    copyright holders and other things. Closes: #682580.
+  * Fix po-mode handling of msgfmt version number. Closes: #798903.
+  * Drop Pre-Depends on multiarch-support, because a stable release
+    has already happened.
+
+ -- Santiago Vila <sanvila@debian.org>  Mon, 14 Sep 2015 00:32:52 +0200
+
+gettext (0.19.5.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * New C++ ABI. libasprintf0c2 becomes libasprintf0v5.
+    Thanks a lot to Matthias Klose. Closes: #793897.
+  * Add patches/03-fix-gettextize-version to avoid FTBFS bugs on
+    packages using autopoint and friends. See bug-gettext for details.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 02 Aug 2015 21:25:10 +0200
+
+gettext (0.19.4-1) unstable; urgency=low
+
+  * New upstream release.
+  * Fix msgunfmt segfaults. Closes: #772088.
+  * Drop obsolete patches:
+  - 03-libtool-powerpc-le.
+  - 04-xgettext-fix-double-free.
+  - 05-msgunfmt-fix-segfault.
+  - 06-msgfilter-fix-read-buffer-allocation.
+  - 99-config-guess-config-sub.
+  * Drop way obsolete build-time test for glibc >= 2.2.
+  * Drop debian/rules hack to keep timestamps.
+  * Create md5sums in a reproducible way.
+  * Fix mtimes before building binary packages.
+
+ -- Santiago Vila <sanvila@debian.org>  Fri, 15 May 2015 18:01:02 +0200
+
 gettext (0.19.3-2) unstable; urgency=low
 
   * xgettext: Fix double-free in singular/plural argument extraction.

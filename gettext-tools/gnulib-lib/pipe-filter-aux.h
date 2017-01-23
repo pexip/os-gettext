@@ -1,5 +1,5 @@
 /* Auxiliary code for filtering of data through a subprocess.
-   Copyright (C) 2001-2003, 2008-2014 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2008-2016 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2009.
 
    This program is free software: you can redistribute it and/or modify
@@ -35,8 +35,9 @@ _GL_INLINE_HEADER_BEGIN
    looping while waiting for the child.  Not good.  But hardly any platform
    lacks select() nowadays.)  */
 
-/* On BeOS select() works only on sockets, not on normal file descriptors.  */
-#ifdef __BEOS__
+/* On BeOS and OS/2 kLIBC select() works only on sockets, not on normal file
+   descriptors.  */
+#if defined __BEOS__ || defined __KLIBC__
 # undef HAVE_SELECT
 #endif
 
@@ -86,25 +87,6 @@ nonintr_write (int fd, const void *buf, size_t count)
 }
 #undef write /* avoid warning on VMS */
 #define write nonintr_write
-
-# if HAVE_SELECT
-
-PIPE_FILTER_AUX_INLINE int
-nonintr_select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
-                struct timeval *timeout)
-{
-  int retval;
-
-  do
-    retval = select (n, readfds, writefds, exceptfds, timeout);
-  while (retval < 0 && errno == EINTR);
-
-  return retval;
-}
-#  undef select /* avoid warning on VMS */
-#  define select nonintr_select
-
-# endif
 
 #endif
 
