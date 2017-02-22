@@ -2,10 +2,9 @@ Source: gettext
 Section: devel
 Priority: optional
 Maintainer: Pexip AS <packaging@pexip.com>
-XSBC-Pexip-Original-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-XSBC-Original-Maintainer: Santiago Vila <sanvila@debian.org>
-Standards-Version: 3.9.1
-Build-Depends: libexpat1-dev, fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, git (>= 1:1.7.0.5), libunistring-dev
+XSBC-Pexip-Original-Maintainer: Santiago Vila <sanvila@debian.org>
+Standards-Version: 3.9.6
+Build-Depends: libexpat1-dev, fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev
 Homepage: http://www.gnu.org/software/gettext/
 XS-Pexip-Upstream: http://ftp.debian.org/debian/ jessie
 
@@ -13,20 +12,19 @@ Package: gettext-base
 Section: utils
 Priority: standard
 Architecture: any
-Depends: ${shlibs:Depends}
-Provides: libasprintf0c2
+Multi-Arch: foreign
+Depends: ${shlibs:Depends}, libasprintf0c2 (>= 0.18.1.1-6)
 Description: GNU Internationalization utilities for the base system
  This package includes the gettext and ngettext programs which allow
  other packages to internationalize the messages given by shell scripts.
 
 Package: gettext
 Architecture: any
-Multi-Arch: allowed
-Depends: ${shlibs:Depends}, libgettextpo0 (= ${binary:Version}), gettext-base, dpkg (>= 1.15.4) | install-info
-Recommends: curl | wget | lynx-cur
-Conflicts: autopoint (<= 0.17-11)
+Multi-Arch: foreign
+Depends: ${shlibs:Depends}, gettext-base, dpkg (>= 1.15.4) | install-info
+Recommends: curl | wget | lynx-cur, autopoint, libasprintf-dev, libgettextpo-dev
+Breaks: autopoint (<= 0.17-11)
 Suggests: gettext-doc
-Provides: libasprintf-dev, libgettextpo-dev
 Description: GNU Internationalization utilities
  Interesting for authors or maintainers of other packages or programs
  which they want to see internationalized.
@@ -34,7 +32,7 @@ Description: GNU Internationalization utilities
 Package: gettext-el
 Section: lisp
 Architecture: all
-Depends: gettext, emacs23 | emacsen
+Depends: gettext, emacs | emacsen
 Description: Emacs po-mode for editing gettext .po files
  This package contains po-mode.el for easy .po editing using emacs.
 
@@ -50,7 +48,8 @@ Package: autopoint
 Section: devel
 Priority: optional
 Architecture: all
-Depends: git (>= 1:1.7.0.5) | git-core
+Multi-Arch: foreign
+Depends: xz-utils
 Replaces: gettext (<= 0.17-11)
 Description: The autopoint program from GNU gettext
  The `autopoint' program copies standard gettext infrastructure files
@@ -61,12 +60,50 @@ Description: The autopoint program from GNU gettext
  into the package.
 
 Package: libgettextpo0
+Section: libs
+Priority: optional
 Architecture: any
 Multi-Arch: same
 Pre-Depends: multiarch-support
 Depends: ${shlibs:Depends}
-Breaks: gettext (<< 0.18.1.1-5ubuntu1)
-Replaces: gettext (<< 0.18.1.1-5ubuntu1)
+Breaks: gettext (<< 0.18.1.1-6)
+Replaces: gettext (<< 0.18.1.1-6)
 Description: GNU Internationalization library
  This package contains the libgettextpo shared library for interfacing
  programmatically with GNU gettext .po files.
+
+Package: libasprintf0c2
+Section: libs
+Priority: standard
+Architecture: any
+Multi-Arch: same
+Pre-Depends: multiarch-support
+Depends: ${shlibs:Depends}
+Breaks: gettext-base (<< 0.18.1.1-6)
+Replaces: gettext-base (<< 0.18.1.1-6)
+Description: GNU library to use fprintf and friends in C++
+ This package contains the libasprintf shared library which makes the
+ C formatted output routines (fprintf et al.) usable in C++ programs,
+ for use with the <string> strings and the <iostream> streams.
+
+Package: libgettextpo-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libgettextpo0 (= ${binary:Version})
+Suggests: gettext-doc
+Breaks: gettext (<< 0.18.1.1-10)
+Replaces: gettext (<< 0.18.1.1-10)
+Description: GNU Internationalization library development files
+ This package contains development files for the libgettextpo library.
+ 
+Package: libasprintf-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libasprintf0c2 (= ${binary:Version})
+Suggests: gettext-doc
+Breaks: gettext (<< 0.18.1.1-10)
+Replaces: gettext (<< 0.18.1.1-10)
+Description: GNU Internationalization library development files
+ This package contains development files for the libasprintf library.
