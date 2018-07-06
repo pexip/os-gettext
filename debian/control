@@ -96,7 +96,7 @@ Breaks: gettext (<< 0.18.1.1-10)
 Replaces: gettext (<< 0.18.1.1-10)
 Description: GNU Internationalization library development files
  This package contains development files for the libgettextpo library.
- 
+
 Package: libasprintf-dev
 Section: libdevel
 Architecture: any
