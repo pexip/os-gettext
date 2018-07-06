@@ -1,5 +1,5 @@
 ## Makefile for the gettext-tools/examples subdirectory of GNU gettext
-## Copyright (C) 2001-2007, 2009-2012 Free Software Foundation, Inc.
+## Copyright (C) 2001-2007, 2009-2016 Free Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -504,7 +504,7 @@ uninstall-local:
 
 # Invoked from inside automake's distdir target.
 distdir1:
-	cd po && $(MAKE) update-po
+	cd po && $(MAKE) update-po all
 	for file in $(EXAMPLESFILES); do \
 	  if test -f $$file; then d=.; else d=$(srcdir); fi; \
 	  dir=`echo "$$file" | sed -e 's,/[^/]*$$,,'`; \
