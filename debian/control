@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Pexip AS <packaging@pexip.com>
 XSBC-Pexip-Original-Maintainer: Santiago Vila <sanvila@debian.org>
 Standards-Version: 3.9.6
-Build-Depends: libexpat1-dev, fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev
+Build-Depends: debhelper (>= 9), fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev
 Homepage: http://www.gnu.org/software/gettext/
 XS-Pexip-Upstream: http://ftp.debian.org/debian/ stretch
 
@@ -13,7 +13,7 @@ Section: utils
 Priority: standard
 Architecture: any
 Multi-Arch: foreign
-Depends: ${shlibs:Depends}, libasprintf0c2 (>= 0.18.1.1-6)
+Depends: ${shlibs:Depends}
 Description: GNU Internationalization utilities for the base system
  This package includes the gettext and ngettext programs which allow
  other packages to internationalize the messages given by shell scripts.
@@ -22,9 +22,9 @@ Package: gettext
 Architecture: any
 Multi-Arch: foreign
 Depends: ${shlibs:Depends}, gettext-base, dpkg (>= 1.15.4) | install-info
-Recommends: curl | wget | lynx-cur, autopoint, libasprintf-dev, libgettextpo-dev
+Recommends: curl | wget | lynx-cur
 Breaks: autopoint (<= 0.17-11)
-Suggests: gettext-doc
+Suggests: gettext-doc, autopoint, libasprintf-dev, libgettextpo-dev
 Description: GNU Internationalization utilities
  Interesting for authors or maintainers of other packages or programs
  which they want to see internationalized.
@@ -64,7 +64,6 @@ Section: libs
 Priority: optional
 Architecture: any
 Multi-Arch: same
-Pre-Depends: multiarch-support
 Depends: ${shlibs:Depends}
 Breaks: gettext (<< 0.18.1.1-6)
 Replaces: gettext (<< 0.18.1.1-6)
@@ -72,15 +71,14 @@ Description: GNU Internationalization library
  This package contains the libgettextpo shared library for interfacing
  programmatically with GNU gettext .po files.
 
-Package: libasprintf0c2
+Package: libasprintf0v5
 Section: libs
-Priority: standard
+Priority: optional
 Architecture: any
 Multi-Arch: same
-Pre-Depends: multiarch-support
 Depends: ${shlibs:Depends}
-Breaks: gettext-base (<< 0.18.1.1-6)
-Replaces: gettext-base (<< 0.18.1.1-6)
+Breaks: gettext-base (<< 0.18.1.1-6), libasprintf0c2
+Replaces: gettext-base (<< 0.18.1.1-6), libasprintf0c2
 Description: GNU library to use fprintf and friends in C++
  This package contains the libasprintf shared library which makes the
  C formatted output routines (fprintf et al.) usable in C++ programs,
@@ -101,7 +99,7 @@ Package: libasprintf-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libasprintf0c2 (= ${binary:Version})
+Depends: libasprintf0v5 (= ${binary:Version})
 Suggests: gettext-doc
 Breaks: gettext (<< 0.18.1.1-10)
 Replaces: gettext (<< 0.18.1.1-10)

@@ -1,5 +1,6 @@
 /* xgettext JavaScript backend.
-   Copyright (C) 2002-2003, 2005-2009, 2013 Free Software Foundation, Inc.
+   Copyright (C) 2002-2003, 2005-2009, 2013, 2015-2016 Free Software
+   Foundation, Inc.
 
    This file was written by Andreas Stricker <andy@knitter.ch>, 2010
    It's based on x-python from Bruno Haible.
@@ -43,7 +44,6 @@
 #include "c-strstr.h"
 #include "c-ctype.h"
 #include "po-charset.h"
-#include "uniname.h"
 #include "unistr.h"
 #include "gettext.h"
 
@@ -205,7 +205,8 @@ phase1_ungetc (int c)
 
 static lexical_context_ty lexical_context;
 
-static int phase2_pushback[max (9, UNINAME_MAX + 3)];
+/* Maximum used, length of "<![CDATA[" tag minus one.  */
+static int phase2_pushback[8];
 static int phase2_pushback_length;
 
 /* Read the next Unicode UCS-4 character from the input file.  */

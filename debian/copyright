@@ -7,7 +7,7 @@ and is currently maintained by Santiago Vila <sanvila@debian.org>.
 
 This release has been built using the sources from:
 
-http://ftp.gnu.org/pub/gnu/gettext/gettext-0.19.3.tar.xz
+http://ftp.gnu.org/pub/gnu/gettext/gettext-0.19.8.1.tar.xz
 
 The changes were fairly minimal, and consisted solely of adding
 various debian/* files to the distribution.
@@ -15,7 +15,7 @@ various debian/* files to the distribution.
 
 Copyright and license for the gettext tools:
 
-Copyright (C) 1995-2014 Free Software Foundation, Inc.
+Copyright (C) 1995-2016 Free Software Foundation, Inc.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,21 +29,21 @@ GNU General Public License for more details.
 
 Copyright and license for the libintl library:
 
-Copyright (C) 1995-2014 Free Software Foundation, Inc.
+Copyright (C) 1995-2016 Free Software Foundation, Inc.
 
-This program is free software; you can redistribute it and/or modify it
-under the terms of the GNU Library General Public License as published
-by the Free Software Foundation; either version 2, or (at your option)
-any later version.
-
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Lesser General Public License as published
+by the Free Software Foundation; either version 2.1 of the License, or
+(at your option) any later version.
+      
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Library General Public License for more details.
+Lesser General Public License for more details.
 
 Copyright and license for gettext documentation:
 
-   Copyright (C) 1995-1998, 2001-2012 Free Software Foundation, Inc.
+   Copyright (C) 1995-1998, 2001-2016 Free Software Foundation, Inc.
 
    This manual is free documentation.  It is dually licensed under the
 GNU FDL and the GNU GPL.  This means that you can redistribute this
@@ -64,6 +64,6 @@ version published by the Free Software Foundation (FSF).
 
 On Debian systems, the complete text of the GNU General Public License
 can be found in `/usr/share/common-licenses/GPL', the complete text of
-the GNU Library General Public License can be found in
+the GNU Lesser General Public License can be found in
 `/usr/share/common-licenses/LGPL', and the complete text of the GNU
 Free Documentation License can be found in `/usr/share/common-licenses/GFDL'

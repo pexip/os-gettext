@@ -12,6 +12,8 @@ print(_("I said: \"This is a test.\""))
 print(_('He said: "You\'re right!"'))
 print(_([[I like brackets.]]))
 print(_([===[Brackets are awesome!]===]))
+print(_([===[==[Even nested brackets]==]===]))
+print(_([===[Or even unmached number of '=' signs]==]===]))
 print(_(hmm["nope"]))
 print({_"yep"})
 print(_["nope"])
@@ -24,8 +26,8 @@ EOF
 
 : ${XGETTEXT=xgettext}
 ${XGETTEXT} --omit-header --no-location --add-comments=TRANSLATORS: \
-  -d xg-lu-1.tmp xg-lu-1.lua || exit 1
-LC_ALL=C tr -d '\r' < xg-lu-1.tmp.po > xg-lu-1.po || exit 1
+  -d xg-lu-1.tmp xg-lu-1.lua || Exit 1
+LC_ALL=C tr -d '\r' < xg-lu-1.tmp.po > xg-lu-1.po || Exit 1
 
 cat <<EOF > xg-lu-1.ok
 msgid "This is a test string."
@@ -50,6 +52,12 @@ msgid "I like brackets."
 msgstr ""
 
 msgid "Brackets are awesome!"
+msgstr ""
+
+msgid "==[Even nested brackets]=="
+msgstr ""
+
+msgid "Or even unmached number of '=' signs]=="
 msgstr ""
 
 msgid "yep"
