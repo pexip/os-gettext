@@ -3,8 +3,9 @@ Section: devel
 Priority: optional
 Maintainer: Santiago Vila <sanvila@debian.org>
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9), fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev
+Build-Depends: g++ (>= 4:7), debhelper (>= 9.20160402), fastjar <!nojava>, default-jdk <!nojava>, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev, bison
 Homepage: http://www.gnu.org/software/gettext/
+Rules-Requires-Root: no
 
 Package: gettext-base
 Section: utils
@@ -20,7 +21,7 @@ Package: gettext
 Architecture: any
 Multi-Arch: foreign
 Depends: ${shlibs:Depends}, gettext-base, dpkg (>= 1.15.4) | install-info
-Recommends: curl | wget | lynx-cur
+Recommends: curl | wget | lynx
 Breaks: autopoint (<= 0.17-11)
 Suggests: gettext-doc, autopoint, libasprintf-dev, libgettextpo-dev
 Description: GNU Internationalization utilities

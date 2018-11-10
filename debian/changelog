@@ -1,11 +1,80 @@
-gettext (0.19.8.1-2+deb9u1) stretch; urgency=medium
+gettext (0.19.8.1-9) unstable; urgency=medium
 
+  * Fix double-free problem with *.po file input. Closes: #913173.
+    Patch extracted from upstream git where it was fixed by Daiki Ueno.
+    For reference, this is CVE-2018-18751.
+  * Add bison to Build-Depends, required by the above.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 10 Nov 2018 18:34:46 +0100
+
+gettext (0.19.8.1-8) unstable; urgency=medium
+
+  * Fix FTBFS with Java 11, by applying Java related patches from
+    upstream git (gnulib). Thanks to Emmanuel Bourg <ebourg@apache.org>
+    for the report and Bruno Haible <bruno@clisp.org> for the fix.
+    Closes: #910246.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 06 Oct 2018 14:00:40 +0200
+
+gettext (0.19.8.1-7) unstable; urgency=medium
+
+  * Use dh_autoreconf to regenerate autoconf stuff. New automake
+    version 1.16 in buster makes gettext to FTBFS because we are
+    modifying m4 files and the orig.tar.gz was created with 1.15.
+  * Update versioned build-dependency on debhelper accordingly.
+  * Disable libtoolize for the above to work.
+  * Rules-Requires-Root: no.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 12 Aug 2018 22:00:10 +0200
+
+gettext (0.19.8.1-6) unstable; urgency=medium
+
+  * Apply all Java 9 related patches from upstream git instead
+    of the patch from openSUSE. This fixes gettext FTBFS bug
+    in a different way and also fixes msgfmt. Closes: #892733.
+    Thanks a lot to Bruno Haible.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 24 Mar 2018 19:32:04 +0100
+
+gettext (0.19.8.1-5) unstable; urgency=medium
+
+  * Fix heap corruption in msgunfmt. Patch from Bruno Haible taken from
+    upstream git. Thanks to Jakub Wilk. Closes: #876498.
+  * Recommend lynx instead on lynx-cur.
+    Thanks to Axel Beckert for the report. Closes: #882284.
   * Stop xgettext() from crashing when run with --its=FILE option.
-    Patch taken from Debian 10, which in turn was extracted from
-    upstream git. Should help the inkscape project. Closes: #891347.
-    See https://gitlab.com/inkscape/inkscape/issues/271 for details.
+    Patch taken from git. Thanks to Gunnar Hjalmarsson. Closes: #891347.
+  * Support "nojava" instead of "stage1" in DEB_BUILD_PROFILES.
+    Thanks to Manuel Fernández Montecelo. Closes: #893064.
+  * Build with OpenJDK 9. Patch from Tiago Stürmer Daitx, adapted
+    from openSUSE. Thanks a lot. Closes: #893739.
+  * Move libgettextsrc, libgettextlib, and preloadable_libintl
+    to multiarch directory as done on Ubuntu.
+  * Use https in Bug-Debian field of Debian patches.
 
- -- Santiago Vila <sanvila@debian.org>  Sat, 31 Aug 2019 01:30:22 +0200
+ -- Santiago Vila <sanvila@debian.org>  Sat, 24 Mar 2018 12:24:50 +0100
+
+gettext (0.19.8.1-4) unstable; urgency=medium
+
+  * Avoid extraneous NUL bytes in .mo files. Closes: #872869.
+    Patch based on commit 2bad4d89684303fe884410ab0ae53770df6a6093
+    by Bruno Haible. Reported by Jakub Wilk. Thanks a lot.
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 22 Aug 2017 03:20:24 +0200
+
+gettext (0.19.8.1-3) unstable; urgency=medium
+
+  * Add g++ (>= 4:7) to Build-Depends to ensure it's built with GCC 7.
+  * Update shlibs file for libasprintf0v5. Closes: #871271.
+  * msgfmt: Remove POT-Creation-Date field from the header in the output.
+    Taken from upstream commit d13f165b83701dffc14f7151419e0c00c00c0d1b.
+    Should help reproducible builds. Closes: #792687, #825436.
+  * Drop spurious spaces/tabs in the changelog.
+  * Activate ldconfig via triggers.
+  * Build against libunistring2.
+  * Rename patches to *.patch.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 20 Aug 2017 22:50:10 +0200
 
 gettext (0.19.8.1-2) unstable; urgency=medium
 
@@ -28,7 +97,7 @@ gettext (0.19.8.1-1) unstable; urgency=medium
 gettext (0.19.7-2) unstable; urgency=high
 
   * Install version specific data files from /usr/share/gettext-VERSION.
-    This should fix glade support. Thanks to Daiki Ueno. Closes: #809846. 
+    This should fix glade support. Thanks to Daiki Ueno. Closes: #809846.
 
  -- Santiago Vila <sanvila@debian.org>  Tue, 05 Jan 2016 00:55:00 +0100
 
@@ -482,14 +551,14 @@ gettext (0.15-3) unstable; urgency=medium
   * Fixed perl parser by updating x-perl.c from CVS (Closes: #386912).
   * Build C# stuff using mono, not pnet. This fixes a FTBFS bug, as pnet
     is currently uninstallable.
-	
+
  -- Santiago Vila <sanvila@debian.org>  Fri,  3 Nov 2006 17:19:02 +0100
 
 gettext (0.15-2) unstable; urgency=low
 
   * Fixed xgettext segfault on certain scheme input (Closes: #384698).
     Patch by Bruno Haible.
-	
+
  -- Santiago Vila <sanvila@debian.org>  Thu, 31 Aug 2006 19:35:04 +0200
 
 gettext (0.15-1) unstable; urgency=low
@@ -504,7 +573,7 @@ gettext (0.15-1) unstable; urgency=low
     so we can distribute it in main in either case.
   * Applied patch from Bruno Haible to fix a bug in xgettext.
     See gnu.utils.bug for details.
-	
+
  -- Santiago Vila <sanvila@debian.org>  Mon, 21 Aug 2006 18:45:14 +0200
 
 gettext (0.14.6-1) unstable; urgency=low
