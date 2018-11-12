@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Pexip AS <packaging@pexip.com>
 XSBC-Pexip-Original-Maintainer: Santiago Vila <sanvila@debian.org>
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9), fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev
+Build-Depends: debhelper (>= 9), fastjar, default-jdk, file, libncurses5-dev, libxml2-dev, libglib2.0-dev, libcroco3-dev, xz-utils, libunistring-dev, bison
 Homepage: http://www.gnu.org/software/gettext/
 XS-Pexip-Upstream: http://ftp.debian.org/debian/ stretch
 

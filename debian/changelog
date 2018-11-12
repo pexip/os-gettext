@@ -1,3 +1,9 @@
+gettext (0.19.8.1-2pexip2) pexip; urgency=medium
+
+  * Backport fix for CVE-2018-18751
+
+ -- John-Mark Bell <jmb@pexip.com>  Mon, 12 Nov 2018 23:13:25 +0000
+
 gettext (0.19.8.1-2pexip1) pexip; urgency=medium
 
   * Migrate to Stretch
