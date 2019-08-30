@@ -1,3 +1,12 @@
+gettext (0.19.8.1-2+deb9u1) stretch; urgency=medium
+
+  * Stop xgettext() from crashing when run with --its=FILE option.
+    Patch taken from Debian 10, which in turn was extracted from
+    upstream git. Should help the inkscape project. Closes: #891347.
+    See https://gitlab.com/inkscape/inkscape/issues/271 for details.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 31 Aug 2019 01:30:22 +0200
+
 gettext (0.19.8.1-2) unstable; urgency=medium
 
   * Use debhelper more.
