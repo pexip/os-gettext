@@ -1,2 +1,3 @@
 01-do-not-use-java-in-urlget
+05-fix-crash-xgettext-with-its.patch
 CVE-2018-18751.patch
