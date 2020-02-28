@@ -3,6 +3,7 @@
 package = gettext
 
 export DEB_BUILD_MAINT_OPTIONS = hardening=-format
+export LIBTOOLIZE = true
 
 DEB_BUILD_GNU_TYPE := $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 DEB_HOST_GNU_TYPE := $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
@@ -38,6 +39,7 @@ endif
 NOJAVA_ARCHS = %none%
 
 build:
+	dh_autoreconf
 	./configure --prefix=/usr --enable-threads $(CSHARP) \
 		--build=$(DEB_BUILD_GNU_TYPE) --host=$(DEB_HOST_GNU_TYPE) \
 		--disable-native-java CC="$(CC)" CFLAGS="$(CFLAGS)" \
@@ -55,6 +57,7 @@ clean:
 	[ ! -f Makefile ] || $(MAKE) distclean
 	rm -f `find . -name "*~"`
 	rm -rf debian/tmp debian/files* core debian/substvars debian/a.out
+	dh_autoreconf_clean
 	dh_clean
 
 binary-arch: build
@@ -115,7 +118,7 @@ gettext-base: build
 	fi
 	find debian/$@/usr/share/locale | grep gettext-tools | xargs rm
 ifeq (,$(findstring %$(DEB_HOST_ARCH)%,$(NOJAVA_ARCHS)))
-ifeq ($(filter stage1,$(DEB_BUILD_PROFILES)),)
+ifeq ($(filter nojava,$(DEB_BUILD_PROFILES)),)
 	install -d debian/$@/usr/share/java
 	cp -p debian/tmp/usr/share/gettext/libintl.jar \
 		debian/$@/usr/share/java
@@ -134,7 +137,7 @@ gettext: build
 	cp -a debian/tmp/usr/share/gettext* debian/$@/usr/share
 	rm -f debian/$@/usr/share/gettext/libintl.jar
 ifeq (,$(findstring %$(DEB_HOST_ARCH)%,$(NOJAVA_ARCHS)))
-ifeq ($(filter stage1,$(DEB_BUILD_PROFILES)),)
+ifeq ($(filter nojava,$(DEB_BUILD_PROFILES)),)
 	mv debian/$@/usr/share/gettext/gettext.jar debian/$@/usr/share/java
 endif
 endif
@@ -146,24 +149,30 @@ endif
 	cd debian/$@/usr/lib && rm -f libasprintf* libgettextpo* *.la
 	cd debian/$@/usr/share/man/man1 && \
 		rm -f gettext.1 ngettext.1 envsubst.1
+	mkdir -p debian/$@/usr/lib/$(DEB_HOST_MULTIARCH)
 	cd debian/$@/usr/lib && chmod 644 libgettextlib* libgettextsrc*
+	cd debian/$@/usr/lib && \
+		mv libgettextlib*.so libgettextsrc*.so preloadable_libintl.so $(DEB_HOST_MULTIARCH)
 	rm -f debian/$@/usr/bin/autopoint
 	rm -f debian/$@/usr/share/man/man1/autopoint.1
 	rm -f debian/$@/usr/share/gettext/archive.dir.tar.xz
 	rm -f debian/$@/usr/lib/libgettextlib.so
 	rm -f debian/$@/usr/lib/libgettextsrc.so
+	cd debian && install -m 644 triggers $@/DEBIAN
 
 libgettextpo0: build
 	rm -rf debian/$@
 	install -d debian/$@/DEBIAN debian/$@/usr/share/doc/$@
 	cd debian/$@ && install -d usr/lib/$(DEB_HOST_MULTIARCH)
 	cp -a debian/tmp/usr/lib/libgettextpo.so.* debian/$@/usr/lib/$(DEB_HOST_MULTIARCH)
+	cd debian && install -m 644 triggers $@/DEBIAN
 
 libasprintf0v5: build
 	rm -rf debian/$@
 	install -d debian/$@/DEBIAN debian/$@/usr/share/doc/$@
 	cd debian/$@ && install -d usr/lib/$(DEB_HOST_MULTIARCH)
 	cp -a debian/tmp/usr/lib/libasprintf.so.* debian/$@/usr/lib/$(DEB_HOST_MULTIARCH)
+	cd debian && install -m 644 triggers $@/DEBIAN
 
 libgettextpo-dev: build
 	rm -rf debian/$@

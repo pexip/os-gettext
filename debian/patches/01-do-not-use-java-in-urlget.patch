@@ -1,6 +1,6 @@
 From: Santiago Vila <sanvila@debian.org>
 Subject: Do not depend on libgcj4
-Bug-Debian: http://bugs.debian.org/292988
+Bug-Debian: https://bugs.debian.org/292988
 X-Debian-version: 0.14.1-10
 
 --- a/gettext-tools/src/urlget.c
