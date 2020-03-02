@@ -1,3 +1,10 @@
+gettext (0.19.8.1-9pexip1) pexip; urgency=medium
+
+  * Migrate to Buster
+  * Remove CVE-2018-18751.patch as applied upstream
+
+ -- Vincent Sanders <vince@pexip.com>  Mon, 02 Mar 2020 10:28:21 +0000
+
 gettext (0.19.8.1-9) unstable; urgency=medium
 
   * Fix double-free problem with *.po file input. Closes: #913173.
