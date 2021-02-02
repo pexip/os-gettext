@@ -1,6 +1,5 @@
 /* KDE format strings.
-   Copyright (C) 2003-2004, 2006-2007, 2009, 2015-2016 Free Software
-   Foundation, Inc.
+   Copyright (C) 2003-2004, 2006-2007, 2009, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2007.
 
    This program is free software: you can redistribute it and/or modify
@@ -14,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -55,7 +54,6 @@ struct spec
 {
   unsigned int directives;
   unsigned int numbered_arg_count;
-  unsigned int allocated;
   struct numbered_arg *numbered;
 };
 
@@ -75,12 +73,13 @@ format_parse (const char *format, bool translated, char *fdi,
 {
   const char *const format_start = format;
   struct spec spec;
+  unsigned int numbered_allocated;
   struct spec *result;
 
   spec.directives = 0;
   spec.numbered_arg_count = 0;
-  spec.allocated = 0;
   spec.numbered = NULL;
+  numbered_allocated = 0;
 
   for (; *format != '\0';)
     if (*format++ == '%')
@@ -102,10 +101,10 @@ format_parse (const char *format, bool translated, char *fdi,
                 format++;
               }
 
-            if (spec.allocated == spec.numbered_arg_count)
+            if (numbered_allocated == spec.numbered_arg_count)
               {
-                spec.allocated = 2 * spec.allocated + 1;
-                spec.numbered = (struct numbered_arg *) xrealloc (spec.numbered, spec.allocated * sizeof (struct numbered_arg));
+                numbered_allocated = 2 * numbered_allocated + 1;
+                spec.numbered = (struct numbered_arg *) xrealloc (spec.numbered, numbered_allocated * sizeof (struct numbered_arg));
               }
             spec.numbered[spec.numbered_arg_count].number = number;
             spec.numbered_arg_count++;
@@ -343,7 +342,7 @@ main ()
 /*
  * For Emacs M-x compile
  * Local Variables:
- * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../intl -DHAVE_CONFIG_H -DTEST format-kde.c ../gnulib-lib/libgettextlib.la"
+ * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../../gettext-runtime/intl -DHAVE_CONFIG_H -DTEST format-kde.c ../gnulib-lib/libgettextlib.la"
  * End:
  */
 

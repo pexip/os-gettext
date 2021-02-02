@@ -1,0 +1,11 @@
+# dh-elpa doesn't know to look in debian/tmp, unlike the rest of
+# debhelper.  It actually simplifies things to do the main package
+# build --without-emacs and have dh-elpa grab the files we need from
+# their source location instead of their install location.
+gettext-tools/emacs/po-mode.el     usr/share/emacs/site-lisp/po-mode
+
+# po-compat.el is only needed with Emacs < 21.2, which is three major
+# versions older than the version in oldoldstable (jessie) as of 2020-09.
+
+# start-po.el is not necessary because dh_elpa will scan po-mode.el for
+# autoloads.

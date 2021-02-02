@@ -1,4 +1,4 @@
-# Copyright (C) 2002-2016 Free Software Foundation, Inc.
+# Copyright (C) 2002-2020 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this file.  If not, see <http://www.gnu.org/licenses/>.
+# along with this file.  If not, see <https://www.gnu.org/licenses/>.
 #
 # As a special exception to the GNU General Public License,
 # this file may be distributed as part of a program that
@@ -27,14 +27,53 @@
 
 
 # Specification in the form of a command-line invocation:
-#   gnulib-tool --import --local-dir=gnulib-local --lib=libgrt --source-base=gnulib-lib --m4-base=gnulib-m4 --doc-base=doc --tests-base=tests --aux-dir=../build-aux --no-conditional-dependencies --no-libtool --macro-prefix=gl ansi-c++-opt atexit basename closeout csharpcomp-script error getopt-gnu gettext-h gettext-runtime-misc havelib java javacomp-script memmove progname propername relocatable-prog setlocale sigpipe stdbool stdio stdlib strtoul unlocked-io xalloc
+# gnulib-tool --import --local-dir=gnulib-local \
+#  --lib=libgrt \
+#  --source-base=gnulib-lib \
+#  --m4-base=gnulib-m4 \
+#  --doc-base=doc \
+#  --tests-base=tests \
+#  --aux-dir=../build-aux \
+#  --no-conditional-dependencies \
+#  --no-libtool \
+#  --macro-prefix=gl \
+#  ansi-c++-opt \
+#  atexit \
+#  basename-lgpl \
+#  binary-io \
+#  bison \
+#  closeout \
+#  csharpcomp-script \
+#  error \
+#  getopt-gnu \
+#  gettext-h \
+#  gettext-runtime-misc \
+#  havelib \
+#  java \
+#  javacomp-script \
+#  memmove \
+#  noreturn \
+#  progname \
+#  propername \
+#  relocatable-prog \
+#  setlocale \
+#  sigpipe \
+#  stdbool \
+#  stdio \
+#  stdlib \
+#  strtoul \
+#  unistd \
+#  unlocked-io \
+#  xalloc
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([../gnulib-local])
 gl_MODULES([
   ansi-c++-opt
   atexit
-  basename
+  basename-lgpl
+  binary-io
+  bison
   closeout
   csharpcomp-script
   error
@@ -45,6 +84,7 @@ gl_MODULES([
   java
   javacomp-script
   memmove
+  noreturn
   progname
   propername
   relocatable-prog
@@ -54,6 +94,7 @@ gl_MODULES([
   stdio
   stdlib
   strtoul
+  unistd
   unlocked-io
   xalloc
 ])

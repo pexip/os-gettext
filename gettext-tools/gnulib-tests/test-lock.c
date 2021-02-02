@@ -1,5 +1,5 @@
 /* Test of locking in multithreaded situations.
-   Copyright (C) 2005, 2008-2016 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2008-2020 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,22 +12,22 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Bruno Haible <bruno@clisp.org>, 2005.  */
 
 #include <config.h>
 
-#if USE_POSIX_THREADS || USE_SOLARIS_THREADS || USE_PTH_THREADS || USE_WINDOWS_THREADS
+#if USE_ISOC_THREADS || USE_POSIX_THREADS || USE_ISOC_AND_POSIX_THREADS || USE_WINDOWS_THREADS
 
+#if USE_ISOC_THREADS
+# define TEST_ISOC_THREADS 1
+#endif
 #if USE_POSIX_THREADS
 # define TEST_POSIX_THREADS 1
 #endif
-#if USE_SOLARIS_THREADS
-# define TEST_SOLARIS_THREADS 1
-#endif
-#if USE_PTH_THREADS
-# define TEST_PTH_THREADS 1
+#if USE_ISOC_AND_POSIX_THREADS
+# define TEST_ISOC_AND_POSIX_THREADS 1
 #endif
 #if USE_WINDOWS_THREADS
 # define TEST_WINDOWS_THREADS 1
@@ -61,27 +61,28 @@
    an "OK" result even without ENABLE_LOCKING (on Linux/x86).  */
 #define REPEAT_COUNT 50000
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #if !ENABLE_LOCKING
+# undef USE_ISOC_THREADS
 # undef USE_POSIX_THREADS
-# undef USE_SOLARIS_THREADS
-# undef USE_PTH_THREADS
+# undef USE_ISOC_AND_POSIX_THREADS
 # undef USE_WINDOWS_THREADS
 #endif
 #include "glthread/lock.h"
 
 #if !ENABLE_LOCKING
+# if TEST_ISOC_THREADS
+#  define USE_ISOC_THREADS 1
+# endif
 # if TEST_POSIX_THREADS
 #  define USE_POSIX_THREADS 1
 # endif
-# if TEST_SOLARIS_THREADS
-#  define USE_SOLARIS_THREADS 1
-# endif
-# if TEST_PTH_THREADS
-#  define USE_PTH_THREADS 1
+# if TEST_ISOC_AND_POSIX_THREADS
+#  define USE_ISOC_AND_POSIX_THREADS 1
 # endif
 # if TEST_WINDOWS_THREADS
 #  define USE_WINDOWS_THREADS 1
@@ -90,6 +91,13 @@
 
 #include "glthread/thread.h"
 #include "glthread/yield.h"
+
+#if HAVE_DECL_ALARM
+# include <signal.h>
+# include <unistd.h>
+#endif
+
+#include "atomic-int-gnulib.h"
 
 #if ENABLE_DEBUGGING
 # define dbgprintf printf
@@ -170,12 +178,12 @@ lock_mutator_thread (void *arg)
   return NULL;
 }
 
-static volatile int lock_checker_done;
+static struct atomic_int lock_checker_done;
 
 static void *
 lock_checker_thread (void *arg)
 {
-  while (!lock_checker_done)
+  while (get_atomic_int_value (&lock_checker_done) == 0)
     {
       dbgprintf ("Checker %p before check lock\n", gl_thread_self_pointer ());
       gl_lock_lock (my_lock);
@@ -200,7 +208,8 @@ test_lock (void)
   /* Initialization.  */
   for (i = 0; i < ACCOUNT_COUNT; i++)
     account[i] = 1000;
-  lock_checker_done = 0;
+  init_atomic_int (&lock_checker_done);
+  set_atomic_int_value (&lock_checker_done, 0);
 
   /* Spawn the threads.  */
   checkerthread = gl_thread_create (lock_checker_thread, NULL);
@@ -210,7 +219,7 @@ test_lock (void)
   /* Wait for the threads to terminate.  */
   for (i = 0; i < THREAD_COUNT; i++)
     gl_thread_join (threads[i], NULL);
-  lock_checker_done = 1;
+  set_atomic_int_value (&lock_checker_done, 1);
   gl_thread_join (checkerthread, NULL);
   check_accounts ();
 }
@@ -254,12 +263,12 @@ rwlock_mutator_thread (void *arg)
   return NULL;
 }
 
-static volatile int rwlock_checker_done;
+static struct atomic_int rwlock_checker_done;
 
 static void *
 rwlock_checker_thread (void *arg)
 {
-  while (!rwlock_checker_done)
+  while (get_atomic_int_value (&rwlock_checker_done) == 0)
     {
       dbgprintf ("Checker %p before check rdlock\n", gl_thread_self_pointer ());
       gl_rwlock_rdlock (my_rwlock);
@@ -284,7 +293,8 @@ test_rwlock (void)
   /* Initialization.  */
   for (i = 0; i < ACCOUNT_COUNT; i++)
     account[i] = 1000;
-  rwlock_checker_done = 0;
+  init_atomic_int (&rwlock_checker_done);
+  set_atomic_int_value (&rwlock_checker_done, 0);
 
   /* Spawn the threads.  */
   for (i = 0; i < THREAD_COUNT; i++)
@@ -295,7 +305,7 @@ test_rwlock (void)
   /* Wait for the threads to terminate.  */
   for (i = 0; i < THREAD_COUNT; i++)
     gl_thread_join (threads[i], NULL);
-  rwlock_checker_done = 1;
+  set_atomic_int_value (&rwlock_checker_done, 1);
   for (i = 0; i < THREAD_COUNT; i++)
     gl_thread_join (checkerthreads[i], NULL);
   check_accounts ();
@@ -356,12 +366,12 @@ reclock_mutator_thread (void *arg)
   return NULL;
 }
 
-static volatile int reclock_checker_done;
+static struct atomic_int reclock_checker_done;
 
 static void *
 reclock_checker_thread (void *arg)
 {
-  while (!reclock_checker_done)
+  while (get_atomic_int_value (&reclock_checker_done) == 0)
     {
       dbgprintf ("Checker %p before check lock\n", gl_thread_self_pointer ());
       gl_recursive_lock_lock (my_reclock);
@@ -386,7 +396,8 @@ test_recursive_lock (void)
   /* Initialization.  */
   for (i = 0; i < ACCOUNT_COUNT; i++)
     account[i] = 1000;
-  reclock_checker_done = 0;
+  init_atomic_int (&reclock_checker_done);
+  set_atomic_int_value (&reclock_checker_done, 0);
 
   /* Spawn the threads.  */
   checkerthread = gl_thread_create (reclock_checker_thread, NULL);
@@ -396,7 +407,7 @@ test_recursive_lock (void)
   /* Wait for the threads to terminate.  */
   for (i = 0; i < THREAD_COUNT; i++)
     gl_thread_join (threads[i], NULL);
-  reclock_checker_done = 1;
+  set_atomic_int_value (&reclock_checker_done, 1);
   gl_thread_join (checkerthread, NULL);
   check_accounts ();
 }
@@ -430,7 +441,7 @@ once_execute (void)
 static void *
 once_contender_thread (void *arg)
 {
-  int id = (int) (long) arg;
+  int id = (int) (intptr_t) arg;
   int repeat;
 
   for (repeat = 0; repeat <= REPEAT_COUNT; repeat++)
@@ -484,13 +495,16 @@ test_once (void)
   fire_signal_state = 0;
 #endif
 
+#if ENABLE_LOCKING
   /* Block all fire_signals.  */
   for (i = REPEAT_COUNT-1; i >= 0; i--)
     gl_rwlock_wrlock (fire_signal[i]);
+#endif
 
   /* Spawn the threads.  */
   for (i = 0; i < THREAD_COUNT; i++)
-    threads[i] = gl_thread_create (once_contender_thread, (void *) (long) i);
+    threads[i] =
+      gl_thread_create (once_contender_thread, (void *) (intptr_t) i);
 
   for (repeat = 0; repeat <= REPEAT_COUNT; repeat++)
     {
@@ -556,9 +570,12 @@ test_once (void)
 int
 main ()
 {
-#if TEST_PTH_THREADS
-  if (!pth_init ())
-    abort ();
+#if HAVE_DECL_ALARM
+  /* Declare failure if test takes too long, by using default abort
+     caused by SIGALRM.  */
+  int alarm_value = 600;
+  signal (SIGALRM, SIG_DFL);
+  alarm (alarm_value);
 #endif
 
 #if DO_TEST_LOCK

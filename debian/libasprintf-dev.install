@@ -1,0 +1,3 @@
+usr/lib/*/libasprintf.a
+usr/lib/*/libasprintf.so
+usr/include/autosprintf.h

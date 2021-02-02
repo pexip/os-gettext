@@ -1,0 +1,1 @@
+debian/libintl.pom.xml --artifact=debian/tmp/usr/share/gettext/libintl.jar --java-lib --usj-name=libintl

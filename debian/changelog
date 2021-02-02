@@ -1,3 +1,103 @@
+gettext (0.21-4) unstable; urgency=medium
+
+  * Drop versioned build-dependency on g++ as it holds in stable.
+    Drop also unused build-dependencies fastjar, libglib2.0-dev
+    and libncurses5-dev. Closes: #981363. Thanks to Helmut Grohne.
+  * Use --with maven-repo-helper only when java is available.
+    Closes: #981668. Thanks to Samuel Thibault.
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 02 Feb 2021 22:35:00 +0100
+
+gettext (0.21-3) unstable; urgency=medium
+
+  * Install libintl.jar in /usr/share/maven-repo. Closes: #976738.
+    Thanks to Louis-Philippe Véronneau for the patch.
+  * Fix gnulib-related build problem in powerpc architectures. Closes: #977763.
+    Thanks to Bruno Haible for the patch.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 20 Dec 2020 17:44:00 +0100
+
+gettext (0.21-2) unstable; urgency=medium
+
+  * Add groff to Build-Depends.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 19 Dec 2020 23:00:00 +0100
+
+gettext (0.21-1) unstable; urgency=medium
+
+  * New upstream release.
+    - xgettext can detect '(eval_)gettext -e' in shell scripts. Closes: #507091.
+    - <gettext.h> compiles cleanly as C++. Closes: #547798.
+    - The unpacked usr/share/gettext/intl is no longer installed.
+      If you were using these files, find them in
+      /usr/share/gettext/archive.dir.tar.xz, which is part of the
+      autopoint package.
+    - Drop Daiki Ueno key (now expired) from signing-key.asc.
+    - Put the new upstream key instead:
+      "Bruno Haible (Open Source Development) <bruno@clisp.org>"
+      9001 B85A F9E1 B83D F1BD  A942 F5BE 8B26 7C6A 406D
+
+  * Patches that are no longer necessary:
+    - 01-do-not-use-java-in-urlget.patch: Replaced with logic in debian/rules.
+    - 02-msgfmt-remove-pot-creation-date.patch: Merged upstream.
+    - 03-avoid-extraneous-nul-bytes.patch: Merged upstream.
+    - 04-fix-msgunfmt-heap-corruption.patch: Merged upstream.
+    - 05-fix-crash-xgettext-with-its.patch: Merged upstream.
+    - 06-java9-support.patch: Merged upstream.
+    - 07-java11-support.patch: Merged upstream.
+    - 08-java-future-support.patch: Merged upstream.
+    - 09-fix-crash-with-po-file-input.patch: Merged upstream.
+
+  * New patches:
+    - 01-use-system-help2man.patch: Use system help2man instead of
+      embedded help2man. Closes: #949338.
+    - 02-library-dependencies.patch: Link all libraries and
+      executables against all of their dependencies, correctly.
+      (Latent upstream bug, exposed by hardening.)
+    - 03-disable-libtextstyle.patch: Do not build libtextstyle.
+      It depends on libcroco, which is unmaintained and has known
+      security bugs. Use the Gnulib libtextstyle-dummy module
+      (already included in the upstream sources) instead.
+      Note that this means --color options silently do nothing.
+      Closes: #967028.
+
+  * Debhelper compat level 13 (current recommended).
+    - Switch to dh sequencing.
+    - Switch to Build-Depends: debhelper-compat.
+    - Switch to declarative package contents, using dh_install etc.
+      dh-exec is needed for build profile filtering in a few places.
+      (The old scripting is preserved in debian/rules.old.)
+    - Manual ldconfig triggers are no longer necessary.
+    - The HTML documentation and examples are now installed in
+      /usr/share/doc/gettext instead of .../gettext-doc.
+
+  * gettext-el is now created using dh_elpa, eliminating the need for
+    custom package scripts.
+
+  * Standards-Version: 4.5.0.
+    - All lintian E-level diagnostics have been addressed, and
+      many but not all of the W- and I-level diagnostics.
+    - I don’t *think* any specific changes were required besides the
+      above, but I could have missed something.
+
+  * This release is mostly the work of Zack Weinberg <zackw@panix.com>.
+    I'm merely making (very small) editorial changes and the upload.
+    Thanks a lot.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 19 Dec 2020 21:56:00 +0100
+
+gettext (0.19.8.1-10) unstable; urgency=medium
+
+  * Make short descriptions more consistent.
+  * Use https for both Homepage and upstream URL in copyright file.
+  * Really drop libgettextlib.so and libgettextsrc.so (this was already
+    the intent but it was not working after the move to multiarch).
+  * Use wildcards in lintian overrides (also multiarch).
+  * Specify licenses for libasprintf (LGPL2.1+) and libgettextpo (GPL3+)
+    in the copyright file.
+
+ -- Santiago Vila <sanvila@debian.org>  Wed, 20 Nov 2019 23:07:20 +0100
+
 gettext (0.19.8.1-9) unstable; urgency=medium
 
   * Fix double-free problem with *.po file input. Closes: #913173.
