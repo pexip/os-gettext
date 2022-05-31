@@ -1,0 +1,26 @@
+#! /usr/bin/dh-exec --with-scripts=filter-build-profiles
+
+# .la files are to be discarded per policy x.y.z;
+# .so files will be regenerated at install time
+usr/lib/*/*.la
+usr/lib/*/*.so
+
+# libgettextlib is internal use only
+usr/lib/*/libgettextlib.a
+
+# .elc files will be regenerated at install time
+usr/share/emacs/site-lisp/*.elc
+
+# usr/share/gettext/styles is used by libtextstyle, which has been
+# disabled, see #967028
+usr/share/gettext/styles/
+
+# not wanted by doc-base
+usr/share/doc/gettext/javadoc2/package-list
+
+# installed via maven-repo-helper to have proper symlinks
+usr/share/gettext/libintl.jar
+
+# not installed under nojava profile
+<nojava> usr/share/gettext/gettext.jar
+<nojava> usr/share/gettext/javaversion.class

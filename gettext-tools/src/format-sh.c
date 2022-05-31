@@ -1,6 +1,5 @@
 /* Shell format strings.
-   Copyright (C) 2003-2004, 2006-2007, 2009, 2015-2016 Free Software
-   Foundation, Inc.
+   Copyright (C) 2003-2004, 2006-2007, 2009, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -14,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -64,7 +63,6 @@ struct spec
 {
   unsigned int directives;
   unsigned int named_arg_count;
-  unsigned int allocated;
   struct named_arg *named;
 };
 
@@ -91,12 +89,13 @@ format_parse (const char *format, bool translated, char *fdi,
 {
   const char *const format_start = format;
   struct spec spec;
+  unsigned int named_allocated;
   struct spec *result;
 
   spec.directives = 0;
   spec.named_arg_count = 0;
-  spec.allocated = 0;
   spec.named = NULL;
+  named_allocated = 0;
 
   for (; *format != '\0';)
     if (*format++ == '$')
@@ -199,10 +198,10 @@ format_parse (const char *format, bool translated, char *fdi,
           }
 
         /* Named argument.  */
-        if (spec.allocated == spec.named_arg_count)
+        if (named_allocated == spec.named_arg_count)
           {
-            spec.allocated = 2 * spec.allocated + 1;
-            spec.named = (struct named_arg *) xrealloc (spec.named, spec.allocated * sizeof (struct named_arg));
+            named_allocated = 2 * named_allocated + 1;
+            spec.named = (struct named_arg *) xrealloc (spec.named, named_allocated * sizeof (struct named_arg));
           }
         spec.named[spec.named_arg_count].name = name;
         spec.named_arg_count++;
@@ -397,7 +396,7 @@ main ()
 /*
  * For Emacs M-x compile
  * Local Variables:
- * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../intl -DHAVE_CONFIG_H -DTEST format-sh.c ../gnulib-lib/libgettextlib.la"
+ * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../../gettext-runtime/intl -DHAVE_CONFIG_H -DTEST format-sh.c ../gnulib-lib/libgettextlib.la"
  * End:
  */
 

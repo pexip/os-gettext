@@ -1,6 +1,5 @@
 /* Writing Desktop Entry files.
-   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2016 Free
-   Software Foundation, Inc.
+   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2016, 2019-2020 Free Software Foundation, Inc.
    This file was written by Daiki Ueno <ueno@gnu.org>.
 
    This program is free software: you can redistribute it and/or modify
@@ -14,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -25,10 +24,12 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "error.h"
 #include "msgl-iconv.h"
+#include "msgl-header.h"
 #include "po-charset.h"
 #include "read-catalog.h"
 #include "read-po.h"
@@ -73,7 +74,7 @@ msgfmt_desktop_handle_pair (desktop_reader_ty *reader,
       if (hash_find_entry (msgfmt_reader->keywords, key, strlen (key),
                            &keyword_value) == 0)
         {
-          bool is_list = (bool) keyword_value;
+          bool is_list = (bool) (uintptr_t) keyword_value;
           char *unescaped = desktop_unescape_string (value, is_list);
           size_t i;
 
@@ -202,6 +203,10 @@ msgdomain_write_desktop (message_list_ty *mlp,
 
   /* Convert the messages to Unicode.  */
   iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL);
+
+  /* Support for "reproducible builds": Delete information that may vary
+     between builds in the same conditions.  */
+  message_list_delete_header_field (mlp, "POT-Creation-Date:");
 
   /* Create a single-element operands and run the bulk operation on it.  */
   operand.language = (char *) locale_name;

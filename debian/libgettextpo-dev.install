@@ -1,0 +1,3 @@
+usr/lib/*/libgettextpo.a
+usr/lib/*/libgettextpo.so
+usr/include/gettext-po.h

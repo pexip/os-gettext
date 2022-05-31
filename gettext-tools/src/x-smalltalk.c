@@ -1,6 +1,5 @@
 /* xgettext Smalltalk backend.
-   Copyright (C) 2002-2003, 2005-2009, 2011, 2015-2016 Free Software
-   Foundation, Inc.
+   Copyright (C) 2002-2003, 2005-2009, 2011, 2018-2020 Free Software Foundation, Inc.
 
    This file was written by Bruno Haible <haible@clisp.cons.org>, 2002.
 
@@ -15,7 +14,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -30,6 +29,8 @@
 
 #include "message.h"
 #include "xgettext.h"
+#include "xg-pos.h"
+#include "xg-message.h"
 #include "error.h"
 #include "xalloc.h"
 #include "gettext.h"
@@ -66,14 +67,6 @@
 
 
 /* ======================== Reading of characters.  ======================== */
-
-
-/* Real filename, used in error messages about the input file.  */
-static const char *real_file_name;
-
-/* Logical filename and line number, used to label the extracted messages.  */
-static char *logical_file_name;
-static int line_number;
 
 /* The input file stream.  */
 static FILE *fp;
@@ -453,9 +446,18 @@ phase2_unget (token_ty *tp)
 
 /* 3. Combine "# string_literal" and "# symbol" to a single token.  */
 
+static token_ty phase3_pushback[1];
+static int phase3_pushback_length;
+
 static void
-x_smalltalk_lex (token_ty *tp)
+phase3_get (token_ty *tp)
 {
+  if (phase3_pushback_length)
+    {
+      *tp = phase3_pushback[--phase3_pushback_length];
+      return;
+    }
+
   phase2_get (tp);
   if (tp->type == token_type_uniq)
     {
@@ -470,6 +472,18 @@ x_smalltalk_lex (token_ty *tp)
         }
       else
         phase2_unget (&token2);
+    }
+}
+
+/* Supports only one pushback token.  */
+static void
+phase3_unget (token_ty *tp)
+{
+  if (tp->type != token_type_eof)
+    {
+      if (phase3_pushback_length == SIZEOF (phase3_pushback))
+        abort ();
+      phase3_pushback[phase3_pushback_length++] = *tp;
     }
 }
 
@@ -503,6 +517,9 @@ extract_smalltalk (FILE *f,
   last_comment_line = -1;
   last_non_comment_line = -1;
 
+  phase2_pushback_length = 0;
+  phase3_pushback_length = 0;
+
   /* Eat tokens until eof is seen.  */
   {
     /* 0 when no "NLS" has been seen.
@@ -523,7 +540,7 @@ extract_smalltalk (FILE *f,
       {
         token_ty token;
 
-        x_smalltalk_lex (&token);
+        phase3_get (&token);
 
         switch (token.type)
           {
@@ -542,19 +559,31 @@ extract_smalltalk (FILE *f,
                 lex_pos_ty pos;
                 pos.file_name = logical_file_name;
                 pos.line_number = token.line_number;
-                remember_a_message (mlp, NULL, token.string, null_context,
-                                    &pos, NULL, savable_comment);
+                remember_a_message (mlp, NULL, token.string, false, false,
+                                    null_context, &pos, NULL, savable_comment,
+                                    false);
                 state = 0;
                 break;
               }
             if (state == 3)
               {
                 lex_pos_ty pos;
+                token_ty token2;
+
                 pos.file_name = logical_file_name;
                 pos.line_number = token.line_number;
-                plural_mp = remember_a_message (mlp, NULL, token.string,
-                                                null_context, &pos,
-                                                NULL, savable_comment);
+
+                phase3_get (&token2);
+
+                plural_mp =
+                  remember_a_message (mlp, NULL, token.string, false,
+                                      token2.type == token_type_symbol
+                                      && strcmp (token.string, "plural:") == 0,
+                                      null_context, &pos,
+                                      NULL, savable_comment, false);
+
+                phase3_unget (&token2);
+
                 state = 4;
                 break;
               }
@@ -564,9 +593,9 @@ extract_smalltalk (FILE *f,
                 pos.file_name = logical_file_name;
                 pos.line_number = token.line_number;
                 if (plural_mp != NULL)
-                  remember_a_message_plural (plural_mp, token.string,
+                  remember_a_message_plural (plural_mp, token.string, false,
                                              null_context, &pos,
-                                             savable_comment);
+                                             savable_comment, false);
                 state = 0;
                 break;
               }

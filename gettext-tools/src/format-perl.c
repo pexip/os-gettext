@@ -1,6 +1,5 @@
 /* Perl format strings.
-   Copyright (C) 2004, 2006-2007, 2009, 2015-2016 Free Software Foundation,
-   Inc.
+   Copyright (C) 2004, 2006-2007, 2009, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -14,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -110,7 +109,6 @@ struct spec
 {
   unsigned int directives;
   unsigned int numbered_arg_count;
-  unsigned int allocated;
   struct numbered_arg *numbered;
 };
 
@@ -140,16 +138,16 @@ format_parse (const char *format, bool translated, char *fdi,
   const char *const format_start = format;
   unsigned int directives;
   unsigned int numbered_arg_count;
-  unsigned int allocated;
   struct numbered_arg *numbered;
+  unsigned int numbered_allocated;
   unsigned int unnumbered_arg_count;
   struct spec *result;
 
   directives = 0;
   numbered_arg_count = 0;
-  unnumbered_arg_count = 0;
-  allocated = 0;
   numbered = NULL;
+  numbered_allocated = 0;
+  unnumbered_arg_count = 0;
 
   for (; *format != '\0';)
     if (*format++ == '%')
@@ -204,10 +202,10 @@ format_parse (const char *format, bool translated, char *fdi,
                 vectorize = true;
 
                 /* Unnumbered argument.  */
-                if (allocated == numbered_arg_count)
+                if (numbered_allocated == numbered_arg_count)
                   {
-                    allocated = 2 * allocated + 1;
-                    numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                    numbered_allocated = 2 * numbered_allocated + 1;
+                    numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
                   }
                 numbered[numbered_arg_count].number = ++unnumbered_arg_count;
                 numbered[numbered_arg_count].type = FAT_SCALAR_VECTOR; /* or FAT_STRING? */
@@ -237,10 +235,10 @@ format_parse (const char *format, bool translated, char *fdi,
                         /* Numbered argument.  */
                         /* Note: As of perl-5.8.0, this is not correctly
                            implemented in perl's sv.c.  */
-                        if (allocated == numbered_arg_count)
+                        if (numbered_allocated == numbered_arg_count)
                           {
-                            allocated = 2 * allocated + 1;
-                            numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                            numbered_allocated = 2 * numbered_allocated + 1;
+                            numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
                           }
                         numbered[numbered_arg_count].number = vector_number;
                         numbered[numbered_arg_count].type = FAT_SCALAR_VECTOR; /* or FAT_STRING? */
@@ -253,10 +251,10 @@ format_parse (const char *format, bool translated, char *fdi,
         if (vectorize)
           {
             /* Numbered or unnumbered argument.  */
-            if (allocated == numbered_arg_count)
+            if (numbered_allocated == numbered_arg_count)
               {
-                allocated = 2 * allocated + 1;
-                numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                numbered_allocated = 2 * numbered_allocated + 1;
+                numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
               }
             numbered[numbered_arg_count].number = (number ? number : ++unnumbered_arg_count);
             numbered[numbered_arg_count].type = FAT_SCALAR_VECTOR;
@@ -292,10 +290,10 @@ format_parse (const char *format, bool translated, char *fdi,
             /* Numbered or unnumbered argument.  */
             /* Note: As of perl-5.8.0, this is not correctly
                implemented in perl's sv.c.  */
-            if (allocated == numbered_arg_count)
+            if (numbered_allocated == numbered_arg_count)
               {
-                allocated = 2 * allocated + 1;
-                numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                numbered_allocated = 2 * numbered_allocated + 1;
+                numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
               }
             numbered[numbered_arg_count].number = (width_number ? width_number : ++unnumbered_arg_count);
             numbered[numbered_arg_count].type = FAT_INTEGER;
@@ -337,10 +335,10 @@ format_parse (const char *format, bool translated, char *fdi,
                   }
 
                 /* Numbered or unnumbered argument.  */
-                if (allocated == numbered_arg_count)
+                if (numbered_allocated == numbered_arg_count)
                   {
-                    allocated = 2 * allocated + 1;
-                    numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                    numbered_allocated = 2 * numbered_allocated + 1;
+                    numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
                   }
                 numbered[numbered_arg_count].number = (precision_number ? precision_number : ++unnumbered_arg_count);
                 numbered[numbered_arg_count].type = FAT_INTEGER;
@@ -461,10 +459,10 @@ format_parse (const char *format, bool translated, char *fdi,
         if (type != FAT_NONE && !vectorize)
           {
             /* Numbered or unnumbered argument.  */
-            if (allocated == numbered_arg_count)
+            if (numbered_allocated == numbered_arg_count)
               {
-                allocated = 2 * allocated + 1;
-                numbered = (struct numbered_arg *) xrealloc (numbered, allocated * sizeof (struct numbered_arg));
+                numbered_allocated = 2 * numbered_allocated + 1;
+                numbered = (struct numbered_arg *) xrealloc (numbered, numbered_allocated * sizeof (struct numbered_arg));
               }
             numbered[numbered_arg_count].number = (number ? number : ++unnumbered_arg_count);
             numbered[numbered_arg_count].type = type;
@@ -526,7 +524,6 @@ format_parse (const char *format, bool translated, char *fdi,
   result = XMALLOC (struct spec);
   result->directives = directives;
   result->numbered_arg_count = numbered_arg_count;
-  result->allocated = allocated;
   result->numbered = numbered;
   return result;
 
@@ -762,7 +759,7 @@ main ()
 /*
  * For Emacs M-x compile
  * Local Variables:
- * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../intl -DHAVE_CONFIG_H -DTEST format-perl.c ../gnulib-lib/libgettextlib.la"
+ * compile-command: "/bin/sh ../libtool --tag=CC --mode=link gcc -o a.out -static -O -g -Wall -I.. -I../gnulib-lib -I../../gettext-runtime/intl -DHAVE_CONFIG_H -DTEST format-perl.c ../gnulib-lib/libgettextlib.la"
  * End:
  */
 
