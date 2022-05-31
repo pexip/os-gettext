@@ -1,5 +1,5 @@
 /* Reading Desktop Entry files.
-   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2016 Free
+   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2019 Free
    Software Foundation, Inc.
    This file was written by Daiki Ueno <ueno@gnu.org>.
 
@@ -14,7 +14,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -46,7 +46,7 @@
 #define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
 /* The syntax of a Desktop Entry file is defined at
-   http://standards.freedesktop.org/desktop-entry-spec/latest/index.html.  */
+   https://standards.freedesktop.org/desktop-entry-spec/latest/index.html.  */
 
 desktop_reader_ty *
 desktop_reader_alloc (desktop_reader_class_ty *method_table)
@@ -252,24 +252,20 @@ desktop_lex (token_ty *tp)
             for (;;)
               {
                 c = phase2_getc ();
-                switch (c)
+                if (c == EOF || c == ']')
+                  break;
+                if (c == '\n')
                   {
-                  default:
-                    /* Group names may contain all ASCII characters
-                       except for '[' and ']' and control characters.  */
-                    if (!(c_isascii (c) && c != '[') && !c_iscntrl (c))
-                      break;
-                    APPEND (c);
-                    continue;
-                  case '\n':
                     po_xerror (PO_SEVERITY_WARNING, NULL,
                                real_file_name, gram_pos.line_number, 0, false,
                                _("unterminated group name"));
                     break;
-                  case EOF: case ']':
-                    break;
                   }
-                break;
+                /* Group names may contain all ASCII characters
+                   except for '[' and ']' and control characters.  */
+                if (!(c_isascii (c) && c != '[' && !c_iscntrl (c)))
+                  break;
+                APPEND (c);
               }
             /* Skip until newline.  */
             while (c != '\n' && c != EOF)
@@ -296,15 +292,9 @@ desktop_lex (token_ty *tp)
             for (;;)
               {
                 c = phase2_getc ();
-                switch (c)
-                  {
-                  default:
-                    APPEND (c);
-                    continue;
-                  case EOF: case '\n':
-                    break;
-                  }
-                break;
+                if (c == EOF || c == '\n')
+                  break;
+                APPEND (c);
               }
             APPEND (0);
             tp->type = token_type_comment;
@@ -360,15 +350,9 @@ desktop_lex (token_ty *tp)
                     for (;;)
                       {
                         int c2 = phase2_getc ();
-                        switch (c2)
-                          {
-                          default:
-                            APPEND (c2);
-                            continue;
-                          case EOF: case ']':
-                            break;
-                          }
-                        break;
+                        if (c2 == EOF || c2 == ']')
+                          break;
+                        APPEND (c2);
                       }
                     break;
 
@@ -380,15 +364,15 @@ desktop_lex (token_ty *tp)
               }
             APPEND (0);
 
-            /* Skip any whitespace before '='.  */
+            /* Skip any space before '='.  */
             for (;;)
               {
                 c = phase2_getc ();
                 switch (c)
                   {
+                  case ' ':
+                    continue;
                   default:
-                    if (c_isspace (c))
-                      continue;
                     phase2_ungetc (c);
                     break;
                   case EOF: case '\n':
@@ -413,18 +397,18 @@ desktop_lex (token_ty *tp)
                 return;
               }
 
-            /* Skip any whitespace after '='.  */
+            /* Skip any space after '='.  */
             for (;;)
               {
                 c = phase2_getc ();
                 switch (c)
                   {
+                  case ' ':
+                    continue;
                   default:
-                    if (c_isspace (c))
-                      continue;
                     phase2_ungetc (c);
                     break;
-                  case EOF: case '\n':
+                  case EOF:
                     break;
                   }
                 break;
@@ -640,6 +624,8 @@ desktop_add_default_keywords (hash_table *keywords)
   desktop_add_keyword (keywords, "Name", false);
   desktop_add_keyword (keywords, "GenericName", false);
   desktop_add_keyword (keywords, "Comment", false);
+#if 0 /* Icon values are localizable, but not supported by xgettext.  */
   desktop_add_keyword (keywords, "Icon", false);
+#endif
   desktop_add_keyword (keywords, "Keywords", true);
 }

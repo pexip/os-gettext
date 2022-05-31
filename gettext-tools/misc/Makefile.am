@@ -1,5 +1,5 @@
 ## Makefile for the gettext-tools/misc subdirectory of GNU gettext
-## Copyright (C) 1995-1997, 2000-2003, 2005-2007, 2009-2010, 2015-2016 Free
+## Copyright (C) 1995-1997, 2000-2003, 2005-2007, 2009-2010, 2019-2020 Free
 ## Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ## Process this file with automake to produce Makefile.in.
 
@@ -47,9 +47,20 @@ ARCHIVE_dirxz = archive.dir.tar.xz
 ARCHIVE_git = archive.git.tar.gz
 ARCHIVE_cvs = archive.cvs.tar.gz
 
-# The archive.dir.tar is not in the CVS. Alpha-testers must use the one from
-# an already installed release.
-archive.dir.tar:
+# The archive.dir.tar file appears in release tarballs.
+# The GNU Coding Standards say in
+# <https://www.gnu.org/prep/standards/html_node/Makefile-Basics.html>:
+#   "GNU distributions usually contain some files which are not source files
+#    ... . Since these files normally appear in the source directory, they
+#    should always appear in the source directory, not in the build directory.
+#    So Makefile rules to update them should put the updated files in the
+#    source directory."
+# Therefore we put this file in the source directory, not the build directory.
+
+# The archive.dir.tar is not stored in the version control repository.
+# Alpha-testers must use the one from an already installed release or from
+# https://alpha.gnu.org/gnu/gettext/ .
+$(srcdir)/archive.dir.tar:
 	if test -f $(gettextsrcdir)/archive.dir.tar.gz; then \
 	  gzip -d -c < $(gettextsrcdir)/archive.dir.tar.gz > $@-t && mv $@-t $@; \
 	else \
@@ -67,55 +78,24 @@ archive.dir.tar:
 MOSTLYCLEANFILES += archive.dir.tar-t
 
 # The archive.dir.tar.gz is generated from archive.dir.tar.
-archive.dir.tar.gz: archive.dir.tar
-	if test -f archive.dir.tar; then \
-	  inputfile=archive.dir.tar; \
-	else \
-	  inputfile='$(srcdir)'/archive.dir.tar; \
-	fi; \
-	gzip -c -9 < "$$inputfile" > $@-t && mv $@-t $@
+archive.dir.tar.gz: $(srcdir)/archive.dir.tar
+	gzip -c -9 < '$(srcdir)'/archive.dir.tar > $@-t && mv $@-t $@
 MOSTLYCLEANFILES += archive.dir.tar.gz-t
 
 # The archive.dir.tar.bz2 is generated from archive.dir.tar.
-archive.dir.tar.bz2: archive.dir.tar
-	if test -f archive.dir.tar; then \
-	  inputfile=archive.dir.tar; \
-	else \
-	  inputfile='$(srcdir)'/archive.dir.tar; \
-	fi; \
-	bzip2 -c -9 < "$$inputfile" > $@-t && mv $@-t $@
+archive.dir.tar.bz2: $(srcdir)/archive.dir.tar
+	bzip2 -c -9 < '$(srcdir)'/archive.dir.tar > $@-t && mv $@-t $@
 MOSTLYCLEANFILES += archive.dir.tar.bz2-t
 
 # The archive.dir.tar.xz is generated from archive.dir.tar.
-archive.dir.tar.xz: archive.dir.tar
-	if test -f archive.dir.tar; then \
-	  inputfile=archive.dir.tar; \
-	else \
-	  inputfile='$(srcdir)'/archive.dir.tar; \
-	fi; \
-	xz -c -5 < "$$inputfile" > $@-t && mv $@-t $@
+archive.dir.tar.xz: $(srcdir)/archive.dir.tar
+	xz -c -5 < '$(srcdir)'/archive.dir.tar > $@-t && mv $@-t $@
 MOSTLYCLEANFILES += archive.dir.tar.xz-t
 
 # The archive.git.tar.gz is generated from archive.dir.tar.
-archive.git.tar.gz: archive.dir.tar
-	if test -f archive.dir.tar; then \
-	  inputfile=archive.dir.tar; \
-	else \
-	  inputfile='$(srcdir)'/archive.dir.tar; \
-	fi; \
-	./convert-archive dir git "$$inputfile" $@
+archive.git.tar.gz: $(srcdir)/archive.dir.tar
+	./convert-archive dir git '$(srcdir)'/archive.dir.tar $@
 
 # The archive.cvs.tar.gz is generated from archive.dir.tar.
-archive.cvs.tar.gz: archive.dir.tar
-	if test -f archive.dir.tar; then \
-	  inputfile=archive.dir.tar; \
-	else \
-	  inputfile='$(srcdir)'/archive.dir.tar; \
-	fi; \
-	./convert-archive dir cvs "$$inputfile" $@
-
-# Emacs Lisp code.
-
-lisp_LISP = start-po.el po-mode.el po-compat.el
-
-EXTRA_DIST += $(lisp_LISP)
+archive.cvs.tar.gz: $(srcdir)/archive.dir.tar
+	./convert-archive dir cvs '$(srcdir)'/archive.dir.tar $@

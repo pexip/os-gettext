@@ -1,5 +1,5 @@
 /* GNU gettext - internationalization aids
-   Copyright (C) 1995-1996, 1998, 2000-2004, 2009, 2015-2016 Free Software
+   Copyright (C) 1995-1996, 1998, 2000-2004, 2009, 2020 Free Software
    Foundation, Inc.
 
    This file was written by Peter Miller <millerp@canb.auug.org.au>
@@ -15,7 +15,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifndef _STR_LIST_H
 #define _STR_LIST_H 1
@@ -79,6 +79,9 @@ extern char *string_list_join (const string_list_ty *slp, const char *separator,
 
 /* Return 1 if s is contained in the list of strings, 0 otherwise.  */
 extern bool string_list_member (const string_list_ty *slp, const char *s);
+
+/* Remove s from the list of strings.  Return the removed string or NULL.  */
+extern const char * string_list_remove (string_list_ty *slp, const char *s);
 
 
 #ifdef __cplusplus

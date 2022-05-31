@@ -1,6 +1,5 @@
 /* Writing Qt .qm files.
-   Copyright (C) 2003, 2005-2007, 2009, 2015-2016 Free Software Foundation,
-   Inc.
+   Copyright (C) 2003, 2005-2007, 2009, 2016, 2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -14,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -35,11 +34,12 @@
 #include "message.h"
 #include "po-charset.h"
 #include "msgl-iconv.h"
+#include "msgl-header.h"
 #include "hash-string.h"
 #include "unistr.h"
 #include "xalloc.h"
 #include "obstack.h"
-#include "hash.h"
+#include "mem-hash-map.h"
 #include "binary-io.h"
 #include "fwriteerror.h"
 #include "gettext.h"
@@ -648,11 +648,11 @@ int
 msgdomain_write_qt (message_list_ty *mlp, const char *canon_encoding,
                     const char *domain_name, const char *file_name)
 {
-  FILE *output_file;
-
   /* If no entry for this domain don't even create the file.  */
   if (mlp->nitems != 0)
     {
+      FILE *output_file;
+
       /* Determine whether mlp has plural entries.  */
       {
         bool has_plural;
@@ -724,6 +724,10 @@ strings, not in the untranslated strings\n")));
           }
       }
 
+      /* Support for "reproducible builds": Delete information that may vary
+         between builds in the same conditions.  */
+      message_list_delete_header_field (mlp, "POT-Creation-Date:");
+
       if (strcmp (domain_name, "-") == 0)
         {
           output_file = stdout;
@@ -740,15 +744,12 @@ strings, not in the untranslated strings\n")));
             }
         }
 
-      if (output_file != NULL)
-        {
-          write_qm (output_file, mlp);
+      write_qm (output_file, mlp);
 
-          /* Make sure nothing went wrong.  */
-          if (fwriteerror (output_file))
-            error (EXIT_FAILURE, errno, _("error while writing \"%s\" file"),
-                   file_name);
-        }
+      /* Make sure nothing went wrong.  */
+      if (fwriteerror (output_file))
+        error (EXIT_FAILURE, errno, _("error while writing \"%s\" file"),
+               file_name);
     }
 
   return 0;

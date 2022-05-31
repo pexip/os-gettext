@@ -1,5 +1,5 @@
 /* Implementation of the internal dcigettext function.
-   Copyright (C) 1995-2016 Free Software Foundation, Inc.
+   Copyright (C) 1995-2020 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published by
@@ -12,7 +12,7 @@
    GNU Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Tell glibc's <string.h> to provide a prototype for mempcpy().
    This must come before <config.h> because <config.h> may include
@@ -203,26 +203,12 @@ static void *mempcpy (void *dest, const void *src, size_t n);
 # define PATH_MAX _POSIX_PATH_MAX
 #endif
 
-/* Pathname support.
-   ISSLASH(C)           tests whether C is a directory separator character.
-   IS_ABSOLUTE_PATH(P)  tests whether P is an absolute path.  If it is not,
-                        it may be concatenated to a directory pathname.
-   IS_PATH_WITH_DIR(P)  tests whether P contains a directory specification.
- */
-#if defined _WIN32 || defined __WIN32__ || defined __CYGWIN__ || defined __EMX__ || defined __DJGPP__
-  /* Win32, Cygwin, OS/2, DOS */
-# define ISSLASH(C) ((C) == '/' || (C) == '\\')
-# define HAS_DEVICE(P) \
-    ((((P)[0] >= 'A' && (P)[0] <= 'Z') || ((P)[0] >= 'a' && (P)[0] <= 'z')) \
-     && (P)[1] == ':')
-# define IS_ABSOLUTE_PATH(P) (ISSLASH ((P)[0]) || HAS_DEVICE (P))
-# define IS_PATH_WITH_DIR(P) \
-    (strchr (P, '/') != NULL || strchr (P, '\\') != NULL || HAS_DEVICE (P))
+#ifdef _LIBC
+# define IS_ABSOLUTE_FILE_NAME(P) ((P)[0] == '/')
+# define IS_RELATIVE_FILE_NAME(P) (! IS_ABSOLUTE_FILE_NAME (P))
+# define IS_FILE_NAME_WITH_DIR(P) (strchr ((P), '/') != NULL)
 #else
-  /* Unix */
-# define ISSLASH(C) ((C) == '/')
-# define IS_ABSOLUTE_PATH(P) ISSLASH ((P)[0])
-# define IS_PATH_WITH_DIR(P) (strchr (P, '/') != NULL)
+# include "filename.h"
 #endif
 
 /* Whether to support different locales in different threads.  */
@@ -494,6 +480,9 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
   const char *categoryname;
   const char *categoryvalue;
   const char *dirname;
+#if defined _WIN32 && !defined __CYGWIN__
+  const wchar_t *wdirname;
+#endif
   char *xdomainname;
   char *single_locale;
   char *retval;
@@ -560,9 +549,10 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 #  endif
 # endif
   search.localename = localename;
-# ifdef IN_LIBGLOCALE
+#endif
+#ifdef IN_LIBGLOCALE
   search.encoding = encoding;
-# endif
+#endif
 
   /* Since tfind/tsearch manage a balanced tree, concurrent tfind and
      tsearch calls can be fatal.  */
@@ -588,7 +578,6 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
       __set_errno (saved_errno);
       return retval;
     }
-#endif
 
   /* See whether this is a SUID binary or not.  */
   DETERMINE_SECURE;
@@ -599,6 +588,9 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
      and _nl_load_domain and _nl_find_domain just pass it through.  */
   binding = NULL;
   dirname = bindtextdomain (domainname, NULL);
+# if defined _WIN32 && !defined __CYGWIN__
+  wdirname = wbindtextdomain (domainname, NULL);
+# endif
 #else
   for (binding = _nl_domain_bindings; binding != NULL; binding = binding->next)
     {
@@ -615,12 +607,80 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
     }
 
   if (binding == NULL)
-    dirname = _nl_default_dirname;
+    {
+      dirname = _nl_default_dirname;
+# if defined _WIN32 && !defined __CYGWIN__
+      wdirname = NULL;
+# endif
+    }
   else
     {
       dirname = binding->dirname;
+# if defined _WIN32 && !defined __CYGWIN__
+      wdirname = binding->wdirname;
+# endif
 #endif
-      if (!IS_ABSOLUTE_PATH (dirname))
+#if defined _WIN32 && !defined __CYGWIN__
+      if (wdirname != NULL
+	  ? IS_RELATIVE_FILE_NAME (wdirname)
+	  : IS_RELATIVE_FILE_NAME (dirname))
+	{
+	  /* We have a relative path.  Make it absolute now.  */
+	  size_t wdirname_len;
+	  size_t path_max;
+	  wchar_t *resolved_wdirname;
+	  wchar_t *ret;
+	  wchar_t *p;
+
+	  if (wdirname != NULL)
+	    wdirname_len = wcslen (wdirname);
+	  else
+	    {
+	      wdirname_len = mbstowcs (NULL, dirname, 0);
+
+	      if (wdirname_len == (size_t)(-1))
+		/* dirname contains invalid multibyte characters.  Don't signal
+		   an error but simply return the default string.  */
+		goto return_untranslated;
+	    }
+	  wdirname_len++;
+
+	  path_max = (unsigned int) PATH_MAX;
+	  path_max += 2;		/* The getcwd docs say to do this.  */
+
+	  for (;;)
+	    {
+	      resolved_wdirname =
+		(wchar_t *)
+		alloca ((path_max + wdirname_len) * sizeof (wchar_t));
+	      ADD_BLOCK (block_list, resolved_wdirname);
+
+	      __set_errno (0);
+	      ret = _wgetcwd (resolved_wdirname, path_max);
+	      if (ret != NULL || errno != ERANGE)
+		break;
+
+	      path_max += path_max / 2;
+	      path_max += PATH_INCR;
+	    }
+
+	  if (ret == NULL)
+	    /* We cannot get the current working directory.  Don't signal an
+	       error but simply return the default string.  */
+	    goto return_untranslated;
+
+	  p = wcschr (resolved_wdirname, L'\0');
+	  *p++ = L'/';
+	  if (wdirname != NULL)
+	    wcscpy (p, wdirname);
+	  else
+	    mbstowcs (p, dirname, wdirname_len);
+
+	  wdirname = resolved_wdirname;
+	  dirname = NULL;
+	}
+#else
+      if (IS_RELATIVE_FILE_NAME (dirname))
 	{
 	  /* We have a relative path.  Make it absolute now.  */
 	  size_t dirname_len = strlen (dirname) + 1;
@@ -634,7 +694,7 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 	  for (;;)
 	    {
 	      resolved_dirname = (char *) alloca (path_max + dirname_len);
-	      ADD_BLOCK (block_list, tmp_dirname);
+	      ADD_BLOCK (block_list, resolved_dirname);
 
 	      __set_errno (0);
 	      ret = getcwd (resolved_dirname, path_max);
@@ -653,6 +713,7 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 	  stpcpy (stpcpy (strchr (resolved_dirname, '\0'), "/"), dirname);
 	  dirname = resolved_dirname;
 	}
+#endif
 #ifndef IN_LIBGLOCALE
     }
 #endif
@@ -706,7 +767,7 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 
 	  /* When this is a SUID binary we must not allow accessing files
 	     outside the dedicated directories.  */
-	  if (ENABLE_SECURE && IS_PATH_WITH_DIR (single_locale))
+	  if (ENABLE_SECURE && IS_FILE_NAME_WITH_DIR (single_locale))
 	    /* Ingore this entry.  */
 	    continue;
 	}
@@ -719,7 +780,11 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 
       /* Find structure describing the message catalog matching the
 	 DOMAINNAME and CATEGORY.  */
-      domain = _nl_find_domain (dirname, single_locale, xdomainname, binding);
+      domain = _nl_find_domain (dirname,
+#if defined _WIN32 && !defined __CYGWIN__
+				wdirname,
+#endif
+				single_locale, xdomainname, binding);
 
       if (domain != NULL)
 	{
@@ -874,6 +939,13 @@ DCIGETTEXT (const char *domainname, const char *msgid1, const char *msgid2,
 	  : n == 1 ? (char *) msgid1 : (char *) msgid2);
 }
 
+
+/* This lock primarily protects the memory management variables freemem,
+   freemem_size.  It also protects write accesses to convd->conv_tab.
+   It's not worth using a separate lock (such as domain->conversions_lock)
+   for this purpose, because when modifying convd->conv_tab, we also need
+   to lock freemem, freemem_size for most of the time.  */
+__libc_lock_define_initialized (static, lock)
 
 /* Look up the translation of msgid within DOMAIN_FILE and DOMAINBINDING.
    Return it if found.  Return NULL if not found or in case of a conversion
@@ -1111,7 +1183,12 @@ _nl_find_msg (struct loaded_l10nfile *domain_file,
 	      /* Resource problems are fatal.  If we continue onwards we will
 	         only attempt to calloc a new conv_tab and fail later.  */
 	      if (__builtin_expect (nullentry == (char *) -1, 0))
-	        return (char *) -1;
+		{
+# ifndef IN_LIBGLOCALE
+		  free ((char *) encoding);
+# endif
+		  goto unlock_fail;
+		}
 
 	      if (nullentry != NULL)
 		{
@@ -1215,14 +1292,6 @@ _nl_find_msg (struct loaded_l10nfile *domain_file,
 	     are represented by consecutive NUL terminated strings.  We
 	     handle this case by converting RESULTLEN bytes, including
 	     NULs.  */
-
-	  /* This lock primarily protects the memory management variables
-	     freemem, freemem_size.  It also protects write accesses to
-	     convd->conv_tab.  It's not worth using a separate lock (such
-	     as domain->conversions_lock) for this purpose, because when
-	     modifying convd->conv_tab, we also need to lock freemem,
-	     freemem_size for most of the time.  */
-	  __libc_lock_define_initialized (static, lock)
 
 	  if (__builtin_expect (convd->conv_tab == NULL, 0))
 	    {
@@ -1510,8 +1579,9 @@ category_to_name (int category)
 }
 #endif
 
-/* Guess value of current locale from value of the environment variables
-   or system-dependent defaults.  */
+/* Lookup or infer the value of specified category in the current locale.
+   This uses values of the environment variables LC_ALL, LC_*, LANG, LANGUAGE,
+   and/or system-dependent defaults.  */
 static const char *
 internal_function
 #ifdef IN_LIBGLOCALE

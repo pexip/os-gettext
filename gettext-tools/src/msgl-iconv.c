@@ -1,5 +1,5 @@
 /* Message list charset and locale charset handling.
-   Copyright (C) 2001-2003, 2005-2009, 2015-2016 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2005-2009, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 
 #ifdef HAVE_CONFIG_H
@@ -32,8 +32,9 @@
 # include <iconv.h>
 #endif
 
+#include "noreturn.h"
 #include "progname.h"
-#include "basename.h"
+#include "basename-lgpl.h"
 #include "message.h"
 #include "po-charset.h"
 #include "xstriconv.h"
@@ -51,11 +52,7 @@
 
 #if HAVE_ICONV
 
-static void conversion_error (const struct conversion_context* context)
-#if defined __GNUC__ && ((__GNUC__ == 2 && __GNUC_MINOR__ >= 5) || __GNUC__ > 2)
-     __attribute__ ((noreturn))
-#endif
-;
+_GL_NORETURN_FUNC static void conversion_error (const struct conversion_context* context);
 static void
 conversion_error (const struct conversion_context* context)
 {
@@ -66,8 +63,7 @@ conversion_error (const struct conversion_context* context)
                           context->from_filename, context->from_code));
   else
     po_xerror (PO_SEVERITY_FATAL_ERROR, context->message, NULL, 0, 0, false,
-               xasprintf (_("\
-%s: error while converting from \"%s\" encoding to \"%s\" encoding"),
+               xasprintf (_("%s: error while converting from \"%s\" encoding to \"%s\" encoding"),
                           context->from_filename, context->from_code,
                           context->to_code));
   /* NOTREACHED */
@@ -244,8 +240,8 @@ iconv_message_list_internal (message_list_ty *mlp,
                           canon_charset = po_charset_ascii;
                         else
                           po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0,
-                                     false, xasprintf (_("\
-present charset \"%s\" is not a portable encoding name"),
+                                     false,
+                                     xasprintf (_("present charset \"%s\" is not a portable encoding name"),
                                                 charset));
                       }
                   }
@@ -256,8 +252,7 @@ present charset \"%s\" is not a portable encoding name"),
                     else if (canon_from_code != canon_charset)
                       po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0,  0,
                                  false,
-                                 xasprintf (_("\
-two different charsets \"%s\" and \"%s\" in input file"),
+                                 xasprintf (_("two different charsets \"%s\" and \"%s\" in input file"),
                                             canon_from_code, canon_charset));
                   }
                 freea (charset);
@@ -287,8 +282,7 @@ two different charsets \"%s\" and \"%s\" in input file"),
         canon_from_code = po_charset_ascii;
       else
         po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-                   _("\
-input file doesn't contain a header entry with a charset specification"));
+                   _("input file doesn't contain a header entry with a charset specification"));
     }
 
   msgids_changed = false;
@@ -302,11 +296,9 @@ input file doesn't contain a header entry with a charset specification"));
 
       if (iconveh_open (canon_to_code, canon_from_code, &cd) < 0)
         po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-                   xasprintf (_("\
-Cannot convert from \"%s\" to \"%s\". %s relies on iconv(), \
-and iconv() does not support this conversion."),
+                   xasprintf (_("Cannot convert from \"%s\" to \"%s\". %s relies on iconv(), and iconv() does not support this conversion."),
                               canon_from_code, canon_to_code,
-                              basename (program_name)));
+                              last_component (program_name)));
 
       context.from_code = canon_from_code;
       context.to_code = canon_to_code;
@@ -332,17 +324,13 @@ and iconv() does not support this conversion."),
       if (msgids_changed)
         if (message_list_msgids_changed (mlp))
           po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-                     xasprintf (_("\
-Conversion from \"%s\" to \"%s\" introduces duplicates: \
-some different msgids become equal."),
+                     xasprintf (_("Conversion from \"%s\" to \"%s\" introduces duplicates: some different msgids become equal."),
                                 canon_from_code, canon_to_code));
 #else
           po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-                     xasprintf (_("\
-Cannot convert from \"%s\" to \"%s\". %s relies on iconv(). \
-This version was built without iconv()."),
+                     xasprintf (_("Cannot convert from \"%s\" to \"%s\". %s relies on iconv(). This version was built without iconv()."),
                                 canon_from_code, canon_to_code,
-                                basename (program_name)));
+                                last_component (program_name)));
 #endif
     }
 
@@ -372,8 +360,7 @@ iconv_msgdomain_list (msgdomain_list_ty *mdlp,
   canon_to_code = po_charset_canonicalize (to_code);
   if (canon_to_code == NULL)
     po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-               xasprintf (_("\
-target charset \"%s\" is not a portable encoding name."),
+               xasprintf (_("target charset \"%s\" is not a portable encoding name."),
                           to_code));
 
   for (k = 0; k < mdlp->nitems; k++)

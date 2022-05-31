@@ -1,5 +1,5 @@
 /* Library functions for class autosprintf.
-   Copyright (C) 2002-2003, 2006, 2015-2016 Free Software Foundation, Inc.
+   Copyright (C) 2002-2003, 2006, 2018-2019 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2002.
 
    This program is free software: you can redistribute it and/or modify
@@ -13,7 +13,7 @@
    GNU Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
@@ -31,8 +31,22 @@
 #include "vasnprintf.c"
 #include "asnprintf.c"
 
+/* Define to the same symbols as in lib-asprintf.h.  */
+#define asprintf libasprintf_asprintf
+#define vasprintf libasprintf_vasprintf
+
 /* Define functions declared in "vasprintf.h".  */
 #include "vasprintf.c"
 #include "asprintf.c"
+
+/* Define the same functions also without the 'libasprintf_' prefix,
+   for binary backward-compatibility.
+   But don't redefine functions already defined by mingw.  */
+#if !(defined __MINGW32__ && __USE_MINGW_ANSI_STDIO)
+#undef asprintf
+#undef vasprintf
+#include "vasprintf.c"
+#include "asprintf.c"
+#endif
 
 #endif
