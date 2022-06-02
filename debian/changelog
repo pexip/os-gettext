@@ -1,3 +1,9 @@
+gettext (0.21-4pexip1) pexip; urgency=medium
+
+  * Initial bullseye build
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 02 Jun 2022 14:42:14 +0100
+
 gettext (0.21-4) unstable; urgency=medium
 
   * Drop versioned build-dependency on g++ as it holds in stable.
