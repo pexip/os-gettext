@@ -1,4 +1,4 @@
-#! /usr/bin/dh-exec --with-scripts=filter-build-profiles
+#! /usr/bin/dh-exec --with-scripts=filter-arch,filter-build-profiles
 
 # .la files are to be discarded per policy x.y.z;
 # .so files will be regenerated at install time
@@ -21,6 +21,11 @@ usr/share/doc/gettext/javadoc2/package-list
 # installed via maven-repo-helper to have proper symlinks
 usr/share/gettext/libintl.jar
 
-# not installed under nojava profile
+# The following two files are not installed:
+# A) If the architecture does not support Java
+# OR
+# B) If build profile "nojava" has been selected
+[hppa hurd-i386 kfreebsd-any] usr/share/gettext/gettext.jar
+[hppa hurd-i386 kfreebsd-any] usr/share/gettext/javaversion.class
 <nojava> usr/share/gettext/gettext.jar
 <nojava> usr/share/gettext/javaversion.class

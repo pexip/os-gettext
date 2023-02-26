@@ -1,4 +1,3 @@
-usr/share/info/gettext.info
-
 # should this be in libasprintf-dev instead?
 usr/share/info/autosprintf.info
+usr/share/info/gettext.info

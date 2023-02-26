@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@ --with elpa $(WITH_MAVEN)
+	dh $@ $(WITH_MAVEN)
 
 
 #
@@ -13,8 +13,10 @@ CONFIGURE_OPTIONS = \
   --disable-rpath \
   --without-emacs
 
-ifeq (,$(filter nojava,$(DEB_BUILD_PROFILES)))
-  WITH_MAVEN = --with maven-repo-helper
+ifneq (,$(filter maven-repo-helper,$(shell dh -l)))
+  ifeq (,$(filter nojava,$(DEB_BUILD_PROFILES)))
+    WITH_MAVEN = --with maven-repo-helper
+  endif
 endif
 
 # On emulated m68k and sh4 targets, OpenMP can cause lockups,

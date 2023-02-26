@@ -1,3 +1,72 @@
+gettext (0.21-12) unstable; urgency=medium
+
+  * Add debian/missing-sources/gettext-tools/m4/csharpexec-test.cs
+    which is the source for gettext-tools/m4/csharpexec-test.exe.
+    Reported by Bastien Roucariè. Thanks to Bruno Haible. Closes: #1031952.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 26 Feb 2023 16:20:00 +0100
+
+gettext (0.21-11) unstable; urgency=medium
+
+  * Use a common debian/watch file which is valid for most GNU packages.
+  * Set upstream metadata fields Name, Bug-Submit and Repository-Browse.
+  * Update lintian override to new format.
+  * Update standards version to 4.6.2.
+  * Trim trailing whitespace.
+  * Run wrap-and-sort.
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 31 Jan 2023 18:35:00 +0100
+
+gettext (0.21-10) unstable; urgency=medium
+
+  * Add support for recent Java versions up to Java 17.
+    Thanks to Adrian Bunk. Closes: #982526, #1012105.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 19 Nov 2022 12:50:00 +0100
+
+gettext (0.21-9) unstable; urgency=medium
+
+  * Really fix debian/not-installed file. Thanks to Jessica Clarke.
+
+ -- Santiago Vila <sanvila@debian.org>  Fri, 26 Aug 2022 14:00:00 +0200
+
+gettext (0.21-8) unstable; urgency=medium
+
+  * Fix debian/not-installed file. It was using filter logic in reverse
+    for non-Java architectures.
+
+ -- Santiago Vila <sanvila@debian.org>  Tue, 16 Aug 2022 13:35:00 +0200
+
+gettext (0.21-7) unstable; urgency=medium
+
+  * Restrict default-jdk and maven-repo-helper build dependencies to
+    architectures that support Java, and adjust debian/rules,
+    debian/gettext.install and debian/not-installed appropriately.
+    Based on a patch by Jessica Clarke. Closes: #981669, #982085.
+  * Drop outdated dependency on install-info. Closes: #1013201.
+
+ -- Santiago Vila <sanvila@debian.org>  Mon, 15 Aug 2022 22:50:00 +0200
+
+gettext (0.21-6) unstable; urgency=medium
+
+  * Remove unportable tests in perror and strerror_r.
+    Should fix FTBFS problem in armel, armhf and mipsel.
+    Patch by Paul Eggert. Reported by Florian Weimer here:
+    https://lists.gnu.org/r/bug-gnulib/2020-08/msg00220.html
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 26 Mar 2022 00:30:00 +0100
+
+gettext (0.21-5) unstable; urgency=medium
+
+  * Move dh-elpa to Build-Depends-Indep and change it to dh-sequence-elpa.
+    Remove explicit "--with elpa" options in debian/rules. Closes: #990039.
+    Thanks to Sebastien Bacher.
+  * Update test for changed libunistring line breaking behaviour.
+    Patch from Bruno Haible. Closes: #1005582.
+    Thanks to Sebastien Bacher.
+
+ -- Santiago Vila <sanvila@debian.org>  Fri, 25 Mar 2022 18:20:00 +0100
+
 gettext (0.21-4) unstable; urgency=medium
 
   * Drop versioned build-dependency on g++ as it holds in stable.
