@@ -7,7 +7,7 @@ Standards-Version: 4.5.1
 Build-Depends: debhelper-compat (= 13), dh-exec (>= 0.13), dh-elpa, bison, file, help2man, xz-utils, default-jdk <!nojava>, maven-repo-helper <!nojava>, libunistring-dev, libxml2-dev, groff
 Homepage: https://www.gnu.org/software/gettext/
 Rules-Requires-Root: no
-XS-Pexip-Upstream: http://deb.debian.org/debian/ bullseye
+XS-Pexip-Upstream: http://deb.debian.org/debian/ bookworm
 
 Package: gettext-base
 Section: utils
