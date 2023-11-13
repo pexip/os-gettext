@@ -1,0 +1,83 @@
+From: Adrian Bunk <bunk@debian.org>
+Date: Sat, 19 Nov 2022 11:47:07 +0200
+Subject: Add support for recent Java versions up to Java 17.
+Bug-Debian: https://bugs.debian.org/982526
+Bug-Debian: https://bugs.debian.org/1012105
+
+--- a/gettext-runtime/configure.ac
++++ b/gettext-runtime/configure.ac
+@@ -34,7 +34,7 @@
+ 
+ gt_JAVA_CHOICE
+ 
+-gt_JAVACOMP([1.5], [1.6])
++gt_JAVACOMP([1.7], [1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR" && test "$JAVA_CHOICE" != no; then
+   BUILDJAVA=yes
+--- a/gettext-tools/configure.ac
++++ b/gettext-tools/configure.ac
+@@ -35,7 +35,7 @@
+ gt_JAVA_CHOICE
+ 
+ gt_JAVAEXEC
+-gt_JAVACOMP([1.5])
++gt_JAVACOMP([1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR" && test "$JAVA_CHOICE" != no; then
+   BUILDJAVA=yes
+--- a/gettext-tools/examples/hello-java-awt/configure.ac
++++ b/gettext-tools/examples/hello-java-awt/configure.ac
+@@ -10,7 +10,7 @@
+ dnl Check whether we can execute Java programs.
+ gt_JAVAEXEC([TestAWT], [$srcdir/m4])
+ dnl Check whether we can build Java programs.
+-gt_JAVACOMP([1.5])
++gt_JAVACOMP([1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR"; then
+   BUILDJAVA=yes
+--- a/gettext-tools/examples/hello-java-qtjambi/configure.ac
++++ b/gettext-tools/examples/hello-java-qtjambi/configure.ac
+@@ -10,7 +10,7 @@
+ dnl Check whether we can execute Java programs.
+ gt_JAVAEXEC([Test15], [$srcdir/m4])
+ dnl Check whether we can build Java programs.
+-gt_JAVACOMP([1.5], [1.6])
++gt_JAVACOMP([1.7], [1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR"; then
+   BUILDJAVA=yes
+--- a/gettext-tools/examples/hello-java-swing/configure.ac
++++ b/gettext-tools/examples/hello-java-swing/configure.ac
+@@ -10,7 +10,7 @@
+ dnl Check whether we can execute Java programs.
+ gt_JAVAEXEC([TestAWT], [$srcdir/m4])
+ dnl Check whether we can build Java programs.
+-gt_JAVACOMP([1.5])
++gt_JAVACOMP([1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR"; then
+   BUILDJAVA=yes
+--- a/gettext-tools/examples/hello-java/configure.ac
++++ b/gettext-tools/examples/hello-java/configure.ac
+@@ -10,7 +10,7 @@
+ dnl Check whether we can execute Java programs.
+ gt_JAVAEXEC
+ dnl Check whether we can build Java programs.
+-gt_JAVACOMP([1.5])
++gt_JAVACOMP([1.7])
+ AC_CHECK_PROG([JAR], [jar], [jar])
+ if test -n "$HAVE_JAVACOMP" && test -n "$JAR"; then
+   BUILDJAVA=yes
+--- a/gettext-tools/src/write-java.c
++++ b/gettext-tools/src/write-java.c
+@@ -1208,7 +1208,7 @@
+      Java compilers create the class files in the source file's directory -
+      which is in a temporary directory in our case.  */
+   java_sources[0] = java_file_name;
+-  if (compile_java_class (java_sources, 1, NULL, 0, "1.5", "1.6", directory,
++  if (compile_java_class (java_sources, 1, NULL, 0, "1.7", "1.7", directory,
+                           true, false, true, verbose > 0))
+     {
+       if (!verbose)

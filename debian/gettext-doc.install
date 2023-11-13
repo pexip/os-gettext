@@ -1,9 +1,8 @@
 usr/share/doc/gettext/*.html
-usr/share/doc/gettext/csharpdoc/*.html
-usr/share/doc/gettext/javadoc2/*.html
-usr/share/doc/gettext/javadoc2/*.css
-usr/share/doc/gettext/javadoc2/gnu/gettext/*.html
 usr/share/doc/gettext/*.html
+usr/share/doc/gettext/csharpdoc/*.html
 usr/share/doc/gettext/examples/
-
+usr/share/doc/gettext/javadoc2/*.css
+usr/share/doc/gettext/javadoc2/*.html
+usr/share/doc/gettext/javadoc2/gnu/gettext/*.html
 usr/share/doc/libasprintf       usr/share/doc/gettext

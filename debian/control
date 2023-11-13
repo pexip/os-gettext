@@ -3,8 +3,19 @@ Section: devel
 Priority: optional
 Maintainer: Pexip AS <packaging@pexip.com>
 XSBC-Pexip-Original-Maintainer: Santiago Vila <sanvila@debian.org>
-Standards-Version: 4.5.1
-Build-Depends: debhelper-compat (= 13), dh-exec (>= 0.13), dh-elpa, bison, file, help2man, xz-utils, default-jdk <!nojava>, maven-repo-helper <!nojava>, libunistring-dev, libxml2-dev, groff
+Standards-Version: 4.6.2
+Build-Depends: bison,
+               debhelper-compat (= 13),
+               default-jdk [!hppa !hurd-i386 !kfreebsd-any] <!nojava>,
+               dh-exec (>= 0.13),
+               file,
+               groff,
+               help2man,
+               libunistring-dev,
+               libxml2-dev,
+               maven-repo-helper [!hppa !hurd-i386 !kfreebsd-any] <!nojava>,
+               xz-utils
+Build-Depends-Indep: dh-sequence-elpa
 Homepage: https://www.gnu.org/software/gettext/
 Rules-Requires-Root: no
 XS-Pexip-Upstream: http://deb.debian.org/debian/ bookworm
@@ -14,7 +25,7 @@ Section: utils
 Priority: standard
 Architecture: any
 Multi-Arch: foreign
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: GNU Internationalization utilities for the base system
  This package includes the gettext and ngettext programs which allow
  other packages to internationalize the messages given by shell scripts.
@@ -22,10 +33,10 @@ Description: GNU Internationalization utilities for the base system
 Package: gettext
 Architecture: any
 Multi-Arch: foreign
-Depends: ${shlibs:Depends}, ${misc:Depends}, gettext-base, dpkg (>= 1.15.4) | install-info
+Depends: gettext-base, ${misc:Depends}, ${shlibs:Depends}
 Recommends: curl | wget | lynx
 Breaks: autopoint (<= 0.17-11)
-Suggests: gettext-doc, autopoint, libasprintf-dev, libgettextpo-dev
+Suggests: autopoint, gettext-doc, libasprintf-dev, libgettextpo-dev
 Description: GNU Internationalization utilities
  Interesting for authors or maintainers of other packages or programs
  which they want to see internationalized.
@@ -33,7 +44,7 @@ Description: GNU Internationalization utilities
 Package: gettext-el
 Section: editors
 Architecture: all
-Depends: gettext, ${misc:Depends}, ${elpa:Depends}
+Depends: gettext, ${elpa:Depends}, ${misc:Depends}
 Enhances: emacs
 Description: Emacs mode for editing gettext .po files
  This package provides an Emacs major mode for editing .po files.
@@ -41,7 +52,7 @@ Description: Emacs mode for editing gettext .po files
 Package: gettext-doc
 Section: doc
 Architecture: all
-Depends: ${misc:Depends},
+Depends: ${misc:Depends}
 Description: Documentation for GNU gettext
  This package contains the HTML documentation for GNU gettext, as well as
  simple "hello world" examples in several programming languages.
@@ -63,7 +74,7 @@ Package: libgettextpo0
 Section: libs
 Architecture: any
 Multi-Arch: same
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Breaks: gettext (<< 0.18.1.1-6)
 Replaces: gettext (<< 0.18.1.1-6)
 Description: process PO files - shared library
@@ -74,7 +85,7 @@ Package: libasprintf0v5
 Section: libs
 Architecture: any
 Multi-Arch: same
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Breaks: gettext-base (<< 0.18.1.1-6), libasprintf0c2
 Replaces: gettext-base (<< 0.18.1.1-6), libasprintf0c2
 Description: use fprintf and friends in C++ - shared library

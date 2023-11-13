@@ -1,4 +1,4 @@
-#! /usr/bin/dh-exec --with-scripts=filter-build-profiles
+#! /usr/bin/dh-exec --with-scripts=filter-arch,filter-build-profiles
 
 usr/bin/gettextize
 usr/bin/msgattrib
@@ -34,8 +34,13 @@ usr/share/gettext/ABOUT-NLS
 usr/share/gettext/config.rpath
 usr/share/gettext/gettext.h
 usr/share/gettext/msgunfmt.tcl
-<!nojava> usr/share/gettext/gettext.jar usr/share/java
-<!nojava> usr/share/gettext/javaversion.class
+
+# The following two files are installed:
+# A) If the architecture supports Java
+# AND
+# B) If build profile "nojava" has not been selected
+[!hppa !hurd-i386 !kfreebsd-any] <!nojava> usr/share/gettext/gettext.jar usr/share/java
+[!hppa !hurd-i386 !kfreebsd-any] <!nojava> usr/share/gettext/javaversion.class
 
 usr/share/gettext/po/
 usr/share/gettext/projects/

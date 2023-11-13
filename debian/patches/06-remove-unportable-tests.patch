@@ -1,0 +1,27 @@
+From: Paul Eggert <eggert@cs.ucla.edu>
+Subject: perror, strerror_r: remove unportable tests
+
+--- a/gettext-tools/gnulib-tests/test-perror2.c
++++ b/gettext-tools/gnulib-tests/test-perror2.c
+@@ -79,9 +79,6 @@
+     errno = -5;
+     perror ("");
+     ASSERT (!ferror (stderr));
+-    ASSERT (msg1 == msg2 || msg1 == msg4 || STREQ (msg1, str1));
+-    ASSERT (msg2 == msg4 || STREQ (msg2, str2));
+-    ASSERT (msg3 == msg4 || STREQ (msg3, str3));
+     ASSERT (STREQ (msg4, str4));
+ 
+     free (str1);
+--- a/gettext-tools/gnulib-tests/test-strerror_r.c
++++ b/gettext-tools/gnulib-tests/test-strerror_r.c
+@@ -165,9 +165,6 @@
+ 
+     strerror_r (EACCES, buf, sizeof buf);
+     strerror_r (-5, buf, sizeof buf);
+-    ASSERT (msg1 == msg2 || msg1 == msg4 || STREQ (msg1, str1));
+-    ASSERT (msg2 == msg4 || STREQ (msg2, str2));
+-    ASSERT (msg3 == msg4 || STREQ (msg3, str3));
+     ASSERT (STREQ (msg4, str4));
+ 
+     free (str1);

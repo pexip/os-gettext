@@ -9,7 +9,7 @@ gettext: no-symbols-control-file usr/lib/*/preloadable_libintl.so
 # Likely a false positive; the build does use hardening flags at all stages
 # when compiling this module.
 #
-gettext: hardening-no-fortify-functions usr/lib/*/preloadable_libintl.so
+gettext: hardening-no-fortify-functions [usr/lib/*/preloadable_libintl.so]
 #
 # Not for use by other packages.
 #
@@ -19,4 +19,4 @@ gettext: no-symbols-control-file usr/lib/*/libgettextsrc-0.21.so
 # These files are not really documentation, and must be in their current locations
 # for some programs shipped in this package to work correctly.
 #
-gettext: package-contains-documentation-outside-usr-share-doc usr/share/gettext/projects/*/teams.html
+gettext: package-contains-documentation-outside-usr-share-doc [usr/share/gettext/projects/*/teams.html]
