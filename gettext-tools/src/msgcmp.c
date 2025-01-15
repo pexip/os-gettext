@@ -1,6 +1,5 @@
 /* GNU gettext - internationalization aids
-   Copyright (C) 1995-1998, 2000-2010, 2012, 2016, 2018-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    This file was written by Peter Miller <millerp@canb.auug.org.au>
 
    This program is free software: you can redistribute it and/or modify
@@ -27,20 +26,23 @@
 #include <stdlib.h>
 #include <locale.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "dir-list.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "message.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "read-po.h"
 #include "read-properties.h"
 #include "read-stringtable.h"
 #include "xmalloca.h"
+#include "po-xerror.h"
+#include "xerror-handler.h"
+#include "xvasprintf.h"
 #include "po-charset.h"
 #include "msgl-iconv.h"
 #include "msgl-fsearch.h"
@@ -104,6 +106,7 @@ main (int argc, char *argv[])
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -171,7 +174,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "1995-2020", "https://gnu.org/licenses/gpl.html");
+              "1995-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Peter Miller"));
       exit (EXIT_SUCCESS);
     }
@@ -323,14 +326,14 @@ match_domain (const char *fn1, const char *fn2,
           if (!include_untranslated && defmsg->msgstr[0] == '\0')
             {
               (*nerrors)++;
-              po_gram_error_at_line (&defmsg->pos,
-                                     _("this message is untranslated"));
+              po_xerror (PO_SEVERITY_ERROR, defmsg, NULL, 0, 0, false,
+                         _("this message is untranslated"));
             }
           else if (!include_fuzzies && defmsg->is_fuzzy && !is_header (defmsg))
             {
               (*nerrors)++;
-              po_gram_error_at_line (&defmsg->pos,
-                                     _("this message needs to be reviewed by the translator"));
+              po_xerror (PO_SEVERITY_ERROR, defmsg, NULL, 0, 0, false,
+                         _("this message needs to be reviewed by the translator"));
             }
           else
             defmsg->used = 1;
@@ -368,17 +371,18 @@ match_domain (const char *fn1, const char *fn2,
             defmsg = NULL;
           if (defmsg)
             {
-              po_gram_error_at_line (&refmsg->pos,
-                                     _("this message is used but not defined..."));
-              error_message_count--;
-              po_gram_error_at_line (&defmsg->pos,
-                                     _("...but this definition is similar"));
+              po_xerror2 (PO_SEVERITY_ERROR,
+                          refmsg, NULL, 0, 0, false,
+                          _("this message is used but not defined"),
+                          defmsg, NULL, 0, 0, false,
+                          _("but this definition is similar"));
               defmsg->used = 1;
             }
           else
-            po_gram_error_at_line (&refmsg->pos,
-                                   _("this message is used but not defined in %s"),
-                                   fn1);
+            po_xerror (PO_SEVERITY_ERROR, refmsg, NULL, 0, 0, false,
+                       xasprintf (
+                         _("this message is used but not defined in %s"),
+                         fn1));
         }
     }
 }
@@ -432,7 +436,8 @@ compare (const char *fn1, const char *fn2, catalog_input_format_ty input_syntax)
             }
         }
     if (was_utf8)
-      def = iconv_msgdomain_list (def, "UTF-8", true, fn1);
+      def = iconv_msgdomain_list (def, po_charset_utf8, true, fn1,
+                                  textmode_xerror_handler);
   }
 
   /* Determine canonicalized encoding name of the definitions now, after
@@ -545,8 +550,8 @@ compare (const char *fn1, const char *fn2, catalog_input_format_ty input_syntax)
           message_ty *defmsg = defmlp->item[j];
 
           if (!defmsg->used)
-            po_gram_error_at_line (&defmsg->pos,
-                                   _("warning: this message is not used"));
+            po_xerror (PO_SEVERITY_ERROR, defmsg, NULL, 0, 0, false,
+                       _("warning: this message is not used"));
         }
     }
 

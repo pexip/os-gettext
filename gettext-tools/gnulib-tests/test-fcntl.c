@@ -1,9 +1,9 @@
 /* Test of fcntl(2).
-   Copyright (C) 2009-2020 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -27,7 +27,6 @@ SIGNATURE_CHECK (fcntl, int, (int, int, ...));
 /* Helpers.  */
 #include <errno.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <unistd.h>
 
 #if defined _WIN32 && ! defined __CYGWIN__
@@ -45,9 +44,19 @@ SIGNATURE_CHECK (fcntl, int, (int, int, ...));
 #include "binary-io.h"
 #include "macros.h"
 
+/* Tell GCC not to warn about the specific edge cases tested here.  */
+#if _GL_GNUC_PREREQ (13, 0)
+# pragma GCC diagnostic ignored "-Wanalyzer-fd-leak"
+# pragma GCC diagnostic ignored "-Wanalyzer-va-arg-type-mismatch"
+#endif
+
 #if !O_BINARY
-# define setmode(f,m) zero ()
-static int zero (void) { return 0; }
+# define set_binary_mode my_set_binary_mode
+static int
+set_binary_mode (_GL_UNUSED int fd, _GL_UNUSED int mode)
+{
+  return 0;
+}
 #endif
 
 /* Return true if FD is open.  */
@@ -94,8 +103,8 @@ is_inheritable (int fd)
 static bool
 is_mode (int fd, int mode)
 {
-  int value = setmode (fd, O_BINARY);
-  setmode (fd, value);
+  int value = set_binary_mode (fd, O_BINARY);
+  set_binary_mode (fd, value);
   return mode == value;
 }
 
@@ -206,13 +215,18 @@ check_flags (void)
 # endif
 #endif
 
+    default:
       ;
     }
 }
 
 int
-main (void)
+main (int argc, _GL_UNUSED char *argv[])
 {
+  if (argc > 1)
+    /* child process */
+    return (is_open (10) ? 42 : 0);
+
   const char *file = "test-fcntl.tmp";
   int fd;
   int bad_fd = getdtablesize ();
@@ -271,7 +285,7 @@ main (void)
 
   /* For F_DUPFD*, check for correct inheritance, as well as
      preservation of text vs. binary.  */
-  setmode (fd, O_BINARY);
+  set_binary_mode (fd, O_BINARY);
   ASSERT (is_open (fd));
   ASSERT (!is_open (fd + 1));
   ASSERT (!is_open (fd + 2));
@@ -297,7 +311,7 @@ main (void)
   ASSERT (is_mode (fd + 2, O_BINARY));
   ASSERT (close (fd) == 0);
 
-  setmode (fd + 2, O_TEXT);
+  set_binary_mode (fd + 2, O_TEXT);
   ASSERT (fcntl (fd + 2, F_DUPFD, fd + 1) == fd + 1);
   ASSERT (!is_open (fd));
   ASSERT (is_open (fd + 1));
@@ -410,5 +424,23 @@ main (void)
   ASSERT (close (fd) == 0);
   ASSERT (unlink (file) == 0);
 
-  return 0;
+  /* Close file descriptors that may have been inherited from the parent
+     process and that would cause failures below.
+     Such file descriptors have been seen:
+       - with GNU make, when invoked as 'make -j N' with j > 1,
+       - in some versions of the KDE desktop environment,
+       - on NetBSD,
+       - in MacPorts with the "trace mode" enabled.
+   */
+  (void) close (10);
+
+  /* Test whether F_DUPFD_CLOEXEC is effective.  */
+  ASSERT (fcntl (1, F_DUPFD_CLOEXEC, 10) >= 0);
+  if (test_exit_status)
+    return test_exit_status;
+#if defined _WIN32 && !defined __CYGWIN__
+  return _execl ("./test-fcntl", "./test-fcntl", "child", NULL);
+#else
+  return execl ("./test-fcntl", "./test-fcntl", "child", NULL);
+#endif
 }

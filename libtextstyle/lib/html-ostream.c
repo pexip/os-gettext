@@ -5,7 +5,7 @@
 #endif
 #line 1 "html-ostream.oo.c"
 /* Output stream that produces HTML output.
-   Copyright (C) 2006-2009, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2009, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -177,7 +177,7 @@ html_ostream__write_mem (html_ostream_t stream, const void *data, size_t len)
             if (n > 0)
               {
                 memcpy (inbuffer + inbufcount, data, n);
-                data = (char *) data + n;
+                data = (const char *) data + n;
                 inbufcount += n;
                 len -= n;
               }
@@ -436,7 +436,23 @@ html_ostream_create (ostream_t destination)
   return stream;
 }
 
-#line 440 "html-ostream.c"
+/* Accessors.  */
+
+static ostream_t
+html_ostream__get_destination (html_ostream_t stream)
+{
+  return stream->destination;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_html_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, html_ostream);
+}
+
+#line 456 "html-ostream.c"
 
 const struct html_ostream_implementation html_ostream_vtable =
 {
@@ -451,6 +467,7 @@ const struct html_ostream_implementation html_ostream_vtable =
   html_ostream__get_hyperlink_ref,
   html_ostream__set_hyperlink_ref,
   html_ostream__flush_to_current_style,
+  html_ostream__get_destination,
 };
 
 #if !HAVE_INLINE
@@ -519,6 +536,14 @@ html_ostream_flush_to_current_style (html_ostream_t first_arg)
   const struct html_ostream_implementation *vtable =
     ((struct html_ostream_representation_header *) (struct html_ostream_representation *) first_arg)->vtable;
   vtable->flush_to_current_style (first_arg);
+}
+
+ostream_t
+html_ostream_get_destination (html_ostream_t first_arg)
+{
+  const struct html_ostream_implementation *vtable =
+    ((struct html_ostream_representation_header *) (struct html_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
 }
 
 #endif

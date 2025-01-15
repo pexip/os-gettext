@@ -1,5 +1,5 @@
 /* Test program, used by the intl-6 test.
-   Copyright (C) 2000, 2005, 2007, 2013, 2018, 2020 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2005, 2007, 2013, 2018, 2020, 2023 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -49,6 +49,16 @@ main (int argc, char *argv[])
   wchar_t *wdir;
   int ret;
 
+  /* Clean up environment.  */
+  unsetenv ("LANGUAGE");
+  unsetenv ("OUTPUT_CHARSET");
+
+  xsetenv ("LC_ALL", locale, 1);
+  if (setlocale (LC_ALL, "") == NULL)
+    setlocale (LC_ALL, "C");
+
+  /* Set up translation domain.  */
+
   wdir = (wchar_t *) malloc ((strlen (dir) + 1) * sizeof (wchar_t));
   mbstowcs (wdir, dir, strlen (dir) + 1);
 
@@ -64,15 +74,7 @@ main (int argc, char *argv[])
       exit (1);
     }
 
-  /* Clean up environment.  */
-  unsetenv ("LANGUAGE");
-  unsetenv ("OUTPUT_CHARSET");
-
   textdomain ("tstprog");
-
-  xsetenv ("LC_ALL", locale, 1);
-  if (setlocale (LC_ALL, "") == NULL)
-    setlocale (LC_ALL, "C");
 
 #if defined _WIN32 && !defined __CYGWIN__
   wbindtextdomain ("tstprog", wunicodedir);
@@ -80,6 +82,7 @@ main (int argc, char *argv[])
   bindtextdomain ("tstprog", unicodedir);
 #endif
 
+  /* Look up the translation.  */
   printf ("%s\n", gettext ("cheese"));
 
   /* Rename the directory back.  */

@@ -11,7 +11,6 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hello-c++-wxwidgets 0.19-rc1\n"
 "Report-Msgid-Bugs-To: bug-gettext@gnu.org\n"
-"POT-Creation-Date: 2020-07-27 01:11+0200\n"
 "PO-Revision-Date: 2014-05-10 16:34+0100\n"
 "Last-Translator: Leandro Regueiro <leandro.regueiro@gmail.com>\n"
 "Language-Team: Galician <proxecto@trasno.net>\n"
@@ -22,11 +21,11 @@ msgstr ""
 "X-Bugs: Report translation errors to the Language-Team address.\n"
 "Plural-Forms: nplurals=2; plural=(n!=1);\n"
 
-#: hello.cc:68
+#: hello.cc:73
 msgid "Hello, world!"
 msgstr "Ola, mundo!"
 
-#: hello.cc:71
+#: hello.cc:76
 #, c-format
 msgid "This program is running as process number %d."
 msgstr "Este programa estase executando como o proceso número %d."

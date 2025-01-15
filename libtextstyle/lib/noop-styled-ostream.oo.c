@@ -1,5 +1,5 @@
 /* Output stream with no-op styling.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2019.
 
    This program is free software: you can redistribute it and/or modify
@@ -120,4 +120,26 @@ noop_styled_ostream_create (ostream_t destination, bool pass_ownership)
   stream->hyperlink_id = NULL;
 
   return stream;
+}
+
+/* Accessors.  */
+
+static ostream_t
+noop_styled_ostream::get_destination (noop_styled_ostream_t stream)
+{
+  return stream->destination;
+}
+
+static bool
+noop_styled_ostream::is_owning_destination (noop_styled_ostream_t stream)
+{
+  return stream->own_destination;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_noop_styled_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, noop_styled_ostream);
 }

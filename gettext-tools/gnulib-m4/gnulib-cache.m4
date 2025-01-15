@@ -1,8 +1,8 @@
-# Copyright (C) 2002-2020 Free Software Foundation, Inc.
+# Copyright (C) 2002-2024 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
 # This file is distributed in the hope that it will be useful,
@@ -27,7 +27,8 @@
 
 
 # Specification in the form of a command-line invocation:
-# gnulib-tool --import --local-dir=gnulib-local \
+# gnulib-tool --import \
+#  --local-dir=gnulib-local \
 #  --lib=libgettextlib \
 #  --source-base=gnulib-lib \
 #  --m4-base=gnulib-m4 \
@@ -44,6 +45,9 @@
 #  --avoid=utime-tests \
 #  --avoid=utimens-tests \
 #  --avoid=utimensat-tests \
+#  --avoid=array-list-tests \
+#  --avoid=linked-list-tests \
+#  --avoid=linkedhash-list-tests \
 #  --avoid=unilbrk/u8-possible-linebreaks-tests \
 #  --avoid=unilbrk/ulc-width-linebreaks-tests \
 #  --avoid=unistr/u8-mbtouc-tests \
@@ -52,11 +56,14 @@
 #  alloca-opt \
 #  ansi-c++-opt \
 #  atexit \
+#  attribute \
 #  backupfile \
 #  basename-lgpl \
+#  bcp47 \
 #  binary-io \
 #  bison \
 #  bison-i18n \
+#  bool \
 #  byteswap \
 #  c-ctype \
 #  c-strcase \
@@ -65,27 +72,29 @@
 #  clean-temp \
 #  closedir \
 #  closeout \
-#  configmake \
 #  copy-file \
 #  csharpcomp \
 #  csharpcomp-script \
 #  csharpexec \
 #  csharpexec-script \
+#  cygpath \
 #  error \
 #  error-progname \
 #  execute \
 #  extensions \
 #  filename \
 #  findprog \
+#  flexmember \
 #  fnmatch \
 #  fopen \
+#  free-posix \
 #  fstrcmp \
 #  full-write \
 #  fwriteerror \
 #  gcd \
+#  getaddrinfo \
 #  getline \
 #  getopt-gnu \
-#  gettext \
 #  gettext-h \
 #  gettext-tools-misc \
 #  iconv \
@@ -98,11 +107,12 @@
 #  libunistring-optional \
 #  libxml \
 #  localcharset \
-#  locale \
+#  locale-h \
 #  localename \
 #  localtime \
 #  lock \
 #  malloc-posix \
+#  manywarnings \
 #  mbrtowc \
 #  mbsinit \
 #  mem-hash-map \
@@ -126,6 +136,7 @@
 #  relocatable-script \
 #  setlocale \
 #  setlocale-null \
+#  sf-istream \
 #  sh-filename \
 #  sh-quote \
 #  sigpipe \
@@ -135,30 +146,32 @@
 #  snippet/warn-on-use \
 #  spawn-pipe \
 #  ssize_t \
-#  stdbool \
-#  stddef \
-#  stdint \
-#  stdio \
-#  stdlib \
+#  stddef-h \
+#  stdint-h \
+#  stdio-h \
+#  stdlib-h \
 #  stpcpy \
 #  stpncpy \
 #  strchrnul \
 #  strcspn \
 #  streq \
 #  strerror \
+#  string-desc \
 #  strpbrk \
 #  strtol \
 #  strtoul \
 #  supersede \
-#  sys_select \
-#  sys_stat \
-#  sys_time \
+#  sys_select-h \
+#  sys_stat-h \
+#  sys_time-h \
 #  trim \
+#  unicase/u8-casefold \
 #  unictype/ctype-space \
 #  unictype/syntax-java-whitespace \
 #  unilbrk/ulc-width-linebreaks \
 #  uniname/uniname \
-#  unistd \
+#  uninorm/nfc \
+#  unistd-h \
 #  unistr/u16-mbtouc \
 #  unistr/u8-check \
 #  unistr/u8-mbtouc \
@@ -170,7 +183,7 @@
 #  vasprintf \
 #  verify \
 #  wait-process \
-#  wchar \
+#  wchar-h \
 #  wctype-h \
 #  windows-mutex \
 #  windows-once \
@@ -183,8 +196,11 @@
 #  xmalloca \
 #  xmemdup0 \
 #  xsetenv \
+#  xstrerror \
 #  xstriconv \
 #  xstriconveh \
+#  xstring-buffer \
+#  xstring-desc \
 #  xvasprintf
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
@@ -193,11 +209,14 @@ gl_MODULES([
   alloca-opt
   ansi-c++-opt
   atexit
+  attribute
   backupfile
   basename-lgpl
+  bcp47
   binary-io
   bison
   bison-i18n
+  bool
   byteswap
   c-ctype
   c-strcase
@@ -206,27 +225,29 @@ gl_MODULES([
   clean-temp
   closedir
   closeout
-  configmake
   copy-file
   csharpcomp
   csharpcomp-script
   csharpexec
   csharpexec-script
+  cygpath
   error
   error-progname
   execute
   extensions
   filename
   findprog
+  flexmember
   fnmatch
   fopen
+  free-posix
   fstrcmp
   full-write
   fwriteerror
   gcd
+  getaddrinfo
   getline
   getopt-gnu
-  gettext
   gettext-h
   gettext-tools-misc
   iconv
@@ -239,11 +260,12 @@ gl_MODULES([
   libunistring-optional
   libxml
   localcharset
-  locale
+  locale-h
   localename
   localtime
   lock
   malloc-posix
+  manywarnings
   mbrtowc
   mbsinit
   mem-hash-map
@@ -267,6 +289,7 @@ gl_MODULES([
   relocatable-script
   setlocale
   setlocale-null
+  sf-istream
   sh-filename
   sh-quote
   sigpipe
@@ -276,30 +299,32 @@ gl_MODULES([
   snippet/warn-on-use
   spawn-pipe
   ssize_t
-  stdbool
-  stddef
-  stdint
-  stdio
-  stdlib
+  stddef-h
+  stdint-h
+  stdio-h
+  stdlib-h
   stpcpy
   stpncpy
   strchrnul
   strcspn
   streq
   strerror
+  string-desc
   strpbrk
   strtol
   strtoul
   supersede
-  sys_select
-  sys_stat
-  sys_time
+  sys_select-h
+  sys_stat-h
+  sys_time-h
   trim
+  unicase/u8-casefold
   unictype/ctype-space
   unictype/syntax-java-whitespace
   unilbrk/ulc-width-linebreaks
   uniname/uniname
-  unistd
+  uninorm/nfc
+  unistd-h
   unistr/u16-mbtouc
   unistr/u8-check
   unistr/u8-mbtouc
@@ -311,7 +336,7 @@ gl_MODULES([
   vasprintf
   verify
   wait-process
-  wchar
+  wchar-h
   wctype-h
   windows-mutex
   windows-once
@@ -324,11 +349,14 @@ gl_MODULES([
   xmalloca
   xmemdup0
   xsetenv
+  xstrerror
   xstriconv
   xstriconveh
+  xstring-buffer
+  xstring-desc
   xvasprintf
 ])
-gl_AVOID([ fdutimensat-tests futimens-tests utime-tests utimens-tests utimensat-tests unilbrk/u8-possible-linebreaks-tests unilbrk/ulc-width-linebreaks-tests unistr/u8-mbtouc-tests unistr/u8-mbtouc-unsafe-tests uniwidth/width-tests])
+gl_AVOID([fdutimensat-tests futimens-tests utime-tests utimens-tests utimensat-tests array-list-tests linked-list-tests linkedhash-list-tests unilbrk/u8-possible-linebreaks-tests unilbrk/ulc-width-linebreaks-tests unistr/u8-mbtouc-tests unistr/u8-mbtouc-unsafe-tests uniwidth/width-tests])
 gl_SOURCE_BASE([gnulib-lib])
 gl_M4_BASE([gnulib-m4])
 gl_PO_BASE([])

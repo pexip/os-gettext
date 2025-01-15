@@ -1,0 +1,47 @@
+From: Bruno Haible <bruno@clisp.org>
+Subject: Fix a test failure when LC_ALL is set to a non-English locale.
+Origin: upstream, https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=commitdiff;h=9d7c69c51bfc55ea30efdce8fcb36c6483b85a7f
+Last-Update: 2025-01-08
+
+Reported by Simon Josefsson <simon@josefsson.org>
+in <https://lists.gnu.org/archive/html/bug-gettext/2025-01/msg00008.html>.
+
+* gettext-tools/tests/xgettext-its-2: When setting LC_MESSAGES, also unset
+LC_ALL.
+---
+ gettext-tools/tests/xgettext-its-2 | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+--- a/gettext-tools/tests/xgettext-its-2
++++ b/gettext-tools/tests/xgettext-its-2
+@@ -37,22 +37,26 @@
+ unset GETTEXTDATADIRS
+ unset XDG_DATA_DIRS
+ 
+-LC_MESSAGES=C ${XGETTEXT} -o /dev/null input.a 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
++LC_MESSAGES=C LC_ALL= \
++${XGETTEXT} -o /dev/null input.a 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
+ result=$?
+ test $result = 0 || Exit 1
+ 
+ GETTEXTDATADIR=a \
+-LC_MESSAGES=C ${XGETTEXT} -o /dev/null input.a 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
++LC_MESSAGES=C LC_ALL= \
++${XGETTEXT} -o /dev/null input.a 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
+ result=$?
+ test $result = 0 && Exit 1
+ 
+ GETTEXTDATADIRS=b:a \
+-LC_MESSAGES=C ${XGETTEXT} -o /dev/null input.b 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
++LC_MESSAGES=C LC_ALL= \
++${XGETTEXT} -o /dev/null input.b 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
+ result=$?
+ test $result = 0 && Exit 1
+ 
+ XDG_DATA_DIRS=xa \
+-LC_MESSAGES=C ${XGETTEXT} -o /dev/null input.xa 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
++LC_MESSAGES=C LC_ALL= \
++${XGETTEXT} -o /dev/null input.xa 2>&1 | grep 'is unknown; will try C' 2>&1 >/dev/null
+ result=$?
+ test $result = 0 && Exit 1
+ 

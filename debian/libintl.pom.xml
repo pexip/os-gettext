@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.gnu.gettext</groupId>
   <artifactId>libintl</artifactId>
-  <version>0.21</version>
+  <version>0.23.1</version>
   <packaging>jar</packaging>
   <properties>
     <debian.hasPackageVersion/>
-    <debian.originalVersion>0.21</debian.originalVersion>
+    <debian.originalVersion>0.23.1</debian.originalVersion>
     <debian.package>gettext-base</debian.package>
   </properties>
 </project>

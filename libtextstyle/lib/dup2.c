@@ -1,18 +1,18 @@
 /* Duplicate an open file descriptor to a specified file descriptor.
 
-   Copyright (C) 1999, 2004-2007, 2009-2020 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2004-2007, 2009-2024 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* written by Paul Eggert */
@@ -52,7 +52,7 @@ dup2_nothrow (int fd, int desired_fd)
 
   TRY_MSVC_INVAL
     {
-      result = dup2 (fd, desired_fd);
+      result = _dup2 (fd, desired_fd);
     }
   CATCH_MSVC_INVAL
     {
@@ -64,7 +64,7 @@ dup2_nothrow (int fd, int desired_fd)
   return result;
 }
 # else
-#  define dup2_nothrow dup2
+#  define dup2_nothrow _dup2
 # endif
 
 static int

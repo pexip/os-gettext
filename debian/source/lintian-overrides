@@ -1,0 +1,4 @@
+# The source is gettext-tools/doc/gettext.texi
+gettext source: source-is-missing [gettext-tools/doc/gettext_9.html]
+# It's not a Windows binary but a C# assembly
+gettext source: source-contains-prebuilt-windows-binary [gettext-tools/m4/csharpexec-test.exe]

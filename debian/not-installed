@@ -8,12 +8,20 @@ usr/lib/*/*.so
 # libgettextlib is internal use only
 usr/lib/*/libgettextlib.a
 
+# libgettextsrc is internal use only
+usr/lib/*/libgettextsrc.a
+
+# libtextstyle is internal use only
+usr/include/textstyle.h
+usr/include/textstyle/*
+usr/lib/*/libtextstyle.a
+
+# libtextstyle is internal use only, no documentation
+usr/share/doc/libtextstyle/*
+usr/share/info/libtextstyle.info
+
 # .elc files will be regenerated at install time
 usr/share/emacs/site-lisp/*.elc
-
-# usr/share/gettext/styles is used by libtextstyle, which has been
-# disabled, see #967028
-usr/share/gettext/styles/
 
 # not wanted by doc-base
 usr/share/doc/gettext/javadoc2/package-list
@@ -25,7 +33,7 @@ usr/share/gettext/libintl.jar
 # A) If the architecture does not support Java
 # OR
 # B) If build profile "nojava" has been selected
-[hppa hurd-i386 kfreebsd-any] usr/share/gettext/gettext.jar
-[hppa hurd-i386 kfreebsd-any] usr/share/gettext/javaversion.class
+[hppa hurd-any kfreebsd-any] usr/share/gettext/gettext.jar
+[hppa hurd-any kfreebsd-any] usr/share/gettext/javaversion.class
 <nojava> usr/share/gettext/gettext.jar
 <nojava> usr/share/gettext/javaversion.class

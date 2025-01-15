@@ -1,5 +1,5 @@
 /* Implementation of the bindtextdomain(3) function
-   Copyright (C) 1995-2020 Free Software Foundation, Inc.
+   Copyright (C) 1995-2023 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published by
@@ -31,18 +31,15 @@
 
 /* Handle multi-threaded applications.  */
 #ifdef _LIBC
-# include <bits/libc-lock.h>
+# include <libc-lock.h>
 # define gl_rwlock_define __libc_rwlock_define
 # define gl_rwlock_wrlock __libc_rwlock_wrlock
 # define gl_rwlock_unlock __libc_rwlock_unlock
 #else
-# include "lock.h"
+# include "glthread/lock.h"
 #endif
 
-/* Some compilers, like SunOS4 cc, don't have offsetof in <stddef.h>.  */
-#ifndef offsetof
-# define offsetof(type,ident) ((size_t)&(((type*)0)->ident))
-#endif
+#include "flexmember.h"
 
 /* @@ end of prolog @@ */
 
@@ -133,16 +130,7 @@ set_binding_values (const char *domainname,
 		  if (strcmp (dirname, _nl_default_dirname) == 0)
 		    result = (char *) _nl_default_dirname;
 		  else
-		    {
-#if defined _LIBC || defined HAVE_STRDUP
-		      result = strdup (dirname);
-#else
-		      size_t len = strlen (dirname) + 1;
-		      result = (char *) malloc (len);
-		      if (__builtin_expect (result != NULL, 1))
-			memcpy (result, dirname, len);
-#endif
-		    }
+		    result = strdup (dirname);
 
 		  if (__builtin_expect (result != NULL, 1))
 		    {
@@ -212,15 +200,7 @@ set_binding_values (const char *domainname,
 	      char *result = binding->codeset;
 	      if (result == NULL || strcmp (codeset, result) != 0)
 		{
-#if defined _LIBC || defined HAVE_STRDUP
 		  result = strdup (codeset);
-#else
-		  size_t len = strlen (codeset) + 1;
-		  result = (char *) malloc (len);
-		  if (__builtin_expect (result != NULL, 1))
-		    memcpy (result, codeset, len);
-#endif
-
 		  if (__builtin_expect (result != NULL, 1))
 		    {
 		      free (binding->codeset);
@@ -254,7 +234,9 @@ set_binding_values (const char *domainname,
       /* We have to create a new binding.  */
       size_t len = strlen (domainname) + 1;
       struct binding *new_binding =
-	(struct binding *) malloc (offsetof (struct binding, domainname) + len);
+	(struct binding *)
+	malloc (FLEXNSIZEOF (struct binding, domainname, len));
+
 
       if (__builtin_expect (new_binding == NULL, 0))
 	goto failed;
@@ -281,18 +263,9 @@ set_binding_values (const char *domainname,
 		dirname = _nl_default_dirname;
 	      else
 		{
-		  char *result;
-#if defined _LIBC || defined HAVE_STRDUP
-		  result = strdup (dirname);
+		  char *result = strdup (dirname);
 		  if (__builtin_expect (result == NULL, 0))
 		    goto failed_dirname;
-#else
-		  size_t len = strlen (dirname) + 1;
-		  result = (char *) malloc (len);
-		  if (__builtin_expect (result == NULL, 0))
-		    goto failed_dirname;
-		  memcpy (result, dirname, len);
-#endif
 		  dirname = result;
 		}
 	    }
@@ -335,19 +308,9 @@ set_binding_values (const char *domainname,
 
 	  if (codeset != NULL)
 	    {
-	      char *result;
-
-#if defined _LIBC || defined HAVE_STRDUP
-	      result = strdup (codeset);
+	      char *result = strdup (codeset);
 	      if (__builtin_expect (result == NULL, 0))
 		goto failed_codeset;
-#else
-	      size_t len = strlen (codeset) + 1;
-	      result = (char *) malloc (len);
-	      if (__builtin_expect (result == NULL, 0))
-		goto failed_codeset;
-	      memcpy (result, codeset, len);
-#endif
 	      codeset = result;
 	    }
 	  *codesetp = codeset;

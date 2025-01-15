@@ -1,18 +1,18 @@
 /* Sequential list data type implemented by a linked list.
-   Copyright (C) 2006-2020 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Common code of gl_linked_list.c and gl_linkedhash_list.c.  */
@@ -170,14 +170,14 @@ gl_linked_size (gl_list_t list)
 }
 
 static const void * _GL_ATTRIBUTE_PURE
-gl_linked_node_value (gl_list_t list _GL_ATTRIBUTE_MAYBE_UNUSED,
+gl_linked_node_value (_GL_ATTRIBUTE_MAYBE_UNUSED gl_list_t list,
                       gl_list_node_t node)
 {
   return node->value;
 }
 
 static int
-gl_linked_node_nx_set_value (gl_list_t list _GL_ATTRIBUTE_MAYBE_UNUSED,
+gl_linked_node_nx_set_value (_GL_ATTRIBUTE_MAYBE_UNUSED gl_list_t list,
                              gl_list_node_t node,
                              const void *elt)
 {
@@ -227,6 +227,24 @@ static gl_list_node_t _GL_ATTRIBUTE_PURE
 gl_linked_previous_node (gl_list_t list, gl_list_node_t node)
 {
   return (node->prev != &list->root ? node->prev : NULL);
+}
+
+static gl_list_node_t _GL_ATTRIBUTE_PURE
+gl_linked_first_node (gl_list_t list)
+{
+  if (list->count > 0)
+    return list->root.next;
+  else
+    return NULL;
+}
+
+static gl_list_node_t _GL_ATTRIBUTE_PURE
+gl_linked_last_node (gl_list_t list)
+{
+  if (list->count > 0)
+    return list->root.prev;
+  else
+    return NULL;
 }
 
 static const void * _GL_ATTRIBUTE_PURE
@@ -916,7 +934,7 @@ gl_linked_list_free (gl_list_t list)
 
 /* --------------------- gl_list_iterator_t Data Type --------------------- */
 
-static gl_list_iterator_t
+static gl_list_iterator_t _GL_ATTRIBUTE_PURE
 gl_linked_iterator (gl_list_t list)
 {
   gl_list_iterator_t result;
@@ -934,7 +952,7 @@ gl_linked_iterator (gl_list_t list)
   return result;
 }
 
-static gl_list_iterator_t
+static gl_list_iterator_t _GL_ATTRIBUTE_PURE
 gl_linked_iterator_from_to (gl_list_t list,
                             size_t start_index, size_t end_index)
 {
@@ -1023,7 +1041,7 @@ gl_linked_iterator_next (gl_list_iterator_t *iterator,
 }
 
 static void
-gl_linked_iterator_free (gl_list_iterator_t *iterator _GL_ATTRIBUTE_MAYBE_UNUSED)
+gl_linked_iterator_free (_GL_ATTRIBUTE_MAYBE_UNUSED gl_list_iterator_t *iterator)
 {
 }
 

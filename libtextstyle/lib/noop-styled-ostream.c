@@ -5,7 +5,7 @@
 #endif
 #line 1 "noop-styled-ostream.oo.c"
 /* Output stream with no-op styling.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2019.
 
    This program is free software: you can redistribute it and/or modify
@@ -129,7 +129,29 @@ noop_styled_ostream_create (ostream_t destination, bool pass_ownership)
   return stream;
 }
 
-#line 133 "noop-styled-ostream.c"
+/* Accessors.  */
+
+static ostream_t
+noop_styled_ostream__get_destination (noop_styled_ostream_t stream)
+{
+  return stream->destination;
+}
+
+static bool
+noop_styled_ostream__is_owning_destination (noop_styled_ostream_t stream)
+{
+  return stream->own_destination;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_noop_styled_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, noop_styled_ostream);
+}
+
+#line 155 "noop-styled-ostream.c"
 
 const struct noop_styled_ostream_implementation noop_styled_ostream_vtable =
 {
@@ -145,6 +167,8 @@ const struct noop_styled_ostream_implementation noop_styled_ostream_vtable =
   noop_styled_ostream__get_hyperlink_id,
   noop_styled_ostream__set_hyperlink,
   noop_styled_ostream__flush_to_current_style,
+  noop_styled_ostream__get_destination,
+  noop_styled_ostream__is_owning_destination,
 };
 
 #if !HAVE_INLINE
@@ -221,6 +245,22 @@ noop_styled_ostream_flush_to_current_style (noop_styled_ostream_t first_arg)
   const struct noop_styled_ostream_implementation *vtable =
     ((struct noop_styled_ostream_representation_header *) (struct noop_styled_ostream_representation *) first_arg)->vtable;
   vtable->flush_to_current_style (first_arg);
+}
+
+ostream_t
+noop_styled_ostream_get_destination (noop_styled_ostream_t first_arg)
+{
+  const struct noop_styled_ostream_implementation *vtable =
+    ((struct noop_styled_ostream_representation_header *) (struct noop_styled_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
+}
+
+bool
+noop_styled_ostream_is_owning_destination (noop_styled_ostream_t first_arg)
+{
+  const struct noop_styled_ostream_implementation *vtable =
+    ((struct noop_styled_ostream_representation_header *) (struct noop_styled_ostream_representation *) first_arg)->vtable;
+  return vtable->is_owning_destination (first_arg);
 }
 
 #endif

@@ -1,6 +1,5 @@
 /* msgunfmt - converts binary .mo files to Uniforum style .po files
-   Copyright (C) 1995-1998, 2000-2007, 2009-2010, 2012, 2016, 2018-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    Written by Ulrich Drepper <drepper@gnu.ai.mit.edu>, April 1995.
 
    This program is free software: you can redistribute it and/or modify
@@ -29,9 +28,9 @@
 
 #include <textstyle.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
@@ -47,6 +46,7 @@
 #include "write-po.h"
 #include "write-properties.h"
 #include "write-stringtable.h"
+#include "xerror-handler.h"
 #include "propername.h"
 #include "gettext.h"
 
@@ -132,6 +132,7 @@ main (int argc, char **argv)
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -262,7 +263,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "1995-2020", "https://gnu.org/licenses/gpl.html");
+              "1995-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Ulrich Drepper"));
       exit (EXIT_SUCCESS);
     }
@@ -406,7 +407,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
     msgdomain_list_sort_by_msgid (result);
 
   /* Write the resulting message list to the given .po file.  */
-  msgdomain_list_print (result, output_file, output_syntax, force_po, false);
+  msgdomain_list_print (result, output_file, output_syntax,
+                        textmode_xerror_handler, force_po, false);
 
   /* No problems.  */
   exit (EXIT_SUCCESS);

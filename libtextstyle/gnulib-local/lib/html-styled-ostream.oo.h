@@ -1,5 +1,5 @@
 /* Output stream for CSS styled text, producing HTML output.
-   Copyright (C) 2006 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,19 @@
 #ifndef _HTML_STYLED_OSTREAM_H
 #define _HTML_STYLED_OSTREAM_H
 
+#include <stdbool.h>
+
 #include "styled-ostream.h"
+#include "html-ostream.h"
 
 
 struct html_styled_ostream : struct styled_ostream
 {
 methods:
+  /* Accessors.  */
+  ostream_t      get_destination (html_styled_ostream_t stream);
+  html_ostream_t get_html_destination (html_styled_ostream_t stream);
+  const char *   get_css_filename (html_styled_ostream_t stream);
 };
 
 
@@ -39,6 +46,10 @@ extern "C" {
 extern html_styled_ostream_t
        html_styled_ostream_create (ostream_t destination,
                                    const char *css_filename);
+
+
+/* Test whether a given output stream is a html_styled_ostream.  */
+extern bool is_instance_of_html_styled_ostream (ostream_t stream);
 
 
 #ifdef __cplusplus

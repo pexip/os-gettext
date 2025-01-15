@@ -2,7 +2,7 @@
 
 #line 1 "iconv-ostream.oo.h"
 /* Output stream that converts the output to another encoding.
-   Copyright (C) 2006 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -24,10 +24,12 @@
 /* Note that this stream does not provide accurate error messages with line
    and column number when the conversion fails.  */
 
+#include <stdbool.h>
+
 #include "ostream.h"
 
 
-#line 31 "iconv-ostream.h"
+#line 33 "iconv-ostream.h"
 struct iconv_ostream_representation;
 /* iconv_ostream_t is defined as a pointer to struct iconv_ostream_representation.
    In C++ mode, we use a smart pointer class.
@@ -60,6 +62,9 @@ extern "C" {
 extern        void iconv_ostream_write_mem (iconv_ostream_t first_arg, const void *data, size_t len);
 extern         void iconv_ostream_flush (iconv_ostream_t first_arg, ostream_flush_scope_t scope);
 extern         void iconv_ostream_free (iconv_ostream_t first_arg);
+extern       const char * iconv_ostream_get_from_encoding (iconv_ostream_t first_arg);
+extern    const char * iconv_ostream_get_to_encoding (iconv_ostream_t first_arg);
+extern    ostream_t    iconv_ostream_get_destination (iconv_ostream_t first_arg);
 #ifdef __cplusplus
 }
 #endif
@@ -114,6 +119,33 @@ iconv_ostream_free (iconv_ostream_t first_arg)
   vtable->free (first_arg);
 }
 
+# define iconv_ostream_get_from_encoding iconv_ostream_get_from_encoding_inline
+static inline const char *
+iconv_ostream_get_from_encoding (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_from_encoding (first_arg);
+}
+
+# define iconv_ostream_get_to_encoding iconv_ostream_get_to_encoding_inline
+static inline const char *
+iconv_ostream_get_to_encoding (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_to_encoding (first_arg);
+}
+
+# define iconv_ostream_get_destination iconv_ostream_get_destination_inline
+static inline ostream_t
+iconv_ostream_get_destination (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
+}
+
 #endif
 
 extern const typeinfo_t iconv_ostream_typeinfo;
@@ -122,7 +154,7 @@ extern const typeinfo_t iconv_ostream_typeinfo;
 
 extern const struct iconv_ostream_implementation iconv_ostream_vtable;
 
-#line 31 "iconv-ostream.oo.h"
+#line 37 "iconv-ostream.oo.h"
 
 
 #ifdef __cplusplus
@@ -139,6 +171,10 @@ extern iconv_ostream_t iconv_ostream_create (const char *from_encoding,
                                              ostream_t destination);
 
 #endif /* HAVE_ICONV */
+
+
+/* Test whether a given output stream is an iconv_ostream.  */
+extern bool is_instance_of_iconv_ostream (ostream_t stream);
 
 
 #ifdef __cplusplus

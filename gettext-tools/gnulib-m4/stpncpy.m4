@@ -1,9 +1,11 @@
-# stpncpy.m4 serial 18
-dnl Copyright (C) 2002-2003, 2005-2007, 2009-2020 Free Software Foundation,
+# stpncpy.m4
+# serial 22
+dnl Copyright (C) 2002-2003, 2005-2007, 2009-2024 Free Software Foundation,
 dnl Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_FUNC_STPNCPY],
 [
@@ -15,7 +17,7 @@ AC_DEFUN([gl_FUNC_STPNCPY],
   dnl The stpncpy() declaration in lib/string.in.h uses 'restrict'.
   AC_REQUIRE([AC_C_RESTRICT])
 
-  AC_REQUIRE([gl_HEADER_STRING_H_DEFAULTS])
+  AC_REQUIRE([gl_STRING_H_DEFAULTS])
 
   dnl Both glibc and AIX (4.3.3, 5.1) have an stpncpy() function
   dnl declared in <string.h>. Its side effects are the same as those
@@ -28,7 +30,7 @@ AC_DEFUN([gl_FUNC_STPNCPY],
   dnl Only the glibc return value is useful in practice.
 
   AC_CHECK_DECLS_ONCE([stpncpy])
-  AC_CHECK_FUNCS_ONCE([stpncpy])
+  gl_CHECK_FUNCS_ANDROID([stpncpy], [[#include <string.h>]])
   if test $ac_cv_func_stpncpy = yes; then
     AC_CACHE_CHECK([for working stpncpy], [gl_cv_func_stpncpy], [
       AC_RUN_IFELSE(
@@ -79,8 +81,8 @@ int main ()
 #endif
 ],         [gl_cv_func_stpncpy="guessing yes"],
            [case "$host_os" in
-              *-musl*) gl_cv_func_stpncpy="guessing yes" ;;
-              *)       gl_cv_func_stpncpy="$gl_cross_guess_normal" ;;
+              *-musl* | midipix*) gl_cv_func_stpncpy="guessing yes" ;;
+              *)                  gl_cv_func_stpncpy="$gl_cross_guess_normal" ;;
             esac
            ])
         ])
@@ -96,6 +98,9 @@ int main ()
     esac
   else
     HAVE_STPNCPY=0
+    case "$gl_cv_onwards_func_stpncpy" in
+      future*) REPLACE_STPNCPY=1 ;;
+    esac
   fi
 ])
 

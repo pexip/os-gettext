@@ -1,10 +1,10 @@
 /* Shell quoting.
-   Copyright (C) 2001-2004, 2006, 2009-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2004, 2006, 2009-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -30,7 +30,7 @@ static struct quoting_options *sh_quoting_options;
 
 /* Initializes the sh_quoting_options variable.  */
 static void
-init_sh_quoting_options ()
+init_sh_quoting_options (void)
 {
   sh_quoting_options = clone_quoting_options (NULL);
   set_quoting_style (sh_quoting_options, shell_quoting_style);
@@ -69,11 +69,11 @@ shell_quote (const char *string)
 /* Returns a freshly allocated string containing all argument strings, quoted,
    separated through spaces.  */
 char *
-shell_quote_argv (char * const *argv)
+shell_quote_argv (const char * const *argv)
 {
   if (*argv != NULL)
     {
-      char * const *argp;
+      const char * const *argp;
       size_t length;
       char *command;
       char *p;

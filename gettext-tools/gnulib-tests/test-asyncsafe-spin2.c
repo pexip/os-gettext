@@ -1,9 +1,9 @@
 /* Test of spin locks for communication between threads and signal handlers.
-   Copyright (C) 2005, 2008-2020 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2008-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -36,7 +36,8 @@
 #define THREAD_COUNT 10
 
 /* Number of operations performed in each thread.  */
-#if !(defined _WIN32 && ! defined __CYGWIN__) && HAVE_PTHREAD_H && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined __ibmxl__
+#if !(defined _WIN32 && ! defined __CYGWIN__) && HAVE_PTHREAD_H && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1) || __clang_major__ >= 3) && !defined __ibmxl__
+
 /* The GCC built-ins are known to work fine.  */
 # define REPEAT_COUNT 5000
 #else
@@ -94,7 +95,7 @@ static int account[ACCOUNT_COUNT];
 static int
 random_account (void)
 {
-  return ((unsigned int) rand () >> 3) % ACCOUNT_COUNT;
+  return ((unsigned long) random () >> 3) % ACCOUNT_COUNT;
 }
 
 static void
@@ -134,7 +135,7 @@ lock_mutator_thread (void *arg)
 
       i1 = random_account ();
       i2 = random_account ();
-      value = ((unsigned int) rand () >> 3) % 10;
+      value = ((unsigned long) random () >> 3) % 10;
       account[i1] += value;
       account[i2] -= value;
 

@@ -3,6 +3,7 @@
 %:
 	dh $@ $(WITH_MAVEN)
 
+override_dh_autoreconf:
 
 #
 # Parameters to configure.
@@ -58,3 +59,6 @@ export DEB_VERSION_UPSTREAM
 # gettext-el has no test suite, but the package as a whole does have a
 # test suite, run by the normal dh_auto_test, that should not be skipped.
 export DH_ELPA_TEST_DISABLE=disable
+
+override_dh_auto_test:
+	dh_auto_test --max-parallel=1

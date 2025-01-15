@@ -1,17 +1,17 @@
 /* Work around platform bugs in localtime.
-   Copyright (C) 2017-2020 Free Software Foundation, Inc.
+   Copyright (C) 2017-2024 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
@@ -21,6 +21,9 @@
 
 #include <stdlib.h>
 #include <string.h>
+#if defined _WIN32 && ! defined __CYGWIN__
+# include <wchar.h>
+#endif
 
 #undef localtime
 
@@ -52,7 +55,28 @@ rpl_localtime (const time_t *tp)
      responsibility.  */
   const char *tz = getenv ("TZ");
   if (tz != NULL && strchr (tz, '/') != NULL)
-    _putenv ("TZ=");
+    {
+      /* Neutralize it, in a way that is multithread-safe.
+         (If we were to use _putenv ("TZ="), it would free the memory allocated
+         for the environment variable "TZ", and thus other threads that are
+         using the previously fetched value of getenv ("TZ") could crash.)  */
+      char **env = _environ;
+      wchar_t **wenv = _wenviron;
+      if (env != NULL)
+        for (char **ep = env; *ep != NULL; ep++)
+          {
+            char *s = *ep;
+            if (s[0] == 'T' && s[1] == 'Z' && s[2] == '=')
+              s[0] = '$';
+          }
+      if (wenv != NULL)
+        for (wchar_t **wep = wenv; *wep != NULL; wep++)
+          {
+            wchar_t *ws = *wep;
+            if (ws[0] == L'T' && ws[1] == L'Z' && ws[2] == L'=')
+              ws[0] = L'$';
+          }
+    }
 #endif
 
   return localtime (tp);

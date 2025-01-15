@@ -1,5 +1,5 @@
 /* Reading Java .properties files.
-   Copyright (C) 2003, 2005-2007, 2009, 2018, 2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -29,24 +29,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
-#include "error-progname.h"
+#include <error.h>
 #include "message.h"
 #include "read-catalog-abstract.h"
 #include "xalloc.h"
 #include "xvasprintf.h"
-#include "po-xerror.h"
+#include "string-buffer.h"
+#include "xstrerror.h"
+#include "xerror-handler.h"
 #include "msgl-ascii.h"
 #include "read-file.h"
 #include "unistr.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
-
-/* For compiling this file in C++ mode.  */
-#ifdef __cplusplus
-# define this thiss
-#endif
 
 
 /* The format of the Java .properties files is documented in the JDK
@@ -71,7 +67,7 @@
 static const char *real_file_name;
 
 /* File name and line number.  */
-extern lex_pos_ty gram_pos;
+static lex_pos_ty pos;
 
 /* The contents of the input file.  */
 static char *contents;
@@ -132,7 +128,7 @@ phase2_getc ()
     }
 
   if (c == '\n')
-    gram_pos.line_number++;
+    pos.line_number++;
 
   return c;
 }
@@ -141,7 +137,7 @@ static void
 phase2_ungetc (int c)
 {
   if (c == '\n')
-    --gram_pos.line_number;
+    --pos.line_number;
   if (c != EOF)
     phase2_pushback[phase2_pushback_length++] = c;
 }
@@ -313,10 +309,10 @@ conv_from_java (char *string)
 #define IS_UNICODE(p4_result) ((p4_result) >= 0x10000)
 
 /* Extract the UTF-16 code of a return value that satisfies IS_UNICODE.  */
-#define UTF16_VALUE(p4_result) ((p4_result) - 0x10000)
+#define UTF16_VALUE(p4_result) ((unsigned short) ((p4_result) - 0x10000))
 
 static int
-phase4_getuc ()
+phase4_getuc (abstract_catalog_reader_ty *catr)
 {
   int c = phase3_getc ();
 
@@ -352,9 +348,10 @@ phase4_getuc ()
               else
                 {
                   phase3_ungetc (c1);
-                  po_xerror (PO_SEVERITY_ERROR, NULL,
-                             real_file_name, gram_pos.line_number, (size_t)(-1),
-                             false, _("warning: invalid \\uxxxx syntax for Unicode character"));
+                  catr->xeh->xerror (CAT_SEVERITY_ERROR, NULL,
+                                     real_file_name, pos.line_number, (size_t)(-1),
+                                     false,
+                                     _("warning: invalid \\uxxxx syntax for Unicode character"));
                   return 'u';
                 }
             }
@@ -378,7 +375,7 @@ phase4_getuc ()
      - otherwise, if in_key is false, after the end of the logical line. */
 
 static char *
-read_escaped_string (bool in_key)
+read_escaped_string (abstract_catalog_reader_ty *catr, bool in_key)
 {
   /* The part of the string that has already been converted to UTF-8.  */
   static unsigned char *utf8_buffer;
@@ -423,11 +420,10 @@ read_escaped_string (bool in_key)
   #define utf8_buffer_append_lone_surrogate(uc, line) \
     do                                                                        \
       {                                                                       \
-        error_with_progname = false;                                          \
-        po_xerror (PO_SEVERITY_ERROR, NULL,                                   \
-                   real_file_name, (line), (size_t)(-1), false,               \
-                   xasprintf (_("warning: lone surrogate U+%04X"), (uc)));    \
-        error_with_progname = true;                                           \
+        catr->xeh->xerror (CAT_SEVERITY_ERROR, NULL,                          \
+                           real_file_name, (line), (size_t)(-1), false,       \
+                           xasprintf (_("warning: lone surrogate U+%04X"),    \
+                                      (uc)));                                 \
         utf8_buffer_ensure_available (3);                                     \
         utf8_buffer[utf8_buflen++] = 0xef;                                    \
         utf8_buffer[utf8_buflen++] = 0xbf;                                    \
@@ -467,7 +463,7 @@ read_escaped_string (bool in_key)
       phase3_ungetc (c);
 
       /* Read the next byte or UTF-16 code point.  */
-      c = phase4_getuc ();
+      c = phase4_getuc (catr);
       if (c == P4_EOF)
         break;
 
@@ -492,13 +488,10 @@ read_escaped_string (bool in_key)
               utf8_buffer_ensure_available (6);
               len = u8_uctomb (utf8_buffer + utf8_buflen, uc, 6);
               if (len < 0)
-                {
-                  error_with_progname = false;
-                  po_xerror (PO_SEVERITY_ERROR, NULL,
-                             real_file_name, gram_pos.line_number, (size_t)(-1),
-                             false, _("warning: invalid Unicode character"));
-                  error_with_progname = true;
-                }
+                catr->xeh->xerror (CAT_SEVERITY_ERROR, NULL,
+                                   real_file_name, pos.line_number, (size_t)(-1),
+                                   false,
+                                   _("warning: invalid Unicode character"));
               else
                 utf8_buflen += len;
 
@@ -515,10 +508,10 @@ read_escaped_string (bool in_key)
               if (c >= UNICODE (0xd800) && c < UNICODE (0xdc00))
                 {
                   utf16_surr = UTF16_VALUE (c);
-                  utf16_surr_line = gram_pos.line_number;
+                  utf16_surr_line = pos.line_number;
                 }
               else if (c >= UNICODE (0xdc00) && c < UNICODE (0xe000))
-                utf8_buffer_append_lone_surrogate (UTF16_VALUE (c), gram_pos.line_number);
+                utf8_buffer_append_lone_surrogate (UTF16_VALUE (c), pos.line_number);
               else
                 {
                   ucs4_t uc = UTF16_VALUE (c);
@@ -527,13 +520,10 @@ read_escaped_string (bool in_key)
                   utf8_buffer_ensure_available (3);
                   len = u8_uctomb (utf8_buffer + utf8_buflen, uc, 3);
                   if (len < 0)
-                    {
-                      error_with_progname = false;
-                      po_xerror (PO_SEVERITY_ERROR, NULL,
-                                 real_file_name, gram_pos.line_number, (size_t)(-1),
-                                 false, _("warning: invalid Unicode character"));
-                      error_with_progname = true;
-                    }
+                    catr->xeh->xerror (CAT_SEVERITY_ERROR, NULL,
+                                       real_file_name, pos.line_number, (size_t)(-1),
+                                       false,
+                                       _("warning: invalid Unicode character"));
                   else
                     utf8_buflen += len;
                 }
@@ -596,19 +586,19 @@ read_escaped_string (bool in_key)
 /* Read a .properties file from a stream, and dispatch to the various
    abstract_catalog_reader_class_ty methods.  */
 static void
-properties_parse (abstract_catalog_reader_ty *this, FILE *file,
-                  const char *real_filename, const char *logical_filename)
+properties_parse (abstract_catalog_reader_ty *catr, FILE *file,
+                  const char *real_filename, const char *logical_filename,
+                  bool is_pot_role)
 {
   /* Read the file into memory.  */
   contents = fread_file (file, 0, &contents_length);
   if (contents == NULL)
     {
-      const char *errno_description = strerror (errno);
-      po_xerror (PO_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
-                 xasprintf ("%s: %s",
-                            xasprintf (_("error while reading \"%s\""),
-                                       real_filename),
-                            errno_description));
+      int err = errno;
+      catr->xeh->xerror (CAT_SEVERITY_FATAL_ERROR, NULL, NULL, 0, 0, false,
+                         xstrerror (xasprintf (_("error while reading \"%s\""),
+                                               real_filename),
+                                    err));
       return;
     }
 
@@ -617,8 +607,8 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
 
   position = 0;
   real_file_name = real_filename;
-  gram_pos.file_name = xstrdup (real_file_name);
-  gram_pos.line_number = 1;
+  pos.file_name = xstrdup (real_file_name);
+  pos.line_number = 1;
 
   for (;;)
     {
@@ -652,31 +642,23 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
       if (comment)
         {
           /* A comment line.  */
-          static char *buffer;
-          static size_t bufmax;
-          static size_t buflen;
+          struct string_buffer buffer;
 
-          buflen = 0;
+          sb_init (&buffer);
           for (;;)
             {
               c = phase2_getc ();
-
-              if (buflen >= bufmax)
-                {
-                  bufmax += 100;
-                  buffer = xrealloc (buffer, bufmax);
-                }
-
               if (c == EOF || c == '\n')
                 break;
 
-              buffer[buflen++] = c;
+              sb_xappend1 (&buffer, c);
             }
-          buffer[buflen] = '\0';
+          char *contents = sb_xdupfree_c (&buffer);
 
-          po_callback_comment_dispatcher (
+          catalog_reader_seen_generic_comment (
+            catr,
             conv_from_java (
-              assume_utf8 ? buffer : conv_from_iso_8859_1 (buffer)));
+              assume_utf8 ? contents : conv_from_iso_8859_1 (contents)));
         }
       else
         {
@@ -684,8 +666,8 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
           char *msgid;
           lex_pos_ty msgid_pos;
 
-          msgid_pos = gram_pos;
-          msgid = read_escaped_string (true);
+          msgid_pos = pos;
+          msgid = read_escaped_string (catr, true);
           if (msgid == NULL)
             /* Skip blank line.  */
             ;
@@ -695,8 +677,8 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
               lex_pos_ty msgstr_pos;
               bool force_fuzzy;
 
-              msgstr_pos = gram_pos;
-              msgstr = read_escaped_string (false);
+              msgstr_pos = pos;
+              msgstr = read_escaped_string (catr, false);
               if (msgstr == NULL)
                 msgstr = xstrdup ("");
 
@@ -704,10 +686,11 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
                  and if it is not already header/fuzzy/untranslated.  */
               force_fuzzy = (hidden && msgid[0] != '\0' && msgstr[0] != '\0');
 
-              po_callback_message (NULL, msgid, &msgid_pos, NULL,
-                                   msgstr, strlen (msgstr) + 1, &msgstr_pos,
-                                   NULL, NULL, NULL,
-                                   force_fuzzy, false);
+              catalog_reader_seen_message (catr,
+                                           NULL, msgid, &msgid_pos, NULL,
+                                           msgstr, strlen (msgstr) + 1, &msgstr_pos,
+                                           NULL, NULL, NULL,
+                                           force_fuzzy, false);
             }
         }
     }
@@ -715,7 +698,7 @@ properties_parse (abstract_catalog_reader_ty *this, FILE *file,
   free (contents);
   contents = NULL;
   real_file_name = NULL;
-  gram_pos.line_number = 0;
+  pos.line_number = 0;
 }
 
 const struct catalog_input_format input_format_properties =

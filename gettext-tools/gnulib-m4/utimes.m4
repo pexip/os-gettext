@@ -1,10 +1,11 @@
 # Detect some bugs in glibc's implementation of utimes.
-# serial 7
+# serial 9
 
-dnl Copyright (C) 2003-2005, 2009-2020 Free Software Foundation, Inc.
+dnl Copyright (C) 2003-2005, 2009-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 # See if we need to work around bugs in glibc's implementation of
 # utimes from 2003-07-12 to 2003-09-17.
@@ -34,6 +35,7 @@ AC_DEFUN([gl_FUNC_UTIMES],
 #include <stdio.h>
 #include <utime.h>
 #include <errno.h>
+]GL_MDA_DEFINES[
 
 static int
 inorder (time_t a, time_t b, time_t c)
@@ -143,11 +145,11 @@ main ()
        [gl_cv_func_working_utimes=yes],
        [gl_cv_func_working_utimes=no],
        [case "$host_os" in
-                   # Guess yes on musl systems.
-          *-musl*) gl_cv_func_working_utimes="guessing yes" ;;
-                   # Guess no on native Windows.
-          mingw*)  gl_cv_func_working_utimes="guessing no" ;;
-          *)       gl_cv_func_working_utimes="$gl_cross_guess_normal" ;;
+                             # Guess yes on musl systems.
+          *-musl*)           gl_cv_func_working_utimes="guessing yes" ;;
+                             # Guess no on native Windows.
+          mingw* | windows*) gl_cv_func_working_utimes="guessing no" ;;
+          *)                 gl_cv_func_working_utimes="$gl_cross_guess_normal" ;;
         esac
        ])
     ])

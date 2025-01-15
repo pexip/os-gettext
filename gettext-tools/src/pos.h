@@ -1,5 +1,5 @@
 /* Source file positions.
-   Copyright (C) 1995-1998, 2000-2001 Free Software Foundation, Inc.
+   Copyright (C) 1995-1998, 2000-2001, 2021, 2023 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,13 +20,20 @@
 /* Get size_t.  */
 #include <stddef.h>
 
+/* Get bool.  */
+#include <stdbool.h>
+
 /* Position of a message within a source file.
    Used for error reporting purposes.  */
 typedef struct lex_pos_ty lex_pos_ty;
 struct lex_pos_ty
 {
-  char *file_name;
+  const char *file_name;
   size_t line_number;
 };
+
+/* Determines whether the file name in the position has spaces.
+   Such spaces need special protection in PO files and .properties files.  */
+extern bool pos_filename_has_spaces (const struct lex_pos_ty *pos);
 
 #endif /* _POS_H */

@@ -1,3 +1,36 @@
+Version 0.23 - December 2023
+
+* In the C.UTF-8 locale, like in the C locale, the *gettext() functions
+  now return the msgid untranslated. This is relevant for GNU systems,
+  Linux with musl libc, FreeBSD, NetBSD, OpenBSD, Cygwin, and Android.
+
+Version 0.22.5 - February 2024
+
+* The replacements for the printf()/fprintf()/... functions that are
+  provided through <libintl.h> on native Windows and NetBSD now enable
+  GCC's format string analysis (-Wformat).
+
+Version 0.22.3 - October 2023
+
+* Portability:
+  - The libintl library now works on macOS 14.  (Older versions of libintl
+    crash on macOS 14, due to an incompatible change in macOS.)
+
+Version 0.22.2 - September 2023
+
+* Bug fix:
+  - The libintl shared library now exports again some symbols that were
+    accidentally missing.
+    <https://savannah.gnu.org/bugs/index.php?64323>
+    This bug was introduced in version 0.22.
+
+Version 0.21.1 - October 2022
+
+* On AIX, locale names with a script or with an uppercase language are now
+  supported.
+  For example, sr_Cyrl_RS.UTF-8 is treated like sr_RS.UTF-8@cyrillic, and
+  EN_US.UTF-8 is treated like en_US.UTF-8.
+
 Version 0.21 - July 2020
 
 * On native Windows platforms, the directory that contains the message

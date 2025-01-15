@@ -1,6 +1,5 @@
 /* Converts Uniforum style .po files to binary .mo files
-   Copyright (C) 1995-1998, 2000-2007, 2009-2010, 2012, 2014-2016, 2018-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    Written by Ulrich Drepper <drepper@gnu.ai.mit.edu>, April 1995.
 
    This program is free software: you can redistribute it and/or modify
@@ -31,16 +30,17 @@
 #include <sys/stat.h>
 #include <assert.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "str-list.h"
 #include "dir-list.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "xerror.h"
+#include "xerror-handler.h"
 #include "xvasprintf.h"
 #include "xalloc.h"
 #include "msgfmt.h"
@@ -55,23 +55,23 @@
 #include "propername.h"
 #include "message.h"
 #include "open-catalog.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "read-po.h"
 #include "read-properties.h"
 #include "read-stringtable.h"
 #include "read-desktop.h"
+#include "po-xerror.h"
+#include "xerror-handler.h"
 #include "po-charset.h"
 #include "msgl-check.h"
 #include "msgl-iconv.h"
 #include "concat-filename.h"
 #include "its.h"
-#include "locating-rule.h"
+#include "locating-rules.h"
 #include "search-path.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
-
-#define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
 /* Contains exit status for case in which no premature exit occurs.  */
 static int exit_status;
@@ -120,6 +120,7 @@ static bool desktop_default_keywords = true;
 
 /* XML mode output file specification.  */
 static bool xml_mode;
+static bool xml_replace_text;
 static const char *xml_locale_name;
 static const char *xml_template_name;
 static const char *xml_base_directory;
@@ -195,13 +196,16 @@ static const struct option long_options[] =
   { "help", no_argument, NULL, 'h' },
   { "java", no_argument, NULL, 'j' },
   { "java2", no_argument, NULL, CHAR_MAX + 5 },
-  { "keyword", required_argument, NULL, 'k' },
+  { "keyword", optional_argument, NULL, 'k' },
   { "language", required_argument, NULL, 'L' },
   { "locale", required_argument, NULL, 'l' },
+  { "no-convert", no_argument, NULL, CHAR_MAX + 17 },
   { "no-hash", no_argument, NULL, CHAR_MAX + 6 },
+  { "no-redundancy", no_argument, NULL, CHAR_MAX + 18 },
   { "output-file", required_argument, NULL, 'o' },
   { "properties-input", no_argument, NULL, 'P' },
   { "qt", no_argument, NULL, CHAR_MAX + 9 },
+  { "replace-text", no_argument, NULL, CHAR_MAX + 19 },
   { "resource", required_argument, NULL, 'r' },
   { "source", no_argument, NULL, CHAR_MAX + 14 },
   { "statistics", no_argument, &do_statistics, 1 },
@@ -256,19 +260,21 @@ main (int argc, char *argv[])
   error_print_progname = maybe_print_progname;
   error_one_per_line = 1;
   exit_status = EXIT_SUCCESS;
+  gram_max_allowed_errors = 20;
 
   /* Set locale via LC_ALL.  */
   setlocale (LC_ALL, "");
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
   /* Ensure that write errors on stdout are detected.  */
   atexit (close_stdout);
 
-  while ((opt = getopt_long (argc, argv, "a:cCd:D:fhjl:L:o:Pr:vVx",
+  while ((opt = getopt_long (argc, argv, "a:cCd:D:fhjk::l:L:o:Pr:vVx",
                              long_options, NULL))
          != EOF)
     switch (opt)
@@ -312,16 +318,13 @@ main (int argc, char *argv[])
         java_mode = true;
         break;
       case 'k':
-        if (optarg == NULL)
+        if (optarg == NULL || *optarg == '\0')
           desktop_default_keywords = false;
         else
           {
+            /* Ensure that desktop_keywords is initialized.  */
             if (desktop_keywords.table == NULL)
-              {
-                hash_init (&desktop_keywords, 100);
-                desktop_default_keywords = false;
-              }
-
+              hash_init (&desktop_keywords, 100);
             desktop_add_keyword (&desktop_keywords, optarg, false);
           }
         break;
@@ -428,6 +431,15 @@ main (int argc, char *argv[])
         desktop_template_name = optarg;
         xml_template_name = optarg;
         break;
+      case CHAR_MAX + 17: /* --no-convert */
+        no_convert_to_utf8 = true;
+        break;
+      case CHAR_MAX + 18: /* --no-redundancy */
+        no_redundancy = true;
+        break;
+      case CHAR_MAX + 19: /* --replace-text */
+        xml_replace_text = true;
+        break;
       default:
         usage (EXIT_FAILURE);
         break;
@@ -444,7 +456,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "1995-2020", "https://gnu.org/licenses/gpl.html");
+              "1995-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Ulrich Drepper"));
       exit (EXIT_SUCCESS);
     }
@@ -502,6 +514,12 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                first_option, second_option);
       }
   }
+  if (!xml_mode && xml_replace_text)
+    {
+      error (EXIT_SUCCESS, 0, _("%s is only valid with %s"),
+             "--replace-text", "--xml");
+      usage (EXIT_FAILURE);
+    }
   if (java_mode)
     {
       if (output_file_name != NULL)
@@ -605,6 +623,10 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                  "--xml");
           usage (EXIT_FAILURE);
         }
+      if (xml_replace_text && xml_base_directory != NULL)
+        error (EXIT_FAILURE, 0,
+               _("%s and %s are mutually exclusive in %s"),
+               "--replace-text", "-d", "--xml");
       if (xml_base_directory != NULL && xml_locale_name != NULL)
         error (EXIT_FAILURE, 0,
                _("%s and %s are mutually exclusive in %s"),
@@ -639,11 +661,13 @@ There is NO WARRANTY, to the extent permitted by law.\n\
         }
     }
 
-  if (desktop_mode && desktop_default_keywords)
+  if (desktop_mode)
     {
+      /* Ensure that desktop_keywords is initialized.  */
       if (desktop_keywords.table == NULL)
         hash_init (&desktop_keywords, 100);
-      desktop_add_default_keywords (&desktop_keywords);
+      if (desktop_default_keywords)
+        desktop_add_default_keywords (&desktop_keywords);
     }
 
   /* Bulk processing mode for .desktop files.
@@ -654,8 +678,6 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                          desktop_template_name,
                                          &desktop_keywords,
                                          output_file_name);
-      if (desktop_keywords.table != NULL)
-        hash_destroy (&desktop_keywords);
       exit (exit_status);
     }
 
@@ -764,7 +786,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                             0, 0,
                             1, check_format_strings, check_header,
                             check_compatibility,
-                            check_accelerators, accelerator_char);
+                            check_accelerators, accelerator_char,
+                            textmode_xerror_handler);
 
     /* Exit with status 1 on any error.  */
     if (nerrors > 0)
@@ -775,6 +798,20 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                nerrors);
         exit_status = EXIT_FAILURE;
       }
+  }
+
+  /* Compose the input file name(s).
+     This is used for statistics and error messages.  */
+  char *all_input_file_names;
+  {
+    string_list_ty input_file_names;
+
+    string_list_init (&input_file_names);;
+    for (arg_i = optind; arg_i < argc; arg_i++)
+      string_list_append (&input_file_names, argv[arg_i]);
+    all_input_file_names =
+      string_list_join (&input_file_names, ", ", '\0', false);
+    string_list_destroy (&input_file_names);
   }
 
   /* Now write out all domains.  */
@@ -822,9 +859,6 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                        &desktop_keywords,
                                        domain->file_name))
             exit_status = EXIT_FAILURE;
-
-          if (desktop_keywords.table != NULL)
-            hash_destroy (&desktop_keywords);
         }
       else if (xml_mode)
         {
@@ -832,13 +866,14 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                    xml_locale_name,
                                    xml_template_name,
                                    xml_its_rules,
+                                   xml_replace_text,
                                    domain->file_name))
             exit_status = EXIT_FAILURE;
         }
       else
         {
           if (msgdomain_write_mo (domain->mlp, domain->domain_name,
-                                  domain->file_name))
+                                  domain->file_name, all_input_file_names))
             exit_status = EXIT_FAILURE;
         }
 
@@ -852,23 +887,9 @@ There is NO WARRANTY, to the extent permitted by law.\n\
       if (do_statistics + verbose >= 2 && optind < argc)
         {
           /* Print the input file name(s) in front of the statistics line.  */
-          char *all_input_file_names;
-
-          {
-            string_list_ty input_file_names;
-
-            string_list_init (&input_file_names);;
-            for (arg_i = optind; arg_i < argc; arg_i++)
-              string_list_append (&input_file_names, argv[arg_i]);
-            all_input_file_names =
-              string_list_join (&input_file_names, ", ", '\0', false);
-            string_list_destroy (&input_file_names);
-          }
-
           /* TRANSLATORS: The prefix before a statistics message.  The argument
              is a file name or a comma separated list of file names.  */
           fprintf (stderr, _("%s: "), all_input_file_names);
-          free (all_input_file_names);
         }
       fprintf (stderr,
                ngettext ("%d translated message", "%d translated messages",
@@ -1020,6 +1041,9 @@ XML mode options:\n"));
       printf (_("\
   -d DIRECTORY                base directory of .po files\n"));
       printf (_("\
+  --replace-text              output XML with translated text replacing the\n\
+                              original text, not augmenting the original text\n"));
+      printf (_("\
 The -l, -o, and --template options are mandatory.  If -D is specified, input\n\
 files are read from the directory instead of the command line arguments.\n"));
       printf ("\n");
@@ -1053,6 +1077,11 @@ Input file interpretation:\n"));
       printf ("\n");
       printf (_("\
 Output details:\n"));
+      printf (_("\
+      --no-convert            don't convert the messages to UTF-8 encoding\n"));
+      printf (_("\
+      --no-redundancy         don't pre-expand ISO C 99 <inttypes.h>\n\
+                                format string directive macros\n"));
       printf (_("\
   -a, --alignment=NUMBER      align strings to NUMBER bytes (default: %d)\n"), DEFAULT_OUTPUT_ALIGNMENT);
       printf (_("\
@@ -1159,35 +1188,36 @@ struct msgfmt_catalog_reader_ty
 
 /* Prepare for first message.  */
 static void
-msgfmt_constructor (abstract_catalog_reader_ty *that)
+msgfmt_constructor (abstract_catalog_reader_ty *catr)
 {
-  msgfmt_catalog_reader_ty *this = (msgfmt_catalog_reader_ty *) that;
+  msgfmt_catalog_reader_ty *mcatr = (msgfmt_catalog_reader_ty *) catr;
 
   /* Invoke superclass constructor.  */
-  default_constructor (that);
+  default_constructor (catr);
 
-  this->has_header_entry = false;
+  mcatr->has_header_entry = false;
 }
 
 
 /* Some checks after whole file is read.  */
 static void
-msgfmt_parse_debrief (abstract_catalog_reader_ty *that)
+msgfmt_parse_debrief (abstract_catalog_reader_ty *catr)
 {
-  msgfmt_catalog_reader_ty *this = (msgfmt_catalog_reader_ty *) that;
+  msgfmt_catalog_reader_ty *mcatr = (msgfmt_catalog_reader_ty *) catr;
 
   /* Invoke superclass method.  */
-  default_parse_debrief (that);
+  default_parse_debrief (catr);
 
   /* Test whether header entry was found.  */
   if (check_header)
     {
-      if (!this->has_header_entry)
+      if (!mcatr->has_header_entry)
         {
-          multiline_error (xasprintf ("%s: ", this->file_name),
-                           xasprintf (_("warning: PO file header missing or invalid\n")));
-          multiline_error (NULL,
-                           xasprintf (_("warning: charset conversion will not work\n")));
+          size_t prefix_width =
+            multiline_error (xasprintf ("%s: ", mcatr->file_name),
+                             xasprintf (_("warning: PO file header missing or invalid\n")));
+          multiline_append (prefix_width,
+                            xasprintf (_("warning: charset conversion will not work\n")));
         }
     }
 }
@@ -1195,7 +1225,8 @@ msgfmt_parse_debrief (abstract_catalog_reader_ty *that)
 
 /* Set 'domain' directive when seen in .po file.  */
 static void
-msgfmt_set_domain (default_catalog_reader_ty *this, char *name)
+msgfmt_set_domain (default_catalog_reader_ty *dcatr,
+                   char *name, lex_pos_ty *name_pos)
 {
   /* If no output file was given, we change it with each 'domain'
      directive.  */
@@ -1223,23 +1254,25 @@ msgfmt_set_domain (default_catalog_reader_ty *this, char *name)
 
       /* Set new domain.  */
       current_domain = new_domain (name, add_mo_suffix (name));
-      this->domain = current_domain->domain_name;
-      this->mlp = current_domain->mlp;
+      dcatr->domain = current_domain->domain_name;
+      dcatr->mlp = current_domain->mlp;
     }
   else
     {
       if (check_domain)
-        po_gram_error_at_line (&gram_pos,
-                               _("'domain %s' directive ignored"), name);
+        po_xerror (PO_SEVERITY_ERROR, NULL,
+                   name_pos->file_name, name_pos->line_number, (size_t)(-1),
+                   false,
+                   xasprintf (_("'domain %s' directive ignored"), name));
 
-      /* NAME was allocated in po-gram-gen.y but is not used anywhere.  */
+      /* NAME was allocated in read-po-gram.y but is not used anywhere.  */
       free (name);
     }
 }
 
 
 static void
-msgfmt_add_message (default_catalog_reader_ty *this,
+msgfmt_add_message (default_catalog_reader_ty *dcatr,
                     char *msgctxt,
                     char *msgid,
                     lex_pos_ty *msgid_pos,
@@ -1257,13 +1290,13 @@ msgfmt_add_message (default_catalog_reader_ty *this,
     {
       current_domain = new_domain (MESSAGE_DOMAIN_DEFAULT,
                                    add_mo_suffix (MESSAGE_DOMAIN_DEFAULT));
-      /* Keep current_domain and this->domain synchronized.  */
-      this->domain = current_domain->domain_name;
-      this->mlp = current_domain->mlp;
+      /* Keep current_domain and dcatr->domain synchronized.  */
+      dcatr->domain = current_domain->domain_name;
+      dcatr->mlp = current_domain->mlp;
     }
 
   /* Invoke superclass method.  */
-  default_add_message (this, msgctxt, msgid, msgid_pos, msgid_plural,
+  default_add_message (dcatr, msgctxt, msgid, msgid_pos, msgid_plural,
                        msgstr, msgstr_len, msgstr_pos,
                        prev_msgctxt, prev_msgid, prev_msgid_plural,
                        force_fuzzy, obsolete);
@@ -1271,11 +1304,11 @@ msgfmt_add_message (default_catalog_reader_ty *this,
 
 
 static void
-msgfmt_frob_new_message (default_catalog_reader_ty *that, message_ty *mp,
+msgfmt_frob_new_message (default_catalog_reader_ty *dcatr, message_ty *mp,
                          const lex_pos_ty *msgid_pos,
                          const lex_pos_ty *msgstr_pos)
 {
-  msgfmt_catalog_reader_ty *this = (msgfmt_catalog_reader_ty *) that;
+  msgfmt_catalog_reader_ty *mcatr = (msgfmt_catalog_reader_ty *) dcatr;
 
   if (!mp->obsolete)
     {
@@ -1308,7 +1341,7 @@ msgfmt_frob_new_message (default_catalog_reader_ty *that, message_ty *mp,
           /* Test for header entry.  */
           if (is_header (mp))
             {
-              this->has_header_entry = true;
+              mcatr->has_header_entry = true;
             }
           else
             /* We don't count the header entry in the statistic so place
@@ -1324,14 +1357,14 @@ msgfmt_frob_new_message (default_catalog_reader_ty *that, message_ty *mp,
 
 /* Test for '#, fuzzy' comments and warn.  */
 static void
-msgfmt_comment_special (abstract_catalog_reader_ty *that, const char *s)
+msgfmt_comment_special (abstract_catalog_reader_ty *catr, const char *s)
 {
-  msgfmt_catalog_reader_ty *this = (msgfmt_catalog_reader_ty *) that;
+  msgfmt_catalog_reader_ty *mcatr = (msgfmt_catalog_reader_ty *) catr;
 
   /* Invoke superclass method.  */
-  default_comment_special (that, s);
+  default_comment_special (catr, s);
 
-  if (this->is_fuzzy)
+  if (mcatr->is_fuzzy)
     {
       static bool warned = false;
 
@@ -1340,7 +1373,7 @@ msgfmt_comment_special (abstract_catalog_reader_ty *that, const char *s)
           warned = true;
           error (0, 0,
                  _("%s: warning: source file contains fuzzy translation"),
-                 gram_pos.file_name);
+                 mcatr->file_name);
         }
     }
 }
@@ -1379,26 +1412,27 @@ read_catalog_file_msgfmt (char *filename, catalog_input_format_ty input_syntax)
 {
   char *real_filename;
   FILE *fp = open_catalog_file (filename, &real_filename, true);
-  default_catalog_reader_ty *pop;
+  default_catalog_reader_ty *dcatr;
 
-  pop = default_catalog_reader_alloc (&msgfmt_methods);
-  pop->handle_comments = false;
-  pop->allow_domain_directives = true;
-  pop->allow_duplicates = false;
-  pop->allow_duplicates_if_same_msgstr = false;
-  pop->file_name = real_filename;
-  pop->mdlp = NULL;
-  pop->mlp = NULL;
+  dcatr = default_catalog_reader_alloc (&msgfmt_methods,
+                                        textmode_xerror_handler);
+  dcatr->pass_obsolete_entries = true;
+  dcatr->handle_comments = false;
+  dcatr->allow_domain_directives = true;
+  dcatr->allow_duplicates = false;
+  dcatr->allow_duplicates_if_same_msgstr = false;
+  dcatr->file_name = real_filename;
+  dcatr->mdlp = NULL;
+  dcatr->mlp = NULL;
   if (current_domain != NULL)
     {
-      /* Keep current_domain and this->domain synchronized.  */
-      pop->domain = current_domain->domain_name;
-      pop->mlp = current_domain->mlp;
+      /* Keep current_domain and dcatr->domain synchronized.  */
+      dcatr->domain = current_domain->domain_name;
+      dcatr->mlp = current_domain->mlp;
     }
-  po_lex_pass_obsolete_entries (true);
-  catalog_reader_parse ((abstract_catalog_reader_ty *) pop, fp, real_filename,
-                        filename, input_syntax);
-  catalog_reader_free ((abstract_catalog_reader_ty *) pop);
+  catalog_reader_parse ((abstract_catalog_reader_ty *) dcatr, fp, real_filename,
+                        filename, false, input_syntax);
+  catalog_reader_free ((abstract_catalog_reader_ty *) dcatr);
 
   if (fp != stdin)
     fclose (fp);
@@ -1408,12 +1442,12 @@ static void
 add_languages (string_list_ty *languages, string_list_ty *desired_languages,
                const char *line, size_t length)
 {
-  char *start;
+  const char *start;
 
   /* Split the line by whitespace and build the languages list.  */
-  for (start = (char *) line; start - line < length; )
+  for (start = line; start - line < length; )
     {
-      char *p;
+      const char *p;
 
       /* Skip whitespace before the string.  */
       while (*start == ' ' || *start == '\t')
@@ -1423,10 +1457,9 @@ add_languages (string_list_ty *languages, string_list_ty *desired_languages,
       while (*p != '\0' && *p != ' ' && *p != '\t')
         p++;
 
-      *p = '\0';
       if (desired_languages == NULL
-          || string_list_member (desired_languages, start))
-        string_list_append_unique (languages, start);
+          || string_list_member_desc (desired_languages, start, p - start))
+        string_list_append_unique_desc (languages, start, p - start);
       start = p + 1;
     }
 }
@@ -1597,7 +1630,8 @@ msgfmt_operand_list_add_from_directory (msgfmt_operand_list_ty *operands,
                             0, 0,
                             1, check_format_strings, check_header,
                             check_compatibility,
-                            check_accelerators, accelerator_char);
+                            check_accelerators, accelerator_char,
+                            textmode_xerror_handler);
 
       retval += nerrors;
       if (nerrors > 0)
@@ -1610,7 +1644,8 @@ msgfmt_operand_list_add_from_directory (msgfmt_operand_list_ty *operands,
         }
 
       /* Convert the messages to Unicode.  */
-      iconv_message_list (mlp, NULL, po_charset_utf8, NULL);
+      iconv_message_list (mlp, NULL, po_charset_utf8, NULL,
+                          textmode_xerror_handler);
 
       msgfmt_operand_list_append (operands, language, mlp);
     }
@@ -1639,16 +1674,13 @@ msgfmt_desktop_bulk (const char *directory,
   /* Read all .po files.  */
   nerrors = msgfmt_operand_list_add_from_directory (&operands, directory);
   if (nerrors > 0)
-    {
-      msgfmt_operand_list_destroy (&operands);
-      return 1;
-    }
-
-  /* Write the messages into .desktop file.  */
-  status = msgdomain_write_desktop_bulk (&operands,
-                                         template_file_name,
-                                         keywords,
-                                         file_name);
+    status = 1;
+  else
+    /* Write the messages into .desktop file.  */
+    status = msgdomain_write_desktop_bulk (&operands,
+                                           template_file_name,
+                                           keywords,
+                                           file_name);
 
   msgfmt_operand_list_destroy (&operands);
 
@@ -1682,6 +1714,7 @@ msgfmt_xml_bulk (const char *directory,
   status = msgdomain_write_xml_bulk (&operands,
                                      template_file_name,
                                      its_rules,
+                                     false,
                                      file_name);
 
   msgfmt_operand_list_destroy (&operands);

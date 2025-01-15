@@ -2,7 +2,7 @@
 
 #line 1 "memory-ostream.oo.h"
 /* Output stream that accumulates the output in memory.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -21,11 +21,12 @@
 #ifndef _MEMORY_OSTREAM_H
 #define _MEMORY_OSTREAM_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "ostream.h"
 
-#line 29 "memory-ostream.h"
+#line 30 "memory-ostream.h"
 struct memory_ostream_representation;
 /* memory_ostream_t is defined as a pointer to struct memory_ostream_representation.
    In C++ mode, we use a smart pointer class.
@@ -130,7 +131,7 @@ extern const typeinfo_t memory_ostream_typeinfo;
 
 extern const struct memory_ostream_implementation memory_ostream_vtable;
 
-#line 34 "memory-ostream.oo.h"
+#line 35 "memory-ostream.oo.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -139,6 +140,10 @@ extern "C" {
 
 /* Create an output stream that accumulates the output in a memory buffer.  */
 extern memory_ostream_t memory_ostream_create (void);
+
+
+/* Test whether a given output stream is a memory_ostream.  */
+extern bool is_instance_of_memory_ostream (ostream_t stream);
 
 
 #ifdef __cplusplus

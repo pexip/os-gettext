@@ -1,5 +1,5 @@
 /* GLIB - Library of useful routines for C programming
- * Copyright (C) 2006-2019 Free Software Foundation, Inc.
+ * Copyright (C) 2006-2023 Free Software Foundation, Inc.
  *
  * This file is not part of the GNU gettext program, but is used with
  * GNU gettext.
@@ -11,16 +11,16 @@
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
+ * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public
+ * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
@@ -372,7 +372,11 @@ g_ascii_strtod (const gchar *nptr,
   fail_pos = NULL;
 
   locale_data = localeconv ();
+#if HAVE_STRUCT_LCONV_DECIMAL_POINT
   decimal_point = locale_data->decimal_point;
+#else
+  decimal_point = ".";
+#endif
   decimal_point_len = strlen (decimal_point);
 
   g_assert (decimal_point_len != 0);
@@ -588,7 +592,11 @@ g_ascii_formatd (gchar       *buffer,
   _g_snprintf (buffer, buf_len, format, d);
 
   locale_data = localeconv ();
+#if HAVE_STRUCT_LCONV_DECIMAL_POINT
   decimal_point = locale_data->decimal_point;
+#else
+  decimal_point = ".";
+#endif
   decimal_point_len = strlen (decimal_point);
 
   g_assert (decimal_point_len != 0);
@@ -641,7 +649,7 @@ g_parse_long_long (const gchar *nptr,
 		   gboolean    *negative)
 {
   /* this code is based on on the strtol(3) code from GNU libc released under
-   * the GNU General Public License.
+   * the GNU Lesser General Public License.
    *
    * Copyright (C) 1991-1992, 1994-2002 Free Software Foundation, Inc.
    */

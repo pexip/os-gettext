@@ -1,17 +1,17 @@
 /* Substitution of parameters in strings from terminal descriptions.
-   Copyright (C) 2006, 2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Originally by Ross Ridge, Public Domain, 92/02/01 07:30:36 */
@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "attribute.h"
 #include "c-ctype.h"
 
 #ifdef USE_SCCS_IDS
@@ -175,16 +176,16 @@ cvtchar (const char *sp, char *c)
 /* sigh... this has got to be the ugliest code I've ever written.
    Trying to handle everything has its cost, I guess.
 
-   It actually isn't to hard to figure out if a given % code is supposed
-   to be interpeted with its termcap or terminfo meaning since almost
+   It actually isn't too hard to figure out if a given % code is supposed
+   to be interpreted with its termcap or terminfo meaning since almost
    all terminfo codes are invalid unless something has been pushed on
    the stack and termcap strings will never push things on the stack
    (%p isn't used by termcap). So where we have a choice we make the
-   decision by wether or not somthing has been pushed on the stack.
+   decision by whether or not something has been pushed on the stack.
    The static variable termcap keeps track of this; it starts out set
-   to 1 and is incremented as each argument processed by a termcap % code,
+   to 1 and is incremented for each argument processed for a termcap % code,
    however if something is pushed on the stack it's set to 0 and the
-   rest of the % codes are interpeted as terminfo % codes. Another way
+   rest of the % codes are interpreted as terminfo % codes. Another way
    of putting it is that if termcap equals one we haven't decided either
    way yet, if it equals zero we're looking for terminfo codes, and if
    its greater than 1 we're looking for termcap codes.
@@ -197,7 +198,7 @@ cvtchar (const char *sp, char *c)
         %c      output pop as a char
         %'c'    push character constant c.
         %{n}    push decimal constant n.
-        %p[1-9] push paramter [1-9]
+        %p[1-9] push parameter [1-9]
         %g[a-z] push variable [a-z]
         %P[a-z] put pop in variable [a-z]
         %l      push the length of pop (a string)
@@ -215,7 +216,7 @@ cvtchar (const char *sp, char *c)
         %O      logical or pop and pop and push the result
         %!      push the logical not of pop
         %? condition %t if_true [%e if_false] %;
-                if condtion evaulates as true then evaluate if_true,
+                if condition evaluates as true then evaluate if_true,
                 else evaluate if_false. elseif's can be done:
         %? cond %t true [%e cond2 %t true2] ... [%e condN %t trueN] [%e false] %;
         %i      add one to parameters 1 and 2. (ANSI)
@@ -235,7 +236,7 @@ cvtchar (const char *sp, char *c)
 (UW)    %sx     subtract parameter FROM the character x
         %>xy    if parameter > character x then add character y to parameter
         %B      convert to BCD (parameter = (parameter/10)*16 + parameter%16)
-        %D      Delta Data encode (parameter = parameter - 2*(paramter%16))
+        %D      Delta Data encode (parameter = parameter - 2*(parameter%16))
         %i      increment the first two parameters by one
         %n      xor the first two parameters by 0140
 (GNU)   %m      xor the first two parameters by 0177
@@ -259,7 +260,7 @@ tparm (const char *str, ...)
   static char buf[MAX_LINE];
   const char *sp;
   char *dp;
-  char *fmt;
+  const char *fmt;
   char scan_for;
   int scan_depth;
   int if_depth;
@@ -331,7 +332,7 @@ tparm (const char *str, ...)
                   sp++;
                   break;
                 }
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case 'C':
               if (*sp == 'C')
                 {
@@ -347,7 +348,7 @@ tparm (const char *str, ...)
                     }
                 }
               fmt = "%c";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case 'a':
               if (!termcap)
                 return OOPS;
@@ -415,7 +416,7 @@ tparm (const char *str, ...)
               if (fmt == NULL)
                 break;
               sp--;
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case '-':
               if (!termcap)
                 {
@@ -429,7 +430,7 @@ tparm (const char *str, ...)
                   break;
                 }
               fmt = "%c";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case 's':
               if (termcap && (fmt == NULL || *sp == '-'))
                 {
@@ -449,44 +450,45 @@ tparm (const char *str, ...)
                 }
               if (!termcap)
                 return OOPS;
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case '.':
               if (termcap && fmt == NULL)
                 fmt = "%c";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case 'd':
               if (termcap && fmt == NULL)
                 fmt = "%d";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case '2':
               if (termcap && fmt == NULL)
                 fmt = "%02d";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case '3':
               if (termcap && fmt == NULL)
                 fmt = "%03d";
-              /* FALLTHROUGH */
+              FALLTHROUGH;
             case ':': case ' ': case '#': case 'u':
             case 'x': case 'X': case 'o': case 'c':
             case '0': case '1': case '4': case '5':
             case '6': case '7': case '8': case '9':
               if (fmt == NULL)
                 {
+                  char *fmtp;
                   if (termcap)
                     return OOPS;
                   if (*sp == ':')
                     sp++;
-                  fmt = fmt_buf;
-                  *fmt++ = '%';
+                  fmtp = fmt_buf;
+                  *fmtp++ = '%';
                   while (*sp != 's' && *sp != 'x' && *sp != 'X' && *sp != 'd'
                          && *sp != 'o' && *sp != 'c' && *sp != 'u')
                     {
                       if (*sp == '\0')
                         return OOPS;
-                      *fmt++ = *sp++;
+                      *fmtp++ = *sp++;
                     }
-                  *fmt++ = *sp;
-                  *fmt = '\0';
+                  *fmtp++ = *sp;
+                  *fmtp = '\0';
                   fmt = fmt_buf;
                 }
               {

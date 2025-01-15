@@ -1,5 +1,5 @@
 /* PHP format strings.
-   Copyright (C) 2001-2004, 2006-2007, 2009, 2019-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2002.
 
    This program is free software: you can redistribute it and/or modify
@@ -31,9 +31,9 @@
 
 #define _(str) gettext (str)
 
-/* PHP format strings are described in phpdoc-4.0.6, file
-   phpdoc/manual/function.sprintf.html, and are implemented in
-   php-4.1.0/ext/standard/formatted_print.c.
+/* PHP format strings are described in
+   https://www.php.net/manual/en/function.sprintf.php, and are implemented in
+   php-8.1.0/ext/standard/formatted_print.c.
    A directive
    - starts with '%' or '%m$' where m is a positive integer,
    - is optionally followed by any of the characters '0', '-', ' ', or
@@ -46,7 +46,8 @@
    - is finished by a specifier
        - 's', that needs a string argument,
        - 'b', 'd', 'u', 'o', 'x', 'X', that need an integer argument,
-       - 'e', 'f', that need a floating-point argument,
+       - 'e', 'E', 'f', 'F', 'g', 'G', 'h', 'H', that need a floating-point
+         argument,
        - 'c', that needs a character argument.
    Additionally there is the directive '%%', which takes no argument.
    Numbered and unnumbered argument specifications can be used in the same
@@ -201,7 +202,8 @@ format_parse (const char *format, bool translated, char *fdi,
               case 'b': case 'd': case 'u': case 'o': case 'x': case 'X':
                 type = FAT_INTEGER;
                 break;
-              case 'e': case 'f':
+              case 'e': case 'E': case 'f': case 'F': case 'g': case 'G':
+              case 'h': case 'H':
                 type = FAT_FLOAT;
                 break;
               case 'c':
@@ -319,7 +321,7 @@ format_get_number_of_directives (void *descr)
 
 static bool
 format_check (void *msgid_descr, void *msgstr_descr, bool equality,
-              formatstring_error_logger_t error_logger,
+              formatstring_error_logger_t error_logger, void *error_logger_data,
               const char *pretty_msgid, const char *pretty_msgstr)
 {
   struct spec *spec1 = (struct spec *) msgid_descr;
@@ -332,7 +334,7 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
       unsigned int n1 = spec1->numbered_arg_count;
       unsigned int n2 = spec2->numbered_arg_count;
 
-      /* Check the argument names are the same.
+      /* Check that the argument numbers are the same.
          Both arrays are sorted.  We search for the first difference.  */
       for (i = 0, j = 0; i < n1 || j < n2; )
         {
@@ -345,7 +347,8 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
           if (cmp > 0)
             {
               if (error_logger)
-                error_logger (_("a format specification for argument %u, as in '%s', doesn't exist in '%s'"),
+                error_logger (error_logger_data,
+                              _("a format specification for argument %u, as in '%s', doesn't exist in '%s'"),
                               spec2->numbered[j].number, pretty_msgstr,
                               pretty_msgid);
               err = true;
@@ -356,7 +359,8 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
               if (equality)
                 {
                   if (error_logger)
-                    error_logger (_("a format specification for argument %u doesn't exist in '%s'"),
+                    error_logger (error_logger_data,
+                                  _("a format specification for argument %u doesn't exist in '%s'"),
                                   spec1->numbered[i].number, pretty_msgstr);
                   err = true;
                   break;
@@ -376,7 +380,8 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
                 if (spec1->numbered[i].type != spec2->numbered[j].type)
                   {
                     if (error_logger)
-                      error_logger (_("format specifications in '%s' and '%s' for argument %u are not the same"),
+                      error_logger (error_logger_data,
+                                    _("format specifications in '%s' and '%s' for argument %u are not the same"),
                                     pretty_msgid, pretty_msgstr,
                                     spec2->numbered[j].number);
                     err = true;

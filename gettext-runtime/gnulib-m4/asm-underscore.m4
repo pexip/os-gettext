@@ -1,8 +1,10 @@
-# asm-underscore.m4 serial 4
-dnl Copyright (C) 2010-2020 Free Software Foundation, Inc.
+# asm-underscore.m4
+# serial 5
+dnl Copyright (C) 2010-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 dnl From Bruno Haible. Based on as-underscore.m4 in GNU clisp.
 
@@ -63,8 +65,19 @@ AC_DEFUN([gl_C_ASM],
 MicrosoftCompiler
 #endif
     ],
-    [gl_asmext='asm'
-     gl_c_asm_opt='-c -Fa'
+    [dnl Microsoft's 'cl' and 'clang-cl' produce an .asm file, whereas 'clang'
+     dnl produces a .s file. Need to distinguish 'clang' and 'clang-cl'.
+     rm -f conftest*
+     echo 'int dummy;' > conftest.c
+     AC_TRY_COMMAND(${CC-cc} $CFLAGS $CPPFLAGS -c conftest.c) >/dev/null 2>&1
+     if test -f conftest.o; then
+       gl_asmext='s'
+       gl_c_asm_opt='-S'
+     else
+       gl_asmext='asm'
+       gl_c_asm_opt='-c -Fa'
+     fi
+     rm -f conftest*
     ],
     [gl_asmext='s'
      gl_c_asm_opt='-S'

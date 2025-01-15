@@ -1,8 +1,10 @@
-# memchr.m4 serial 16
-dnl Copyright (C) 2002-2004, 2009-2020 Free Software Foundation, Inc.
+# memchr.m4
+# serial 20
+dnl Copyright (C) 2002-2004, 2009-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
 [
@@ -13,7 +15,7 @@ AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
   AC_CHECK_HEADERS_ONCE([sys/mman.h])
   AC_CHECK_FUNCS_ONCE([mprotect])
 
-  AC_REQUIRE([gl_HEADER_STRING_H_DEFAULTS])
+  AC_REQUIRE([gl_STRING_H_DEFAULTS])
   # Detect platform-specific bugs in some versions of glibc:
   # memchr should not dereference anything with length 0
   #   https://bugzilla.redhat.com/show_bug.cgi?id=499689
@@ -48,7 +50,7 @@ AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
   if (fd >= 0)
 # endif
     {
-      int pagesize = getpagesize ();
+      long int pagesize = sysconf (_SC_PAGESIZE);
       char *two_pages =
         (char *) mmap (NULL, 2 * pagesize, PROT_READ | PROT_WRITE,
                        flags, fd, 0);
@@ -59,6 +61,7 @@ AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
 #endif
   if (fence)
     {
+      /* Test against bugs on glibc systems.  */
       if (memchr (fence, 0, 0))
         result |= 1;
       strcpy (fence - 9, "12345678");
@@ -66,6 +69,9 @@ AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
         result |= 2;
       if (memchr (fence - 1, 0, 3) != fence - 1)
         result |= 4;
+      /* Test against bug on AIX 7.2.  */
+      if (memchr (fence - 4, '6', 16) != fence - 4)
+        result |= 8;
     }
   /* Test against bug on Android 4.3.  */
   {
@@ -74,19 +80,19 @@ AC_DEFUN_ONCE([gl_FUNC_MEMCHR],
     input[1] = 'b';
     input[2] = 'c';
     if (memchr (input, 0x789abc00 | 'b', 3) != input + 1)
-      result |= 8;
+      result |= 16;
   }
   return result;
 ]])],
        [gl_cv_func_memchr_works=yes],
        [gl_cv_func_memchr_works=no],
        [case "$host_os" in
-                           # Guess no on Android.
-          linux*-android*) gl_cv_func_memchr_works="guessing no" ;;
-                           # Guess yes on native Windows.
-          mingw*)          gl_cv_func_memchr_works="guessing yes" ;;
-                           # If we don't know, obey --enable-cross-guesses.
-          *)               gl_cv_func_memchr_works="$gl_cross_guess_normal" ;;
+                             # Guess no on Android.
+          linux*-android*)   gl_cv_func_memchr_works="guessing no" ;;
+                             # Guess yes on native Windows.
+          mingw* | windows*) gl_cv_func_memchr_works="guessing yes" ;;
+                             # If we don't know, obey --enable-cross-guesses.
+          *)                 gl_cv_func_memchr_works="$gl_cross_guess_normal" ;;
         esac
        ])
     ])

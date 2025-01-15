@@ -1,5 +1,5 @@
 /* xgettext librep backend.
-   Copyright (C) 2001-2003, 2005-2009, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
 
    This file was written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error.h>
+#include "attribute.h"
 #include "c-ctype.h"
 #include "message.h"
 #include "xgettext.h"
@@ -38,7 +40,7 @@
 #include "xg-arglist-callshape.h"
 #include "xg-arglist-parser.h"
 #include "xg-message.h"
-#include "error.h"
+#include "if-error.h"
 #include "xalloc.h"
 #include "mem-hash-map.h"
 #include "gettext.h"
@@ -371,7 +373,7 @@ read_token (struct token *tp, const int *first)
                                 radix = 0;
                               break;
                             }
-                          /*FALLTHROUGH*/
+                          FALLTHROUGH;
                         default:
                           if (exponent && (c == '+' || c == '-'))
                             break;
@@ -506,8 +508,17 @@ string_of_object (const struct object *op)
   return str;
 }
 
+
 /* Context lookup table.  */
 static flag_context_list_table_ty *flag_context_list_table;
+
+
+/* Maximum supported nesting depth.  */
+#define MAX_NESTING_DEPTH 1000
+
+/* Current nesting depth.  */
+static int nesting_depth;
+
 
 /* Returns the character represented by an escape sequence.  */
 static int
@@ -587,15 +598,19 @@ do_getc_escaped (int c)
 
 /* Read the next object.  */
 static void
-read_object (struct object *op, flag_context_ty outer_context)
+read_object (struct object *op, flag_region_ty *outer_region)
 {
+  if (nesting_depth > MAX_NESTING_DEPTH)
+    if_error (IF_SEVERITY_FATAL_ERROR,
+              logical_file_name, line_number, (size_t)(-1), false,
+              _("too deeply nested objects"));
   for (;;)
     {
-      int c;
+      int ch;
 
-      c = do_getc ();
+      ch = do_getc ();
 
-      switch (c)
+      switch (ch)
         {
         case EOF:
           op->type = t_eof;
@@ -622,17 +637,19 @@ read_object (struct object *op, flag_context_ty outer_context)
             for (;; arg++)
               {
                 struct object inner;
-                flag_context_ty inner_context;
+                flag_region_ty *inner_region;
 
                 if (arg == 0)
-                  inner_context = null_context;
+                  inner_region = null_context_region ();
                 else
-                  inner_context =
-                    inherited_context (outer_context,
+                  inner_region =
+                    inheriting_region (outer_region,
                                        flag_context_list_iterator_advance (
                                          &context_iter));
 
-                read_object (&inner, inner_context);
+                ++nesting_depth;
+                read_object (&inner, inner_region);
+                nesting_depth--;
 
                 /* Recognize end of list.  */
                 if (inner.type == t_close)
@@ -642,6 +659,7 @@ read_object (struct object *op, flag_context_ty outer_context)
                     last_non_comment_line = line_number;
                     if (argparser != NULL)
                       arglist_parser_done (argparser, arg);
+                    unref_region (inner_region);
                     return;
                   }
 
@@ -691,13 +709,14 @@ read_object (struct object *op, flag_context_ty outer_context)
                                                      inner.line_number_at_start);
                         free (s);
                         arglist_parser_remember (argparser, arg, ms,
-                                                 inner_context,
+                                                 inner_region,
                                                  logical_file_name,
                                                  inner.line_number_at_start,
                                                  savable_comment, false);
                       }
                   }
 
+                unref_region (inner_region);
                 free_object (&inner);
               }
 
@@ -714,7 +733,9 @@ read_object (struct object *op, flag_context_ty outer_context)
               {
                 struct object inner;
 
-                read_object (&inner, null_context);
+                ++nesting_depth;
+                read_object (&inner, null_context_region ());
+                nesting_depth--;
 
                 /* Recognize end of vector.  */
                 if (inner.type == t_close)
@@ -752,13 +773,15 @@ read_object (struct object *op, flag_context_ty outer_context)
             if (c != EOF && c != '@')
               do_ungetc (c);
           }
-          /*FALLTHROUGH*/
+          FALLTHROUGH;
         case '\'':
         case '`':
           {
             struct object inner;
 
-            read_object (&inner, null_context);
+            ++nesting_depth;
+            read_object (&inner, null_context_region ());
+            nesting_depth--;
 
             /* Dots and EOF are not allowed here.  But be tolerant.  */
 
@@ -840,7 +863,7 @@ read_object (struct object *op, flag_context_ty outer_context)
                 pos.file_name = logical_file_name;
                 pos.line_number = op->line_number_at_start;
                 remember_a_message (mlp, NULL, string_of_object (op), false,
-                                    false, null_context, &pos,
+                                    false, null_context_region (), &pos,
                                     NULL, savable_comment, false);
               }
             last_non_comment_line = line_number;
@@ -848,57 +871,159 @@ read_object (struct object *op, flag_context_ty outer_context)
           }
 
         case '?':
-          c = do_getc ();
-          if (c == EOF)
-            /* Invalid input.  Be tolerant, no error message.  */
-            ;
-          else if (c == '\\')
-            {
-              c = do_getc ();
-              if (c == EOF)
-                /* Invalid input.  Be tolerant, no error message.  */
-                ;
-              else
-                {
-                  c = do_getc_escaped (c);
-                  if (c == EOF)
-                    /* Invalid input.  Be tolerant, no error message.  */
-                    ;
-                }
-            }
-          op->type = t_other;
-          last_non_comment_line = line_number;
-          return;
+          {
+            int c = do_getc ();
+            if (c == EOF)
+              /* Invalid input.  Be tolerant, no error message.  */
+              ;
+            else if (c == '\\')
+              {
+                c = do_getc ();
+                if (c == EOF)
+                  /* Invalid input.  Be tolerant, no error message.  */
+                  ;
+                else
+                  {
+                    c = do_getc_escaped (c);
+                    if (c == EOF)
+                      /* Invalid input.  Be tolerant, no error message.  */
+                      ;
+                  }
+              }
+            op->type = t_other;
+            last_non_comment_line = line_number;
+            return;
+          }
 
         case '#':
           /* Dispatch macro handling.  */
-          c = do_getc ();
-          if (c == EOF)
-            /* Invalid input.  Be tolerant, no error message.  */
-            {
-              op->type = t_other;
-              return;
-            }
+          {
+            int dmc = do_getc ();
+            if (dmc == EOF)
+              /* Invalid input.  Be tolerant, no error message.  */
+              {
+                op->type = t_other;
+                return;
+              }
 
-          switch (c)
-            {
-            case '!':
-              if (ftell (fp) == 2)
-                /* Skip comment until !# */
+            switch (dmc)
+              {
+              case '!':
+                if (ftell (fp) == 2)
+                  /* Skip comment until !# */
+                  {
+                    int c;
+
+                    c = do_getc ();
+                    for (;;)
+                      {
+                        if (c == EOF)
+                          break;
+                        if (c == '!')
+                          {
+                            c = do_getc ();
+                            if (c == EOF || c == '#')
+                              break;
+                          }
+                        else
+                          c = do_getc ();
+                      }
+                    if (c == EOF)
+                      {
+                        /* EOF not allowed here.  But be tolerant.  */
+                        op->type = t_eof;
+                        return;
+                      }
+                    continue;
+                  }
+                FALLTHROUGH;
+              case '\'':
+              case ':':
                 {
+                  struct object inner;
+                  ++nesting_depth;
+                  read_object (&inner, null_context_region ());
+                  nesting_depth--;
+                  /* Dots and EOF are not allowed here.
+                     But be tolerant.  */
+                  free_object (&inner);
+                  op->type = t_other;
+                  last_non_comment_line = line_number;
+                  return;
+                }
+
+              case '[':
+              case '(':
+                {
+                  struct object inner;
+                  do_ungetc (dmc);
+                  ++nesting_depth;
+                  read_object (&inner, null_context_region ());
+                  nesting_depth--;
+                  /* Dots and EOF are not allowed here.
+                     But be tolerant.  */
+                  free_object (&inner);
+                  op->type = t_other;
+                  last_non_comment_line = line_number;
+                  return;
+                }
+
+              case '|':
+                {
+                  int depth = 0;
+                  int c;
+
+                  comment_start ();
                   c = do_getc ();
                   for (;;)
                     {
                       if (c == EOF)
                         break;
-                      if (c == '!')
+                      if (c == '|')
                         {
                           c = do_getc ();
-                          if (c == EOF || c == '#')
+                          if (c == EOF)
                             break;
+                          if (c == '#')
+                            {
+                              if (depth == 0)
+                                {
+                                  comment_line_end (0);
+                                  break;
+                                }
+                              depth--;
+                              comment_add ('|');
+                              comment_add ('#');
+                              c = do_getc ();
+                            }
+                          else
+                            comment_add ('|');
+                        }
+                      else if (c == '#')
+                        {
+                          c = do_getc ();
+                          if (c == EOF)
+                            break;
+                          comment_add ('#');
+                          if (c == '|')
+                            {
+                              depth++;
+                              comment_add ('|');
+                              c = do_getc ();
+                            }
                         }
                       else
-                        c = do_getc ();
+                        {
+                          /* We skip all leading white space.  */
+                          if (!(buflen == 0 && (c == ' ' || c == '\t')))
+                            comment_add (c);
+                          if (c == '\n')
+                            {
+                              comment_line_end (1);
+                              comment_start ();
+                            }
+                          c = do_getc ();
+                        }
                     }
                   if (c == EOF)
                     {
@@ -906,145 +1031,57 @@ read_object (struct object *op, flag_context_ty outer_context)
                       op->type = t_eof;
                       return;
                     }
+                  last_comment_line = line_number;
                   continue;
                 }
-              /*FALLTHROUGH*/
-            case '\'':
-            case ':':
-              {
-                struct object inner;
-                read_object (&inner, null_context);
-                /* Dots and EOF are not allowed here.
-                   But be tolerant.  */
-                free_object (&inner);
+
+              case '\\':
+                {
+                  struct token token;
+                  int first = '\\';
+                  read_token (&token, &first);
+                  free_token (&token);
+                  op->type = t_other;
+                  last_non_comment_line = line_number;
+                  return;
+                }
+
+              case 'T': case 't':
+              case 'F': case 'f':
                 op->type = t_other;
                 last_non_comment_line = line_number;
                 return;
-              }
 
-            case '[':
-            case '(':
-              {
-                struct object inner;
-                do_ungetc (c);
-                read_object (&inner, null_context);
-                /* Dots and EOF are not allowed here.
-                   But be tolerant.  */
-                free_object (&inner);
-                op->type = t_other;
-                last_non_comment_line = line_number;
-                return;
-              }
-
-            case '|':
-              {
-                int depth = 0;
-
-                comment_start ();
-                c = do_getc ();
-                for (;;)
+              case 'B': case 'b':
+              case 'O': case 'o':
+              case 'D': case 'd':
+              case 'X': case 'x':
+              case 'E': case 'e':
+              case 'I': case 'i':
+                {
+                  struct token token;
+                  do_ungetc (dmc);
                   {
-                    if (c == EOF)
-                      break;
-                    if (c == '|')
-                      {
-                        c = do_getc ();
-                        if (c == EOF)
-                          break;
-                        if (c == '#')
-                          {
-                            if (depth == 0)
-                              {
-                                comment_line_end (0);
-                                break;
-                              }
-                            depth--;
-                            comment_add ('|');
-                            comment_add ('#');
-                            c = do_getc ();
-                          }
-                        else
-                          comment_add ('|');
-                      }
-                    else if (c == '#')
-                      {
-                        c = do_getc ();
-                        if (c == EOF)
-                          break;
-                        comment_add ('#');
-                        if (c == '|')
-                          {
-                            depth++;
-                            comment_add ('|');
-                            c = do_getc ();
-                          }
-                      }
-                    else
-                      {
-                        /* We skip all leading white space.  */
-                        if (!(buflen == 0 && (c == ' ' || c == '\t')))
-                          comment_add (c);
-                        if (c == '\n')
-                          {
-                            comment_line_end (1);
-                            comment_start ();
-                          }
-                        c = do_getc ();
-                      }
+                    int c;
+                    c = '#';
+                    read_token (&token, &c);
+                    free_token (&token);
                   }
-                if (c == EOF)
-                  {
-                    /* EOF not allowed here.  But be tolerant.  */
-                    op->type = t_eof;
-                    return;
-                  }
-                last_comment_line = line_number;
-                continue;
-              }
+                  op->type = t_other;
+                  last_non_comment_line = line_number;
+                  return;
+                }
 
-            case '\\':
-              {
-                struct token token;
-                int first = '\\';
-                read_token (&token, &first);
-                free_token (&token);
+              default:
+                /* Invalid input.  Be tolerant, no error message.  */
                 op->type = t_other;
                 last_non_comment_line = line_number;
                 return;
               }
 
-            case 'T': case 't':
-            case 'F': case 'f':
-              op->type = t_other;
-              last_non_comment_line = line_number;
-              return;
-
-            case 'B': case 'b':
-            case 'O': case 'o':
-            case 'D': case 'd':
-            case 'X': case 'x':
-            case 'E': case 'e':
-            case 'I': case 'i':
-              {
-                struct token token;
-                do_ungetc (c);
-                c = '#';
-                read_token (&token, &c);
-                free_token (&token);
-                op->type = t_other;
-                last_non_comment_line = line_number;
-                return;
-              }
-
-            default:
-              /* Invalid input.  Be tolerant, no error message.  */
-              op->type = t_other;
-              last_non_comment_line = line_number;
-              return;
-            }
-
-          /*NOTREACHED*/
-          abort ();
+            /*NOTREACHED*/
+            abort ();
+          }
 
         default:
           /* Read a token.  */
@@ -1052,7 +1089,7 @@ read_object (struct object *op, flag_context_ty outer_context)
             bool symbol;
 
             op->token = XMALLOC (struct token);
-            symbol = read_token (op->token, &c);
+            symbol = read_token (op->token, &ch);
             if (op->token->charcount == 1 && op->token->chars[0] == '.')
               {
                 free_token (op->token);
@@ -1070,27 +1107,29 @@ read_object (struct object *op, flag_context_ty outer_context)
                 return;
               }
             /* Distinguish between "foo" and "foo#bar".  */
-            c = do_getc ();
-            if (c == '#')
-              {
-                struct token second_token;
+            {
+              int c = do_getc ();
+              if (c == '#')
+                {
+                  struct token second_token;
 
-                free_token (op->token);
-                free (op->token);
-                read_token (&second_token, NULL);
-                free_token (&second_token);
-                op->type = t_other;
-                last_non_comment_line = line_number;
-                return;
-              }
-            else
-              {
-                if (c != EOF)
-                  do_ungetc (c);
-                op->type = t_symbol;
-                last_non_comment_line = line_number;
-                return;
-              }
+                  free_token (op->token);
+                  free (op->token);
+                  read_token (&second_token, NULL);
+                  free_token (&second_token);
+                  op->type = t_other;
+                  last_non_comment_line = line_number;
+                  return;
+                }
+              else
+                {
+                  if (c != EOF)
+                    do_ungetc (c);
+                  op->type = t_symbol;
+                  last_non_comment_line = line_number;
+                  return;
+                }
+            }
           }
         }
     }
@@ -1114,6 +1153,7 @@ extract_librep (FILE *f,
   last_non_comment_line = -1;
 
   flag_context_list_table = flag_table;
+  nesting_depth = 0;
 
   init_keywords ();
 
@@ -1123,7 +1163,7 @@ extract_librep (FILE *f,
     {
       struct object toplevel_object;
 
-      read_object (&toplevel_object, null_context);
+      read_object (&toplevel_object, null_context_region ());
 
       if (toplevel_object.type == t_eof)
         break;
