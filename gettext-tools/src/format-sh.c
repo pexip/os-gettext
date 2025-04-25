@@ -1,5 +1,5 @@
 /* Shell format strings.
-   Copyright (C) 2003-2004, 2006-2007, 2009, 2019-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2004, 2006-2007, 2009, 2019-2020, 2023 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -270,7 +270,7 @@ format_get_number_of_directives (void *descr)
 
 static bool
 format_check (void *msgid_descr, void *msgstr_descr, bool equality,
-              formatstring_error_logger_t error_logger,
+              formatstring_error_logger_t error_logger, void *error_logger_data,
               const char *pretty_msgid, const char *pretty_msgstr)
 {
   struct spec *spec1 = (struct spec *) msgid_descr;
@@ -283,7 +283,7 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
       unsigned int n1 = spec1->named_arg_count;
       unsigned int n2 = spec2->named_arg_count;
 
-      /* Check the argument names are the same.
+      /* Check that the argument names are the same.
          Both arrays are sorted.  We search for the first difference.  */
       for (i = 0, j = 0; i < n1 || j < n2; )
         {
@@ -294,7 +294,8 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
           if (cmp > 0)
             {
               if (error_logger)
-                error_logger (_("a format specification for argument '%s', as in '%s', doesn't exist in '%s'"),
+                error_logger (error_logger_data,
+                              _("a format specification for argument '%s', as in '%s', doesn't exist in '%s'"),
                               spec2->named[j].name, pretty_msgstr,
                               pretty_msgid);
               err = true;
@@ -305,7 +306,8 @@ format_check (void *msgid_descr, void *msgstr_descr, bool equality,
               if (equality)
                 {
                   if (error_logger)
-                    error_logger (_("a format specification for argument '%s' doesn't exist in '%s'"),
+                    error_logger (error_logger_data,
+                                  _("a format specification for argument '%s' doesn't exist in '%s'"),
                                   spec1->named[i].name, pretty_msgstr);
                   err = true;
                   break;

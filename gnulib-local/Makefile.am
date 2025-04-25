@@ -1,5 +1,5 @@
 ## Makefile for the gnulib-local directory of GNU gettext
-## Copyright (C) 2006-2008, 2010-2012, 2014-2020 Free Software Foundation, Inc.
+## Copyright (C) 2006-2024 Free Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -26,8 +26,7 @@ lib/backupfile.c \
 lib/backupfile.h \
 lib/closeout.c \
 lib/closeout.h \
-lib/diffseq.h.diff \
-lib/error.h.diff \
+lib/error.in.h.diff \
 lib/error-progname.c \
 lib/error-progname.h \
 lib/exitfail.h.diff \
@@ -145,19 +144,15 @@ lib/obstack.h.diff \
 lib/progname.h.diff \
 lib/regex_internal.h.diff \
 lib/unistd.in.h.diff \
-lib/xalloc.h \
 lib/xerror.c \
 lib/xerror.h \
-lib/xgetcwd.c \
-lib/xgetcwd.h \
-lib/xmalloc.c \
-lib/xstrdup.c \
 m4/backupfile.m4 \
 m4/java.m4 \
 m4/libxml.m4 \
 modules/backupfile \
 modules/closeout \
 modules/error-progname \
+modules/gettext-runtime-intl-misc \
 modules/gettext-runtime-misc \
 modules/gettext-tools-misc \
 modules/java \
@@ -165,10 +160,8 @@ modules/libtextstyle-dummy \
 modules/libxml \
 modules/markup \
 modules/mem-hash-map \
-modules/xalloc \
-modules/xalloc-die \
 modules/xerror \
-modules/xgetcwd
+modules/xgetcwd.diff
 
 # Extra files to be installed.
 

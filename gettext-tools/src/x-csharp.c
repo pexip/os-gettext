@@ -1,5 +1,5 @@
 /* xgettext C# backend.
-   Copyright (C) 2003-2009, 2011, 2014, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error.h>
+#include "attribute.h"
 #include "message.h"
 #include "rc-str-list.h"
 #include "xgettext.h"
@@ -39,8 +41,8 @@
 #include "xg-arglist-parser.h"
 #include "xg-message.h"
 #include "c-ctype.h"
-#include "error.h"
-#include "error-progname.h"
+#include "if-error.h"
+#include "xstrerror.h"
 #include "xalloc.h"
 #include "xerror.h"
 #include "xvasprintf.h"
@@ -54,7 +56,9 @@
 #define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
 
-/* The C# syntax is defined in ECMA-334, second edition.  */
+/* The C# syntax is defined in ECMA-334, second edition.
+   Strings with embedded expressions are defined in
+   <https://learn.microsoft.com/en-us/dotnet/csharp/how-to/concatenate-multiple-strings#string-interpolation>.  */
 
 
 /* ====================== Keyword set customization.  ====================== */
@@ -235,11 +239,14 @@ phase2_getc ()
          interactive behaviour when fp is connected to an interactive tty.  */
       unsigned char buf[MAX_PHASE1_PUSHBACK];
       size_t bufcount;
-      int c = phase1_getc ();
-      if (c == EOF)
-        return UEOF;
-      buf[0] = (unsigned char) c;
-      bufcount = 1;
+
+      {
+        int c = phase1_getc ();
+        if (c == EOF)
+          return UEOF;
+        buf[0] = (unsigned char) c;
+        bufcount = 1;
+      }
 
       for (;;)
         {
@@ -312,8 +319,9 @@ Please specify the correct source encoding through --from-code.\n"),
                   buf[bufcount++] = (unsigned char) c;
                 }
               else
-                error (EXIT_FAILURE, errno, _("%s:%d: iconv failure"),
-                       real_file_name, line_number);
+                if_error (IF_SEVERITY_FATAL_ERROR,
+                          real_file_name, line_number, (size_t)(-1), false,
+                          "%s", xstrerror (_("iconv failure"), errno));
             }
           else
             {
@@ -444,7 +452,7 @@ phase2_ungetc (int c)
 /* Line number defined in terms of phase3.  */
 static int logical_line_number;
 
-static int phase3_pushback[9];
+static int phase3_pushback[10];
 static int phase3_pushback_length;
 
 /* Read the next Unicode UCS-4 character from the input file, mapping
@@ -620,7 +628,7 @@ phase4_getc ()
                   comment_line_end (2);
                   break;
                 }
-              /* FALLTHROUGH */
+              FALLTHROUGH;
 
             default:
               last_was_star = false;
@@ -1247,6 +1255,10 @@ enum token_type_ty
   token_type_comma,             /* , */
   token_type_dot,               /* . */
   token_type_string_literal,    /* "abc", @"abc" */
+  token_type_template,          /* $"abc" */
+  token_type_ltemplate,         /* left part of template: $"abc{ */
+  token_type_mtemplate,         /* middle part of template: }abc{ */
+  token_type_rtemplate,         /* right part of template: }abc" */
   token_type_number,            /* 1.23 */
   token_type_symbol,            /* identifier, keyword, null */
   token_type_plus,              /* + */
@@ -1259,8 +1271,8 @@ struct token_ty
 {
   token_type_ty type;
   char *string;                         /* for token_type_symbol */
-  mixed_string_ty *mixed_string;        /* for token_type_string_literal */
-  refcounted_string_list_ty *comment;   /* for token_type_string_literal */
+  mixed_string_ty *mixed_string;        /* for token_type_string_literal, token_type_template */
+  refcounted_string_list_ty *comment;   /* for token_type_string_literal, token_type_template */
   int line_number;
   int logical_line_number;
 };
@@ -1272,7 +1284,7 @@ free_token (token_ty *tp)
 {
   if (tp->type == token_type_symbol)
     free (tp->string);
-  if (tp->type == token_type_string_literal)
+  if (tp->type == token_type_string_literal || tp->type == token_type_template)
     {
       mixed_string_free (tp->mixed_string);
       drop_reference (tp->comment);
@@ -1324,12 +1336,9 @@ do_getc_unicode_escaped (bool (*predicate) (int))
         }
 
       if (n >= 0x110000)
-        {
-          error_with_progname = false;
-          error (0, 0, _("%s:%d: warning: invalid Unicode character"),
-                 logical_file_name, line_number);
-          error_with_progname = true;
-        }
+        if_error (IF_SEVERITY_WARNING,
+                  logical_file_name, line_number, (size_t)(-1), false,
+                  _("invalid Unicode character"));
       else if (predicate (n))
         return n;
 
@@ -1428,9 +1437,11 @@ do_getc_escaped ()
 }
 
 /* Read a regular string literal or character literal.
-   See ECMA-334 sections 9.4.4.4., 9.4.4.5.  */
-static void
-accumulate_escaped (struct mixed_string_buffer *literal, int delimiter)
+   See ECMA-334 sections 9.4.4.4., 9.4.4.5.
+   Returns one of UEOF, delimiter, delimiter2, UNL.  */
+static int
+accumulate_escaped (struct mixed_string_buffer *literal,
+                    int delimiter, int delimiter2)
 {
   int c;
 
@@ -1438,19 +1449,19 @@ accumulate_escaped (struct mixed_string_buffer *literal, int delimiter)
     {
       /* Use phase 3, because phase 4 elides comments.  */
       c = phase3_getc ();
-      if (c == UEOF || c == delimiter)
+      if (c == UEOF || c == delimiter || c == delimiter2)
         break;
       if (c == UNL)
         {
           phase3_ungetc (c);
-          error_with_progname = false;
           if (delimiter == '\'')
-            error (0, 0, _("%s:%d: warning: unterminated character constant"),
-                   logical_file_name, line_number);
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("unterminated character constant"));
           else
-            error (0, 0, _("%s:%d: warning: unterminated string constant"),
-                   logical_file_name, line_number);
-          error_with_progname = true;
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("unterminated string constant"));
           break;
         }
       if (c == '\\')
@@ -1458,6 +1469,7 @@ accumulate_escaped (struct mixed_string_buffer *literal, int delimiter)
       if (literal)
         mixed_string_buffer_append_unicode (literal, c);
     }
+  return c;
 }
 
 
@@ -1466,6 +1478,30 @@ accumulate_escaped (struct mixed_string_buffer *literal, int delimiter)
 /* Maximum used guaranteed to be < 4.  */
 static token_ty phase6_pushback[4];
 static int phase6_pushback_length;
+
+/* Number of open template literals $"...{  */
+static int template_literal_depth;
+
+/* Number of open '{' tokens, at each template literal level.
+   The "current" element is brace_depths[template_literal_depth].  */
+static int *brace_depths;
+/* Number of allocated elements in brace_depths.  */
+static size_t brace_depths_alloc;
+
+/* Adds a new brace_depths level after template_literal_depth was
+   incremented.  */
+static void
+new_brace_depth_level (void)
+{
+  if (template_literal_depth == brace_depths_alloc)
+    {
+      brace_depths_alloc = 2 * brace_depths_alloc + 1;
+      /* Now template_literal_depth < brace_depths_alloc.  */
+      brace_depths =
+        (int *) xrealloc (brace_depths, brace_depths_alloc * sizeof (int));
+    }
+  brace_depths[template_literal_depth] = 0;
+}
 
 static void
 phase6_get (token_ty *tp)
@@ -1496,7 +1532,7 @@ phase6_get (token_ty *tp)
         case UNL:
           if (last_non_comment_line > last_comment_line)
             savable_comment_reset ();
-          /* FALLTHROUGH */
+          FALLTHROUGH;
         case ' ':
         case '\t':
         case '\f':
@@ -1516,14 +1552,6 @@ phase6_get (token_ty *tp)
           tp->type = token_type_rparen;
           return;
 
-        case '{':
-          tp->type = token_type_lbrace;
-          return;
-
-        case '}':
-          tp->type = token_type_rbrace;
-          return;
-
         case ',':
           tp->type = token_type_comma;
           return;
@@ -1536,7 +1564,7 @@ phase6_get (token_ty *tp)
               tp->type = token_type_dot;
               return;
             }
-          /* FALLTHROUGH */
+          FALLTHROUGH;
 
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
@@ -1584,7 +1612,7 @@ phase6_get (token_ty *tp)
                                       lexical_context,
                                       logical_file_name,
                                       logical_line_number);
-            accumulate_escaped (&literal, '"');
+            accumulate_escaped (&literal, '"', '"');
             tp->mixed_string = mixed_string_buffer_result (&literal);
             tp->comment = add_reference (savable_comment);
             lexical_context = lc_outside;
@@ -1592,10 +1620,46 @@ phase6_get (token_ty *tp)
             return;
           }
 
+        case '$':
+          c = phase4_getc ();
+          if (c != '"')
+            {
+              phase4_ungetc (c);
+              /* Misc. operator.  */
+              tp->type = token_type_other;
+              return;
+            }
+          /* String with embedded expressions, a.k.a. "interpolated string".  */
+          {
+            struct mixed_string_buffer msb;
+
+            lexical_context = lc_string;
+            /* Start accumulating the string.  */
+            mixed_string_buffer_init (&msb, lexical_context,
+                                      logical_file_name, logical_line_number);
+            c = accumulate_escaped (&msb, '"', '{');
+            /* Keep line_number in sync.  */
+            msb.line_number = logical_line_number;
+            if (c == '{')
+              {
+                mixed_string_buffer_destroy (&msb);
+                tp->type = token_type_ltemplate;
+                template_literal_depth++;
+                new_brace_depth_level ();
+              }
+            else
+              {
+                tp->mixed_string = mixed_string_buffer_result (&msb);
+                tp->comment = add_reference (savable_comment);
+                tp->type = token_type_template;
+              }
+            return;
+          }
+
         case '\'':
           /* Character literal.  */
           {
-            accumulate_escaped (NULL, '\'');
+            accumulate_escaped (NULL, '\'', '\'');
             tp->type = token_type_other;
             return;
           }
@@ -1614,6 +1678,30 @@ phase6_get (token_ty *tp)
               phase4_ungetc (c);
               tp->type = token_type_plus;
             }
+          return;
+
+        case '{':
+          brace_depths[template_literal_depth]++;
+          tp->type = token_type_lbrace;
+          return;
+
+        case '}':
+          if (brace_depths[template_literal_depth] > 0)
+            brace_depths[template_literal_depth]--;
+          else if (template_literal_depth > 0)
+            {
+              /* Middle or right part of string with embedded expressions.  */
+              c = accumulate_escaped (NULL, '"', '{');
+              if (c == '{')
+                tp->type = token_type_mtemplate;
+              else
+                {
+                  tp->type = token_type_rtemplate;
+                  template_literal_depth--;
+                }
+              return;
+            }
+          tp->type = token_type_rbrace;
           return;
 
         case '@':
@@ -1651,7 +1739,7 @@ phase6_get (token_ty *tp)
               tp->type = token_type_string_literal;
               return;
             }
-          /* FALLTHROUGH, so that @identifier is recognized.  */
+          FALLTHROUGH; /* so that @identifier is recognized.  */
 
         default:
           if (c == '\\')
@@ -1793,6 +1881,14 @@ x_csharp_unlex (token_ty *tp)
 static flag_context_list_table_ty *flag_context_list_table;
 
 
+/* Maximum supported nesting depth.  */
+#define MAX_NESTING_DEPTH 1000
+
+/* Current nesting depths.  */
+static int paren_nesting_depth;
+static int brace_nesting_depth;
+
+
 /* The file is broken into tokens.  Scan the token stream, looking for
    a keyword, followed by a left paren, followed by a string.  When we
    see this sequence, we have something to remember.  We assume we are
@@ -1814,7 +1910,7 @@ static flag_context_list_table_ty *flag_context_list_table;
    Return true upon eof, false upon closing parenthesis or brace.  */
 static bool
 extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
-                       flag_context_ty outer_context,
+                       flag_region_ty *outer_region,
                        flag_context_list_iterator_ty context_iter,
                        struct arglist_parser *argparser)
 {
@@ -1827,9 +1923,9 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
   /* Context iterator that will be used if the next token is a '('.  */
   flag_context_list_iterator_ty next_context_iter =
     passthrough_context_list_iterator;
-  /* Current context.  */
-  flag_context_ty inner_context =
-    inherited_context (outer_context,
+  /* Current region.  */
+  flag_region_ty *inner_region =
+    inheriting_region (outer_region,
                        flag_context_list_iterator_advance (&context_iter));
 
   /* Start state is 0.  */
@@ -1928,14 +2024,20 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           }
 
         case token_type_lparen:
+          if (++paren_nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open parentheses"));
           if (extract_parenthesized (mlp, token_type_rparen,
-                                     inner_context, next_context_iter,
+                                     inner_region, next_context_iter,
                                      arglist_parser_alloc (mlp,
                                                            state ? next_shapes : NULL)))
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return true;
             }
+          paren_nesting_depth--;
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
@@ -1944,28 +2046,32 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           if (terminator == token_type_rparen)
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return false;
             }
           if (terminator == token_type_rbrace)
-            {
-              error_with_progname = false;
-              error (0, 0,
-                     _("%s:%d: warning: ')' found where '}' was expected"),
-                     logical_file_name, token.line_number);
-              error_with_progname = true;
-            }
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, token.line_number, (size_t)(-1), false,
+                      _("')' found where '}' was expected"));
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
 
         case token_type_lbrace:
+          if (++brace_nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open braces"));
           if (extract_parenthesized (mlp, token_type_rbrace,
-                                     null_context, null_context_list_iterator,
+                                     null_context_region (),
+                                     null_context_list_iterator,
                                      arglist_parser_alloc (mlp, NULL)))
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return true;
             }
+          brace_nesting_depth--;
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
@@ -1974,24 +2080,22 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           if (terminator == token_type_rbrace)
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return false;
             }
           if (terminator == token_type_rparen)
-            {
-              error_with_progname = false;
-              error (0, 0,
-                     _("%s:%d: warning: '}' found where ')' was expected"),
-                     logical_file_name, token.line_number);
-              error_with_progname = true;
-            }
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, token.line_number, (size_t)(-1), false,
+                      _("'}' found where ')' was expected"));
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
 
         case token_type_comma:
           arg++;
-          inner_context =
-            inherited_context (outer_context,
+          unref_region (inner_region);
+          inner_region =
+            inheriting_region (outer_region,
                                flag_context_list_iterator_advance (
                                  &context_iter));
           next_context_iter = passthrough_context_list_iterator;
@@ -1999,6 +2103,7 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           continue;
 
         case token_type_string_literal:
+        case token_type_template:
           {
             lex_pos_ty pos;
 
@@ -2010,12 +2115,12 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
                 char *string = mixed_string_contents (token.mixed_string);
                 mixed_string_free (token.mixed_string);
                 remember_a_message (mlp, NULL, string, true, false,
-                                    inner_context, &pos,
+                                    inner_region, &pos,
                                     NULL, token.comment, true);
               }
             else
               arglist_parser_remember (argparser, arg, token.mixed_string,
-                                       inner_context,
+                                       inner_region,
                                        pos.file_name, pos.line_number,
                                        token.comment, true);
           }
@@ -2026,8 +2131,12 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
 
         case token_type_eof:
           arglist_parser_done (argparser, arg);
+          unref_region (inner_region);
           return true;
 
+        case token_type_ltemplate:
+        case token_type_mtemplate:
+        case token_type_rtemplate:
         case token_type_dot:
         case token_type_number:
         case token_type_plus:
@@ -2071,16 +2180,21 @@ extract_csharp (FILE *f,
 
   phase5_pushback_length = 0;
   phase6_pushback_length = 0;
+  template_literal_depth = 0;
+  new_brace_depth_level ();
   phase7_pushback_length = 0;
 
   flag_context_list_table = flag_table;
+  paren_nesting_depth = 0;
+  brace_nesting_depth = 0;
 
   init_keywords ();
 
   /* Eat tokens until eof is seen.  When extract_parenthesized returns
      due to an unbalanced closing parenthesis, just restart it.  */
   while (!extract_parenthesized (mlp, token_type_eof,
-                                 null_context, null_context_list_iterator,
+                                 null_context_region (),
+                                 null_context_list_iterator,
                                  arglist_parser_alloc (mlp, NULL)))
     ;
 

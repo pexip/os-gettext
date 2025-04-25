@@ -1,5 +1,5 @@
 /* xgettext YCP backend.
-   Copyright (C) 2001-2003, 2005-2009, 2011, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
 
    This file was written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
@@ -29,14 +29,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <error.h>
+#include "attribute.h"
 #include "message.h"
 #include "rc-str-list.h"
 #include "xgettext.h"
 #include "xg-pos.h"
 #include "xg-arglist-context.h"
 #include "xg-message.h"
-#include "error.h"
+#include "if-error.h"
 #include "xalloc.h"
+#include "string-buffer.h"
 #include "gettext.h"
 
 #define _(s) gettext(s)
@@ -133,9 +136,6 @@ static int phase2_pushback_length;
 static int
 phase2_getc ()
 {
-  static char *buffer;
-  static size_t bufmax;
-  size_t buflen;
   int lineno;
   int c;
   bool last_was_star;
@@ -153,7 +153,8 @@ phase2_getc ()
       if (c == '#')
         {
           /* sh comment.  */
-          buflen = 0;
+          struct string_buffer buffer;
+          sb_init (&buffer);
           lineno = line_number;
           for (;;)
             {
@@ -161,23 +162,11 @@ phase2_getc ()
               if (c == '\n' || c == EOF)
                 break;
               /* We skip all leading white space, but not EOLs.  */
-              if (!(buflen == 0 && (c == ' ' || c == '\t')))
-                {
-                  if (buflen >= bufmax)
-                    {
-                      bufmax = 2 * bufmax + 10;
-                      buffer = xrealloc (buffer, bufmax);
-                    }
-                  buffer[buflen++] = c;
-                }
+              if (!(string_desc_length (sb_contents (&buffer)) == 0
+                    && (c == ' ' || c == '\t')))
+                sb_xappend1 (&buffer, c);
             }
-          if (buflen >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          buffer[buflen] = '\0';
-          savable_comment_add (buffer);
+          savable_comment_add (sb_xdupfree_c (&buffer));
           last_comment_line = lineno;
           return '\n';
         }
@@ -197,94 +186,85 @@ phase2_getc ()
 
         case '*':
           /* C comment.  */
-          buflen = 0;
-          lineno = line_number;
-          last_was_star = false;
-          for (;;)
-            {
-              c = phase1_getc ();
-              if (c == EOF)
+          {
+            struct string_buffer buffer;
+            sb_init (&buffer);
+            lineno = line_number;
+            last_was_star = false;
+            for (;;)
+              {
+                c = phase1_getc ();
+                if (c == EOF)
+                  {
+                    sb_free (&buffer);
+                    break;
+                  }
+                /* We skip all leading white space, but not EOLs.  */
+                if (string_desc_length (sb_contents (&buffer)) == 0
+                    && (c == ' ' || c == '\t'))
+                  continue;
+                sb_xappend1 (&buffer, c);
+                switch (c)
+                  {
+                  case '\n':
+                    --buffer.length;
+                    while (buffer.length >= 1
+                           && (buffer.data[buffer.length - 1] == ' '
+                               || buffer.data[buffer.length - 1] == '\t'))
+                      --buffer.length;
+                    savable_comment_add (sb_xdupfree_c (&buffer));
+                    sb_init (&buffer);
+                    lineno = line_number;
+                    last_was_star = false;
+                    continue;
+
+                  case '*':
+                    last_was_star = true;
+                    continue;
+
+                  case '/':
+                    if (last_was_star)
+                      {
+                        buffer.length -= 2;
+                        while (buffer.length >= 1
+                               && (buffer.data[buffer.length - 1] == ' '
+                                   || buffer.data[buffer.length - 1] == '\t'))
+                          --buffer.length;
+                        savable_comment_add (sb_xdupfree_c (&buffer));
+                        break;
+                      }
+                    FALLTHROUGH;
+
+                  default:
+                    last_was_star = false;
+                    continue;
+                  }
                 break;
-              /* We skip all leading white space, but not EOLs.  */
-              if (buflen == 0 && (c == ' ' || c == '\t'))
-                continue;
-              if (buflen >= bufmax)
-                {
-                  bufmax = 2 * bufmax + 10;
-                  buffer = xrealloc (buffer, bufmax);
-                }
-              buffer[buflen++] = c;
-              switch (c)
-                {
-                case '\n':
-                  --buflen;
-                  while (buflen >= 1
-                         && (buffer[buflen - 1] == ' '
-                             || buffer[buflen - 1] == '\t'))
-                    --buflen;
-                  buffer[buflen] = '\0';
-                  savable_comment_add (buffer);
-                  buflen = 0;
-                  lineno = line_number;
-                  last_was_star = false;
-                  continue;
-
-                case '*':
-                  last_was_star = true;
-                  continue;
-
-                case '/':
-                  if (last_was_star)
-                    {
-                      buflen -= 2;
-                      while (buflen >= 1
-                             && (buffer[buflen - 1] == ' '
-                                 || buffer[buflen - 1] == '\t'))
-                        --buflen;
-                      buffer[buflen] = '\0';
-                      savable_comment_add (buffer);
-                      break;
-                    }
-                  /* FALLTHROUGH */
-
-                default:
-                  last_was_star = false;
-                  continue;
-                }
-              break;
-            }
-          last_comment_line = lineno;
-          return ' ';
+              }
+            last_comment_line = lineno;
+            return ' ';
+          }
 
         case '/':
           /* C++ comment.  */
-          buflen = 0;
-          lineno = line_number;
-          for (;;)
-            {
-              c = phase1_getc ();
-              if (c == '\n' || c == EOF)
-                break;
-              /* We skip all leading white space, but not EOLs.  */
-              if (!(buflen == 0 && (c == ' ' || c == '\t')))
-                {
-                  if (buflen >= bufmax)
-                    {
-                      bufmax = 2 * bufmax + 10;
-                      buffer = xrealloc (buffer, bufmax);
-                    }
-                  buffer[buflen++] = c;
-                }
-            }
-          if (buflen >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          buffer[buflen] = '\0';
-          savable_comment_add (buffer);
-          last_comment_line = lineno;
-          return '\n';
+          {
+            struct string_buffer buffer;
+            sb_init (&buffer);
+            lineno = line_number;
+            for (;;)
+              {
+                c = phase1_getc ();
+                if (c == '\n' || c == EOF)
+                  break;
+                /* We skip all leading white space, but not EOLs.  */
+                if (!(string_desc_length (sb_contents (&buffer)) == 0
+                      && (c == ' ' || c == '\t')))
+                  sb_xappend1 (&buffer, c);
+              }
+            savable_comment_add (sb_xdupfree_c (&buffer));
+            last_comment_line = lineno;
+            return '\n';
+          }
         }
     }
   else
@@ -330,13 +310,13 @@ struct token_ty
 };
 
 
-/* 7. Replace escape sequences within character strings with their
+/* Replace escape sequences within character strings with their
    single character equivalents.  */
 
-#define P7_QUOTES (1000 + '"')
+#define SE_QUOTES (1000 + '"')
 
 static int
-phase7_getc ()
+get_string_element ()
 {
   int c;
 
@@ -346,7 +326,7 @@ phase7_getc ()
       c = phase1_getc ();
 
       if (c == '"')
-        return P7_QUOTES;
+        return SE_QUOTES;
       if (c != '\\')
         return c;
       c = phase1_getc ();
@@ -421,9 +401,6 @@ static int phase5_pushback_length;
 static void
 phase5_get (token_ty *tp)
 {
-  static char *buffer;
-  static int bufmax;
-  int bufpos;
   int c;
 
   if (phase5_pushback_length)
@@ -445,7 +422,7 @@ phase5_get (token_ty *tp)
         case '\n':
           if (last_non_comment_line > last_comment_line)
             savable_comment_reset ();
-          /* FALLTHROUGH */
+          FALLTHROUGH;
         case '\r':
         case '\t':
         case ' ':
@@ -471,76 +448,66 @@ phase5_get (token_ty *tp)
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
           /* Symbol, or part of a number.  */
-          bufpos = 0;
-          for (;;)
-            {
-              if (bufpos >= bufmax)
-                {
-                  bufmax = 2 * bufmax + 10;
-                  buffer = xrealloc (buffer, bufmax);
-                }
-              buffer[bufpos++] = c;
-              c = phase2_getc ();
-              switch (c)
-                {
-                case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-                case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
-                case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
-                case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
-                case 'Y': case 'Z':
-                case '_':
-                case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-                case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
-                case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
-                case 's': case 't': case 'u': case 'v': case 'w': case 'x':
-                case 'y': case 'z':
-                case '0': case '1': case '2': case '3': case '4':
-                case '5': case '6': case '7': case '8': case '9':
-                  continue;
-                default:
-                  if (bufpos == 1 && buffer[0] == '_' && c == '(')
+          {
+            struct string_buffer buffer;
+            sb_init (&buffer);
+            for (;;)
+              {
+                sb_xappend1 (&buffer, c);
+                c = phase2_getc ();
+                switch (c)
+                  {
+                  case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                  case 'G': case 'H': case 'I': case 'J': case 'K': case 'L':
+                  case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
+                  case 'S': case 'T': case 'U': case 'V': case 'W': case 'X':
+                  case 'Y': case 'Z':
+                  case '_':
+                  case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+                  case 'g': case 'h': case 'i': case 'j': case 'k': case 'l':
+                  case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
+                  case 's': case 't': case 'u': case 'v': case 'w': case 'x':
+                  case 'y': case 'z':
+                  case '0': case '1': case '2': case '3': case '4':
+                  case '5': case '6': case '7': case '8': case '9':
+                    continue;
+                  default:
                     {
-                      tp->type = token_type_i18n;
-                      return;
+                      string_desc_t contents = sb_contents (&buffer);
+                      if (string_desc_length (contents) == 1
+                          && string_desc_char_at (contents, 0) == '_'
+                          && c == '(')
+                        {
+                          sb_free (&buffer);
+                          tp->type = token_type_i18n;
+                          return;
+                        }
                     }
-                  phase2_ungetc (c);
-                  break;
-                }
-              break;
-            }
-          if (bufpos >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          buffer[bufpos] = '\0';
-          tp->string = xstrdup (buffer);
-          tp->type = token_type_symbol;
+                    phase2_ungetc (c);
+                    break;
+                  }
+                break;
+              }
+            tp->string = sb_xdupfree_c (&buffer);
+            tp->type = token_type_symbol;
+          }
           return;
 
         case '"':
-          bufpos = 0;
-          for (;;)
-            {
-              c = phase7_getc ();
-              if (c == EOF || c == P7_QUOTES)
-                break;
-              if (bufpos >= bufmax)
-                {
-                  bufmax = 2 * bufmax + 10;
-                  buffer = xrealloc (buffer, bufmax);
-                }
-              buffer[bufpos++] = c;
-            }
-          if (bufpos >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          buffer[bufpos] = '\0';
-          tp->string = xstrdup (buffer);
-          tp->type = token_type_string_literal;
-          tp->comment = add_reference (savable_comment);
+          {
+            struct string_buffer buffer;
+            sb_init (&buffer);
+            for (;;)
+              {
+                c = get_string_element ();
+                if (c == EOF || c == SE_QUOTES)
+                  break;
+                sb_xappend1 (&buffer, c);
+              }
+            tp->string = sb_xdupfree_c (&buffer);
+            tp->type = token_type_string_literal;
+            tp->comment = add_reference (savable_comment);
+          }
           return;
 
         case '(':
@@ -633,6 +600,13 @@ phase8_unget (token_ty *tp)
 static flag_context_list_table_ty *flag_context_list_table;
 
 
+/* Maximum supported nesting depth.  */
+#define MAX_NESTING_DEPTH 1000
+
+/* Current nesting depth.  */
+static int nesting_depth;
+
+
 /* The file is broken into tokens.
 
      Normal handling: Look for
@@ -653,7 +627,7 @@ static flag_context_list_table_ty *flag_context_list_table;
    Return true upon eof, false upon closing parenthesis.  */
 static bool
 extract_parenthesized (message_list_ty *mlp,
-                       flag_context_ty outer_context,
+                       flag_region_ty *outer_region,
                        flag_context_list_iterator_ty context_iter,
                        bool in_i18n)
 {
@@ -663,9 +637,9 @@ extract_parenthesized (message_list_ty *mlp,
   /* Context iterator that will be used if the next token is a '('.  */
   flag_context_list_iterator_ty next_context_iter =
     passthrough_context_list_iterator;
-  /* Current context.  */
-  flag_context_ty inner_context =
-    inherited_context (outer_context,
+  /* Current region.  */
+  flag_region_ty *inner_region =
+    inheriting_region (outer_region,
                        flag_context_list_iterator_advance (&context_iter));
 
   /* Start state is 0 or 1.  */
@@ -683,9 +657,17 @@ extract_parenthesized (message_list_ty *mlp,
       switch (token.type)
         {
         case token_type_i18n:
-          if (extract_parenthesized (mlp, inner_context, next_context_iter,
+          if (++nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open parentheses"));
+          if (extract_parenthesized (mlp, inner_region, next_context_iter,
                                      true))
-            return true;
+            {
+              unref_region (inner_region);
+              return true;
+            }
+          nesting_depth--;
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
@@ -710,7 +692,7 @@ extract_parenthesized (message_list_ty *mlp,
                   plural_mp =
                     remember_a_message (mlp, NULL, token.string, false,
                                         token2.type == token_type_comma,
-                                        inner_context, &pos,
+                                        inner_region, &pos,
                                         NULL, token.comment, false);
 
                   if (in_i18n)
@@ -726,7 +708,7 @@ extract_parenthesized (message_list_ty *mlp,
                   /* Seen an msgid_plural.  */
                   if (plural_mp != NULL)
                     remember_a_message_plural (plural_mp, token.string, false,
-                                               inner_context, &pos,
+                                               inner_region, &pos,
                                                token.comment, false);
                   state = 0;
                 }
@@ -751,14 +733,23 @@ extract_parenthesized (message_list_ty *mlp,
           continue;
 
         case token_type_lparen:
-          if (extract_parenthesized (mlp, inner_context, next_context_iter,
+          if (++nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open parentheses"));
+          if (extract_parenthesized (mlp, inner_region, next_context_iter,
                                      false))
-            return true;
+            {
+              unref_region (inner_region);
+              return true;
+            }
+          nesting_depth--;
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
 
         case token_type_rparen:
+          unref_region (inner_region);
           return false;
 
         case token_type_comma:
@@ -766,8 +757,9 @@ extract_parenthesized (message_list_ty *mlp,
             state = 1;
           else
             state = 0;
-          inner_context =
-            inherited_context (outer_context,
+          unref_region (inner_region);
+          inner_region =
+            inheriting_region (outer_region,
                                flag_context_list_iterator_advance (
                                  &context_iter));
           next_context_iter = passthrough_context_list_iterator;
@@ -779,6 +771,7 @@ extract_parenthesized (message_list_ty *mlp,
           continue;
 
         case token_type_eof:
+          unref_region (inner_region);
           return true;
 
         default:
@@ -810,11 +803,12 @@ extract_ycp (FILE *f,
   phase8_pushback_length = 0;
 
   flag_context_list_table = flag_table;
+  nesting_depth = 0;
 
   /* Eat tokens until eof is seen.  When extract_parenthesized returns
      due to an unbalanced closing parenthesis, just restart it.  */
-  while (!extract_parenthesized (mlp, null_context, null_context_list_iterator,
-                                 false))
+  while (!extract_parenthesized (mlp, null_context_region (),
+                                 null_context_list_iterator, false))
     ;
 
   fp = NULL;

@@ -2,7 +2,7 @@
 
 #line 1 "html-ostream.oo.h"
 /* Output stream that produces HTML output.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -21,10 +21,12 @@
 #ifndef _HTML_OSTREAM_H
 #define _HTML_OSTREAM_H
 
+#include <stdbool.h>
+
 #include "ostream.h"
 
 
-#line 28 "html-ostream.h"
+#line 30 "html-ostream.h"
 struct html_ostream_representation;
 /* html_ostream_t is defined as a pointer to struct html_ostream_representation.
    In C++ mode, we use a smart pointer class.
@@ -62,6 +64,7 @@ extern          void html_ostream_end_span (html_ostream_t first_arg, const char
 extern         const char * html_ostream_get_hyperlink_ref (html_ostream_t first_arg);
 extern    void html_ostream_set_hyperlink_ref (html_ostream_t first_arg, const char *ref);
 extern              void html_ostream_flush_to_current_style (html_ostream_t first_arg);
+extern         ostream_t html_ostream_get_destination (html_ostream_t first_arg);
 #ifdef __cplusplus
 }
 #endif
@@ -161,6 +164,15 @@ html_ostream_flush_to_current_style (html_ostream_t first_arg)
   vtable->flush_to_current_style (first_arg);
 }
 
+# define html_ostream_get_destination html_ostream_get_destination_inline
+static inline ostream_t
+html_ostream_get_destination (html_ostream_t first_arg)
+{
+  const struct html_ostream_implementation *vtable =
+    ((struct html_ostream_representation_header *) (struct html_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
+}
+
 #endif
 
 extern const typeinfo_t html_ostream_typeinfo;
@@ -169,7 +181,7 @@ extern const typeinfo_t html_ostream_typeinfo;
 
 extern const struct html_ostream_implementation html_ostream_vtable;
 
-#line 49 "html-ostream.oo.h"
+#line 54 "html-ostream.oo.h"
 
 
 #ifdef __cplusplus
@@ -185,6 +197,10 @@ extern "C" {
    Note that the resulting stream must be closed before DESTINATION can be
    closed.  */
 extern html_ostream_t html_ostream_create (ostream_t destination);
+
+
+/* Test whether a given output stream is a html_ostream.  */
+extern bool is_instance_of_html_ostream (ostream_t stream);
 
 
 #ifdef __cplusplus

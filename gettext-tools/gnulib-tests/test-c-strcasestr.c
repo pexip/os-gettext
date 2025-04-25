@@ -1,9 +1,9 @@
 /* Test of case-insensitive searching in a string.
-   Copyright (C) 2007-2020 Free Software Foundation, Inc.
+   Copyright (C) 2007-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -60,18 +60,18 @@ main ()
 
   /* Check that a long periodic needle does not cause false positives.  */
   {
-    const char input[] = ("F_BD_CE_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD"
-                          "_C3_88_20_EF_BF_BD_EF_BF_BD_EF_BF_BD"
-                          "_C3_A7_20_EF_BF_BD");
+    const char input[] = "F_BD_CE_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD"
+                         "_C3_88_20_EF_BF_BD_EF_BF_BD_EF_BF_BD"
+                         "_C3_A7_20_EF_BF_BD";
     const char need[] = "_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD";
     const char *result = c_strcasestr (input, need);
     ASSERT (result == NULL);
   }
   {
-    const char input[] = ("F_BD_CE_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD"
-                          "_C3_88_20_EF_BF_BD_EF_BF_BD_EF_BF_BD"
-                          "_C3_A7_20_EF_BF_BD_DA_B5_C2_A6_20"
-                          "_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD");
+    const char input[] = "F_BD_CE_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD"
+                         "_C3_88_20_EF_BF_BD_EF_BF_BD_EF_BF_BD"
+                         "_C3_A7_20_EF_BF_BD_DA_B5_C2_A6_20"
+                         "_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD";
     const char need[] = "_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD_EF_BF_BD";
     const char *result = c_strcasestr (input, need);
     ASSERT (result == input + 115);
@@ -238,6 +238,14 @@ main ()
     free (haystack);
   }
 
+  /* Test case from Yves Bastide.
+     <https://www.openwall.com/lists/musl/2014/04/18/2>  */
+  {
+    const char input[] = "playing PLAY play PLAY always";
+    const char *result = c_strcasestr (input, "play PLAY play");
+    ASSERT (result == input + 8);
+  }
+
   /* Test long needles.  */
   {
     size_t m = 1024;
@@ -260,5 +268,5 @@ main ()
     free (haystack);
   }
 
-  return 0;
+  return test_exit_status;
 }

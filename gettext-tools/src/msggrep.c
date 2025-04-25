@@ -1,6 +1,5 @@
 /* Extract some translations of a translation catalog.
-   Copyright (C) 2001-2007, 2009-2010, 2012, 2014, 2016, 2018-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -40,16 +39,16 @@
 
 #include <textstyle.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "dir-list.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "message.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "read-po.h"
 #include "read-properties.h"
 #include "read-stringtable.h"
@@ -57,6 +56,7 @@
 #include "write-po.h"
 #include "write-properties.h"
 #include "write-stringtable.h"
+#include "xerror-handler.h"
 #include "str-list.h"
 #include "msgl-charset.h"
 #include "xalloc.h"
@@ -157,12 +157,14 @@ main (int argc, char **argv)
   /* Set program name for messages.  */
   set_program_name (argv[0]);
   error_print_progname = maybe_print_progname;
+  gram_max_allowed_errors = 20;
 
   /* Set locale via LC_ALL.  */
   setlocale (LC_ALL, "");
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -415,7 +417,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2001-2020", "https://gnu.org/licenses/gpl.html");
+              "2001-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Bruno Haible"));
       exit (EXIT_SUCCESS);
     }
@@ -482,7 +484,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
     msgdomain_list_sort_by_msgid (result);
 
   /* Write the merged message list out.  */
-  msgdomain_list_print (result, output_file, output_syntax, force_po, false);
+  msgdomain_list_print (result, output_file, output_syntax,
+                        textmode_xerror_handler, force_po, false);
 
   exit (EXIT_SUCCESS);
 }
@@ -654,29 +657,6 @@ filename_list_match (const string_list_ty *slp, const char *filename)
       return true;
   return false;
 }
-
-
-#ifdef EINTR
-
-/* EINTR handling for close().
-   These functions can return -1/EINTR even though we don't have any
-   signal handlers set up, namely when we get interrupted via SIGSTOP.  */
-
-static inline int
-nonintr_close (int fd)
-{
-  int retval;
-
-  do
-    retval = close (fd);
-  while (retval < 0 && errno == EINTR);
-
-  return retval;
-}
-#undef close
-#define close nonintr_close
-
-#endif
 
 
 /* Process a string STR of size LEN bytes through grep, and return true

@@ -5,7 +5,7 @@
 #endif
 #line 1 "fd-ostream.oo.c"
 /* Output stream referring to a file descriptor.
-   Copyright (C) 2006-2007, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -35,7 +35,7 @@
 # include <termios.h>
 #endif
 
-#include "error.h"
+#include <error.h>
 #include "full-write.h"
 #include "xalloc.h"
 #include "gettext.h"
@@ -94,7 +94,7 @@ fd_ostream__write_mem (fd_ostream_t stream, const void *data, size_t len)
               if (n > 0)
                 {
                   memcpy (stream->buffer + BUFSIZE - stream->avail, data, n);
-                  data = (char *) data + n;
+                  data = (const char *) data + n;
                   stream->avail -= n;
                   len -= n;
                 }
@@ -123,7 +123,7 @@ fd_ostream__write_mem (fd_ostream_t stream, const void *data, size_t len)
                    - a last chunk, which is copied to the buffer.  */
               size_t n = stream->avail;
               memcpy (stream->buffer + BUFSIZE - stream->avail, data, n);
-              data = (char *) data + n;
+              data = (const char *) data + n;
               len -= n;
               if (full_write (stream->fd, stream->buffer, BUFSIZE) < BUFSIZE)
                 error (EXIT_FAILURE, errno, _("error writing to %s"),
@@ -134,7 +134,7 @@ fd_ostream__write_mem (fd_ostream_t stream, const void *data, size_t len)
                   if (full_write (stream->fd, data, BUFSIZE) < BUFSIZE)
                     error (EXIT_FAILURE, errno, _("error writing to %s"),
                            stream->filename);
-                  data = (char *) data + BUFSIZE;
+                  data = (const char *) data + BUFSIZE;
                   len -= BUFSIZE;
                 }
 
@@ -209,7 +209,35 @@ fd_ostream_create (int fd, const char *filename, bool buffered)
   return stream;
 }
 
-#line 213 "fd-ostream.c"
+/* Accessors.  */
+
+static int
+fd_ostream__get_descriptor (fd_ostream_t stream)
+{
+  return stream->fd;
+}
+
+static const char *
+fd_ostream__get_filename (fd_ostream_t stream)
+{
+  return stream->filename;
+}
+
+static bool
+fd_ostream__is_buffered (fd_ostream_t stream)
+{
+  return stream->buffer != NULL;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_fd_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, fd_ostream);
+}
+
+#line 241 "fd-ostream.c"
 
 const struct fd_ostream_implementation fd_ostream_vtable =
 {
@@ -219,6 +247,9 @@ const struct fd_ostream_implementation fd_ostream_vtable =
   fd_ostream__write_mem,
   fd_ostream__flush,
   fd_ostream__free,
+  fd_ostream__get_descriptor,
+  fd_ostream__get_filename,
+  fd_ostream__is_buffered,
 };
 
 #if !HAVE_INLINE
@@ -247,6 +278,30 @@ fd_ostream_free (fd_ostream_t first_arg)
   const struct fd_ostream_implementation *vtable =
     ((struct fd_ostream_representation_header *) (struct fd_ostream_representation *) first_arg)->vtable;
   vtable->free (first_arg);
+}
+
+int
+fd_ostream_get_descriptor (fd_ostream_t first_arg)
+{
+  const struct fd_ostream_implementation *vtable =
+    ((struct fd_ostream_representation_header *) (struct fd_ostream_representation *) first_arg)->vtable;
+  return vtable->get_descriptor (first_arg);
+}
+
+const char *
+fd_ostream_get_filename (fd_ostream_t first_arg)
+{
+  const struct fd_ostream_implementation *vtable =
+    ((struct fd_ostream_representation_header *) (struct fd_ostream_representation *) first_arg)->vtable;
+  return vtable->get_filename (first_arg);
+}
+
+bool
+fd_ostream_is_buffered (fd_ostream_t first_arg)
+{
+  const struct fd_ostream_implementation *vtable =
+    ((struct fd_ostream_representation_header *) (struct fd_ostream_representation *) first_arg)->vtable;
+  return vtable->is_buffered (first_arg);
 }
 
 #endif

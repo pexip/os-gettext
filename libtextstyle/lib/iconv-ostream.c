@@ -5,7 +5,7 @@
 #endif
 #line 1 "iconv-ostream.oo.c"
 /* Output stream that converts the output to another encoding.
-   Copyright (C) 2006-2007, 2010, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -33,8 +33,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error.h>
 #include "c-strcase.h"
-#include "error.h"
 #include "xalloc.h"
 #include "gettext.h"
 
@@ -81,7 +81,7 @@ iconv_ostream__write_mem (iconv_ostream_t stream, const void *data, size_t len)
             if (n > 0)
               {
                 memcpy (inbuffer + inbufcount, data, n);
-                data = (char *) data + n;
+                data = (const char *) data + n;
                 inbufcount += n;
                 len -= n;
               }
@@ -98,12 +98,13 @@ iconv_ostream__write_mem (iconv_ostream_t stream, const void *data, size_t len)
             size_t res = iconv (stream->cd,
                                 (ICONV_CONST char **) &inptr, &insize,
                                 &outptr, &outsize);
-            #if !defined _LIBICONV_VERSION \
+            #if !(defined _LIBICONV_VERSION && !(_LIBICONV_VERSION == 0x10b && defined __APPLE__)) \
                 && !(defined __GLIBC__ && !defined __UCLIBC__)
             /* Irix iconv() inserts a NUL byte if it cannot convert.
                NetBSD iconv() inserts a question mark if it cannot convert.
-               Only GNU libiconv and GNU libc are known to prefer to fail rather
-               than doing a lossy conversion.  */
+               Only GNU libiconv (excluding the bastard Apple iconv) and
+               GNU libc are known to prefer to fail rather than doing a lossy
+               conversion.  */
             if (res > 0)
               {
                 errno = EILSEQ;
@@ -154,11 +155,6 @@ iconv_ostream__free (iconv_ostream_t stream)
   /* Silently ignore the few bytes in stream->buf[] that don't correspond to a
      character.  */
 
-  /* Avoid glibc-2.1 bug and Solaris 2.7 bug.  */
-  #if defined _LIBICONV_VERSION \
-      || !(((__GLIBC__ - 0 == 2 && __GLIBC_MINOR__ - 0 <= 1) \
-            && !defined __UCLIBC__) \
-           || defined __sun)
   {
     char outbuffer[2048];
     char *outptr = outbuffer;
@@ -172,7 +168,6 @@ iconv_ostream__free (iconv_ostream_t stream)
       ostream_write_mem (stream->destination,
                          outbuffer, sizeof (outbuffer) - outsize);
   }
-  #endif
 
   iconv_close (stream->cd);
   free (stream->from_encoding);
@@ -193,16 +188,7 @@ iconv_ostream_create (const char *from_encoding, const char *to_encoding,
   stream->from_encoding = xstrdup (from_encoding);
   stream->to_encoding = xstrdup (to_encoding);
 
-  /* Avoid glibc-2.1 bug with EUC-KR.  */
-  #if ((__GLIBC__ - 0 == 2 && __GLIBC_MINOR__ - 0 <= 1) \
-       && !defined __UCLIBC__) \
-      && !defined _LIBICONV_VERSION
-  if (c_strcasecmp (from_encoding, "EUC-KR") == 0
-      || c_strcasecmp (to_encoding, "EUC-KR") == 0)
-    stream->cd = (iconv_t)(-1):
-  else
-  #endif
-    stream->cd = iconv_open (to_encoding, from_encoding);
+  stream->cd = iconv_open (to_encoding, from_encoding);
   if (stream->cd == (iconv_t)(-1))
     {
       if (iconv_open ("UTF-8", from_encoding) == (iconv_t)(-1))
@@ -220,6 +206,34 @@ iconv_ostream_create (const char *from_encoding, const char *to_encoding,
   stream->buflen = 0;
 
   return stream;
+}
+
+/* Accessors.  */
+
+static const char *
+iconv_ostream__get_from_encoding (iconv_ostream_t stream)
+{
+  return stream->from_encoding;
+}
+
+static const char *
+iconv_ostream__get_to_encoding (iconv_ostream_t stream)
+{
+  return stream->to_encoding;
+}
+
+static ostream_t
+iconv_ostream__get_destination (iconv_ostream_t stream)
+{
+  return stream->destination;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_iconv_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, iconv_ostream);
 }
 
 #else
@@ -242,9 +256,37 @@ iconv_ostream__free (iconv_ostream_t stream)
   abort ();
 }
 
+/* Accessors.  */
+
+static const char *
+iconv_ostream__get_from_encoding (iconv_ostream_t stream)
+{
+  abort ();
+}
+
+static const char *
+iconv_ostream__get_to_encoding (iconv_ostream_t stream)
+{
+  abort ();
+}
+
+static ostream_t
+iconv_ostream__get_destination (iconv_ostream_t stream)
+{
+  abort ();
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_iconv_ostream (ostream_t stream)
+{
+  return false;
+}
+
 #endif /* HAVE_ICONV */
 
-#line 248 "iconv-ostream.c"
+#line 290 "iconv-ostream.c"
 
 const struct iconv_ostream_implementation iconv_ostream_vtable =
 {
@@ -254,6 +296,9 @@ const struct iconv_ostream_implementation iconv_ostream_vtable =
   iconv_ostream__write_mem,
   iconv_ostream__flush,
   iconv_ostream__free,
+  iconv_ostream__get_from_encoding,
+  iconv_ostream__get_to_encoding,
+  iconv_ostream__get_destination,
 };
 
 #if !HAVE_INLINE
@@ -282,6 +327,30 @@ iconv_ostream_free (iconv_ostream_t first_arg)
   const struct iconv_ostream_implementation *vtable =
     ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
   vtable->free (first_arg);
+}
+
+const char *
+iconv_ostream_get_from_encoding (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_from_encoding (first_arg);
+}
+
+const char *
+iconv_ostream_get_to_encoding (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_to_encoding (first_arg);
+}
+
+ostream_t
+iconv_ostream_get_destination (iconv_ostream_t first_arg)
+{
+  const struct iconv_ostream_implementation *vtable =
+    ((struct iconv_ostream_representation_header *) (struct iconv_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
 }
 
 #endif

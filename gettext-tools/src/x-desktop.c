@@ -1,5 +1,5 @@
 /* xgettext Desktop Entry backend.
-   Copyright (C) 2014, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2014-2024 Free Software Foundation, Inc.
 
    This file was written by Daiki Ueno <ueno@gnu.org>, 2014.
 
@@ -29,11 +29,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error.h>
 #include "message.h"
 #include "xgettext.h"
 #include "xg-message.h"
-#include "error.h"
-#include "error-progname.h"
 #include "xalloc.h"
 #include "xvasprintf.h"
 #include "mem-hash-map.h"
@@ -43,8 +42,6 @@
 #include "c-ctype.h"
 
 #define _(s) gettext(s)
-
-#define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
 /* ====================== Keyword set customization.  ====================== */
 
@@ -128,7 +125,7 @@ extract_desktop_handle_pair (struct desktop_reader_ty *reader,
 
       remember_a_message (extract_reader->mlp, NULL,
                           desktop_unescape_string (value, is_list), false,
-                          false, null_context, key_pos,
+                          false, null_context_region (), key_pos,
                           NULL, savable_comment, false);
     }
   savable_comment_reset ();
@@ -163,7 +160,7 @@ extract_desktop_handle_blank (struct desktop_reader_ty *reader,
   savable_comment_reset ();
 }
 
-desktop_reader_class_ty extract_methods =
+static desktop_reader_class_ty extract_methods =
   {
     sizeof (extract_desktop_reader_ty),
     NULL,

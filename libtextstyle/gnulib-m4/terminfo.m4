@@ -1,8 +1,10 @@
-# terminfo.m4 serial 3 (gettext-0.18)
-dnl Copyright (C) 2000-2002, 2006-2008 Free Software Foundation, Inc.
+# terminfo.m4
+# serial 7
+dnl Copyright (C) 2000-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 dnl From Bruno Haible.
 
@@ -30,7 +32,7 @@ AC_DEFUN([gl_TERMINFO_BODY],
   dnl tgetflag(), e.g. Linux (in libncurses) or Solaris (in libtermcap =
   dnl libncurses).
   dnl Some systems have them in a different library, e.g. OSF/1 (in libcurses,
-  dnl not in libtermcap) or HP-UX (in libxcurses, not in libtermcap).
+  dnl not in libtermcap) or AIX, HP-UX (in libxcurses, not in libtermcap).
   dnl Some systems, like NetBSD or BeOS, don't have these functions at all;
   dnl they have only a libtermcap.
   dnl Some systems, like BeOS, use GNU termcap, which has tparam() instead of
@@ -44,6 +46,11 @@ AC_DEFUN([gl_TERMINFO_BODY],
   dnl Prerequisites of AC_LIB_LINKFLAGS_BODY.
   AC_REQUIRE([AC_LIB_PREPARE_PREFIX])
   AC_REQUIRE([AC_LIB_RPATH])
+
+  dnl Avoid disturbing the gl_TERMCAP_BODY macro.
+  gl_saved_LIBTERMCAP="$LIBTERMCAP"
+  gl_saved_LTLIBTERMCAP="$LTLIBTERMCAP"
+  gl_saved_INCTERMCAP="$INCTERMCAP"
 
   if test "$gl_curses_allowed" != no; then
 
@@ -87,142 +94,157 @@ AC_DEFUN([gl_TERMINFO_BODY],
   dnl libxcurses and libcurses, because it is smaller.
   AC_CACHE_CHECK([where terminfo library functions come from], [gl_cv_terminfo], [
     gl_cv_terminfo="not found, consider installing GNU ncurses"
-    AC_TRY_LINK([extern
-      #ifdef __cplusplus
-      "C"
-      #endif
-      int setupterm (const char *, int, int *);
-      extern
-      #ifdef __cplusplus
-      "C"
-      #endif
-      int tigetnum (const char *);
-      extern
-      #ifdef __cplusplus
-      "C"
-      #endif
-      int tigetflag (const char *);
-      extern
-      #ifdef __cplusplus
-      "C"
-      #endif
-      const char * tigetstr (const char *);
-      ], [return setupterm ("xterm", 0, (int *)0)
-                 + tigetnum ("colors")
-                 + tigetflag ("hc") + * tigetstr("oc");],
+    AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM(
+         [[extern
+           #ifdef __cplusplus
+           "C"
+           #endif
+           int setupterm (const char *, int, int *);
+           extern
+           #ifdef __cplusplus
+           "C"
+           #endif
+           int tigetnum (const char *);
+           extern
+           #ifdef __cplusplus
+           "C"
+           #endif
+           int tigetflag (const char *);
+           extern
+           #ifdef __cplusplus
+           "C"
+           #endif
+           const char * tigetstr (const char *);
+         ]],
+         [[return setupterm ("xterm", 0, (int *)0)
+                  + tigetnum ("colors")
+                  + tigetflag ("hc") + * tigetstr ("oc");]])],
       [gl_cv_terminfo=libc])
     if test "$gl_cv_terminfo" != libc; then
-      gl_save_LIBS="$LIBS"
+      gl_saved_LIBS="$LIBS"
       LIBS="$LIBS $LIBNCURSES"
-      AC_TRY_LINK([extern
-        #ifdef __cplusplus
-        "C"
-        #endif
-        int setupterm (const char *, int, int *);
-        extern
-        #ifdef __cplusplus
-        "C"
-        #endif
-        int tigetnum (const char *);
-        extern
-        #ifdef __cplusplus
-        "C"
-        #endif
-        int tigetflag (const char *);
-        extern
-        #ifdef __cplusplus
-        "C"
-        #endif
-        const char * tigetstr (const char *);
-        ], [return setupterm ("xterm", 0, (int *)0)
-                   + tigetnum ("colors")
-                   + tigetflag ("hc") + * tigetstr("oc");],
+      AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM(
+           [[extern
+             #ifdef __cplusplus
+             "C"
+             #endif
+             int setupterm (const char *, int, int *);
+             extern
+             #ifdef __cplusplus
+             "C"
+             #endif
+             int tigetnum (const char *);
+             extern
+             #ifdef __cplusplus
+             "C"
+             #endif
+             int tigetflag (const char *);
+             extern
+             #ifdef __cplusplus
+             "C"
+             #endif
+             const char * tigetstr (const char *);
+           ]],
+           [[return setupterm ("xterm", 0, (int *)0)
+                    + tigetnum ("colors")
+                    + tigetflag ("hc") + * tigetstr ("oc");]])],
         [gl_cv_terminfo=libncurses])
-      LIBS="$gl_save_LIBS"
+      LIBS="$gl_saved_LIBS"
       if test "$gl_cv_terminfo" != libncurses; then
-        gl_save_LIBS="$LIBS"
+        gl_saved_LIBS="$LIBS"
         LIBS="$LIBS $LIBTERMCAP"
-        AC_TRY_LINK([extern
-          #ifdef __cplusplus
-          "C"
-          #endif
-          int setupterm (const char *, int, int *);
-          extern
-          #ifdef __cplusplus
-          "C"
-          #endif
-          int tigetnum (const char *);
-          extern
-          #ifdef __cplusplus
-          "C"
-          #endif
-          int tigetflag (const char *);
-          extern
-          #ifdef __cplusplus
-          "C"
-          #endif
-          const char * tigetstr (const char *);
-          ], [return setupterm ("xterm", 0, (int *)0)
-                     + tigetnum ("colors")
-                     + tigetflag ("hc") + * tigetstr("oc");],
+        AC_LINK_IFELSE(
+          [AC_LANG_PROGRAM(
+             [[extern
+               #ifdef __cplusplus
+               "C"
+               #endif
+               int setupterm (const char *, int, int *);
+               extern
+               #ifdef __cplusplus
+               "C"
+               #endif
+               int tigetnum (const char *);
+               extern
+               #ifdef __cplusplus
+               "C"
+               #endif
+               int tigetflag (const char *);
+               extern
+               #ifdef __cplusplus
+               "C"
+               #endif
+               const char * tigetstr (const char *);
+             ]],
+             [[return setupterm ("xterm", 0, (int *)0)
+                      + tigetnum ("colors")
+                      + tigetflag ("hc") + * tigetstr ("oc");]])],
           [gl_cv_terminfo=libtermcap])
-        LIBS="$gl_save_LIBS"
+        LIBS="$gl_saved_LIBS"
         if test "$gl_cv_terminfo" != libtermcap; then
-          gl_save_LIBS="$LIBS"
+          gl_saved_LIBS="$LIBS"
           LIBS="$LIBS $LIBXCURSES"
-          AC_TRY_LINK([extern
-            #ifdef __cplusplus
-            "C"
-            #endif
-            int setupterm (const char *, int, int *);
-            extern
-            #ifdef __cplusplus
-            "C"
-            #endif
-            int tigetnum (const char *);
-            extern
-            #ifdef __cplusplus
-            "C"
-            #endif
-            int tigetflag (const char *);
-            extern
-            #ifdef __cplusplus
-            "C"
-            #endif
-            const char * tigetstr (const char *);
-            ], [return setupterm ("xterm", 0, (int *)0)
-                       + tigetnum ("colors")
-                       + tigetflag ("hc") + * tigetstr("oc");],
+          AC_LINK_IFELSE(
+            [AC_LANG_PROGRAM(
+               [[extern
+                 #ifdef __cplusplus
+                 "C"
+                 #endif
+                 int setupterm (const char *, int, int *);
+                 extern
+                 #ifdef __cplusplus
+                 "C"
+                 #endif
+                 int tigetnum (const char *);
+                 extern
+                 #ifdef __cplusplus
+                 "C"
+                 #endif
+                 int tigetflag (const char *);
+                 extern
+                 #ifdef __cplusplus
+                 "C"
+                 #endif
+                 const char * tigetstr (const char *);
+               ]],
+               [[return setupterm ("xterm", 0, (int *)0)
+                        + tigetnum ("colors")
+                        + tigetflag ("hc") + * tigetstr ("oc");]])],
             [gl_cv_terminfo=libxcurses])
-          LIBS="$gl_save_LIBS"
+          LIBS="$gl_saved_LIBS"
           if test "$gl_cv_terminfo" != libxcurses; then
-            gl_save_LIBS="$LIBS"
+            gl_saved_LIBS="$LIBS"
             LIBS="$LIBS $LIBCURSES"
-            AC_TRY_LINK([extern
-              #ifdef __cplusplus
-              "C"
-              #endif
-              int setupterm (const char *, int, int *);
-              extern
-              #ifdef __cplusplus
-              "C"
-              #endif
-              int tigetnum (const char *);
-              extern
-              #ifdef __cplusplus
-              "C"
-              #endif
-              int tigetflag (const char *);
-              extern
-              #ifdef __cplusplus
-              "C"
-              #endif
-              const char * tigetstr (const char *);
-              ], [return setupterm ("xterm", 0, (int *)0)
-                         + tigetnum ("colors")
-                         + tigetflag ("hc") + * tigetstr("oc");],
+            AC_LINK_IFELSE(
+              [AC_LANG_PROGRAM(
+                 [[extern
+                   #ifdef __cplusplus
+                   "C"
+                   #endif
+                   int setupterm (const char *, int, int *);
+                   extern
+                   #ifdef __cplusplus
+                   "C"
+                   #endif
+                   int tigetnum (const char *);
+                   extern
+                   #ifdef __cplusplus
+                   "C"
+                   #endif
+                   int tigetflag (const char *);
+                   extern
+                   #ifdef __cplusplus
+                   "C"
+                   #endif
+                   const char * tigetstr (const char *);
+                 ]],
+                 [[return setupterm ("xterm", 0, (int *)0)
+                          + tigetnum ("colors")
+                          + tigetflag ("hc") + * tigetstr ("oc");]])],
               [gl_cv_terminfo=libcurses])
-            LIBS="$gl_save_LIBS"
+            LIBS="$gl_saved_LIBS"
           fi
         fi
       fi
@@ -265,35 +287,44 @@ AC_DEFUN([gl_TERMINFO_BODY],
       dnl Use the termcap functions as a fallback.
       AC_CACHE_CHECK([where termcap library functions come from], [gl_cv_termcap], [
         gl_cv_termcap="not found, consider installing GNU ncurses"
-        AC_TRY_LINK([extern
-          #ifdef __cplusplus
-          "C"
-          #endif
-          int tgetent (char *, const char *);
-          ], [return tgetent ((char *) 0, "xterm");],
+        AC_LINK_IFELSE(
+          [AC_LANG_PROGRAM(
+             [[extern
+               #ifdef __cplusplus
+               "C"
+               #endif
+               int tgetent (char *, const char *);
+             ]],
+             [[return tgetent ((char *) 0, "xterm");]])],
           [gl_cv_termcap=libc])
         if test "$gl_cv_termcap" != libc; then
-          gl_save_LIBS="$LIBS"
+          gl_saved_LIBS="$LIBS"
           LIBS="$LIBS $LIBNCURSES"
-          AC_TRY_LINK([extern
-            #ifdef __cplusplus
-            "C"
-            #endif
-            int tgetent (char *, const char *);
-            ], [return tgetent ((char *) 0, "xterm");],
+          AC_LINK_IFELSE(
+            [AC_LANG_PROGRAM(
+               [[extern
+                 #ifdef __cplusplus
+                 "C"
+                 #endif
+                 int tgetent (char *, const char *);
+               ]],
+               [[return tgetent ((char *) 0, "xterm");]])],
             [gl_cv_termcap=libncurses])
-          LIBS="$gl_save_LIBS"
+          LIBS="$gl_saved_LIBS"
           if test "$gl_cv_termcap" != libncurses; then
-            gl_save_LIBS="$LIBS"
+            gl_saved_LIBS="$LIBS"
             LIBS="$LIBS $LIBTERMCAP"
-            AC_TRY_LINK([extern
-              #ifdef __cplusplus
-              "C"
-              #endif
-              int tgetent (char *, const char *);
-              ], [return tgetent ((char *) 0, "xterm");],
+            AC_LINK_IFELSE(
+              [AC_LANG_PROGRAM(
+                 [[extern
+                   #ifdef __cplusplus
+                   "C"
+                   #endif
+                   int tgetent (char *, const char *);
+                 ]],
+                 [[return tgetent ((char *) 0, "xterm");]])],
               [gl_cv_termcap=libtermcap])
-            LIBS="$gl_save_LIBS"
+            LIBS="$gl_saved_LIBS"
           fi
         fi
       ])
@@ -330,20 +361,24 @@ AC_DEFUN([gl_TERMINFO_BODY],
   dnl Test against the old GNU termcap, which provides a tparam() function
   dnl instead of the classical tparm() function.
   AC_CACHE_CHECK([for tparam], [gl_cv_terminfo_tparam], [
-    gl_save_LIBS="$LIBS"
+    gl_saved_LIBS="$LIBS"
     LIBS="$LIBS $LIBTERMINFO"
-    gl_save_CPPFLAGS="$CPPFLAGS"
+    gl_saved_CPPFLAGS="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS $INCTERMINFO"
-    AC_TRY_LINK([extern
-      #ifdef __cplusplus
-      "C"
-      #endif
-      char * tparam (const char *, void *, int, ...);
-      char buf;
-      ], [return tparam ("\033\133%dm", &buf, 1, 8);],
-      [gl_cv_terminfo_tparam=yes], [gl_cv_terminfo_tparam=no])
-    CPPFLAGS="$gl_save_CPPFLAGS"
-    LIBS="$gl_save_LIBS"
+    AC_LINK_IFELSE(
+      [AC_LANG_PROGRAM(
+         [[extern
+           #ifdef __cplusplus
+           "C"
+           #endif
+           char * tparam (const char *, void *, int, ...);
+           char buf;
+         ]],
+         [[return ! tparam ("\033\133%dm", &buf, 1, 8);]])],
+      [gl_cv_terminfo_tparam=yes],
+      [gl_cv_terminfo_tparam=no])
+    CPPFLAGS="$gl_saved_CPPFLAGS"
+    LIBS="$gl_saved_LIBS"
   ])
   if test $gl_cv_terminfo_tparam = yes; then
     AC_DEFINE([HAVE_TPARAM], 1,
@@ -352,19 +387,27 @@ AC_DEFUN([gl_TERMINFO_BODY],
     dnl Test whether a tparm() function is provided. It is missing e.g.
     dnl in NetBSD 3.0 libtermcap.
     AC_CACHE_CHECK([for tparm], [gl_cv_terminfo_tparm], [
-      gl_save_LIBS="$LIBS"
+      gl_saved_LIBS="$LIBS"
       LIBS="$LIBS $LIBTERMINFO"
-      gl_save_CPPFLAGS="$CPPFLAGS"
+      gl_saved_CPPFLAGS="$CPPFLAGS"
       CPPFLAGS="$CPPFLAGS $INCTERMINFO"
-      AC_TRY_LINK([extern
-        #ifdef __cplusplus
-        "C"
-        #endif
-        char * tparm (const char *, ...);
-        ], [return tparm ("\033\133%dm", 8);],
+      AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM(
+           [[extern
+             #ifdef __cplusplus
+             "C"
+             #endif
+             char * tparm (const char *, ...);
+           ]],
+           [[return ! tparm ("\033\133%dm", 8);]])],
         [gl_cv_terminfo_tparm=yes], [gl_cv_terminfo_tparm=no])
-      CPPFLAGS="$gl_save_CPPFLAGS"
-      LIBS="$gl_save_LIBS"
+      CPPFLAGS="$gl_saved_CPPFLAGS"
+      LIBS="$gl_saved_LIBS"
     ])
   fi
+
+  dnl Avoid disturbing the gl_TERMCAP_BODY macro.
+  LIBTERMCAP="$gl_saved_LIBTERMCAP"
+  LTLIBTERMCAP="$gl_saved_LTLIBTERMCAP"
+  INCTERMCAP="$gl_saved_INCTERMCAP"
 ])

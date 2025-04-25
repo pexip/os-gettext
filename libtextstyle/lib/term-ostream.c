@@ -5,7 +5,7 @@
 #endif
 #line 1 "term-ostream.oo.c"
 /* Output stream for attributed text, producing ANSI escape sequences.
-   Copyright (C) 2006-2008, 2017, 2019-2020 Free Software Foundation, Inc.
+   Copyright (C) 2006-2008, 2017, 2019-2020, 2022-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@
 # include <windows.h>
 #endif
 
-#include "error.h"
+#include <error.h>
 #include "full-write.h"
 #include "get_ppid_of.h"
 #include "get_progname_of.h"
@@ -1045,7 +1045,7 @@ static const typeinfo_t * const term_ostream_superclasses[] =
 
 #define super ostream_vtable
 
-#line 1108 "term-ostream.oo.c"
+#line 1109 "term-ostream.oo.c"
 
 static struct term_style_control_data *
 get_control_data (term_ostream_t stream)
@@ -1148,6 +1148,16 @@ out_char (int c)
   return 0;
 }
 
+/* Output an entire string (not an escape sequence) to out_fd.  */
+static void
+out_data_string (const char *s)
+{
+  size_t n = strlen (s);
+  if (n > 0)
+    if (full_write (out_fd, s, n) < n)
+      out_error ();
+}
+
 /* Output a single char to out_fd.  Ignore errors.  */
 static _GL_ASYNC_SAFE int
 out_char_unchecked (int c)
@@ -1157,6 +1167,16 @@ out_char_unchecked (int c)
   bytes[0] = (char)c;
   full_write (out_fd, bytes, 1);
   return 0;
+}
+
+/* Output an entire string (not an escape sequence) to out_fd.
+   Ignore errors.  */
+static _GL_ASYNC_SAFE void
+out_data_string_unchecked (const char *s)
+{
+  size_t n = strlen (s);
+  if (n > 0)
+    full_write (out_fd, s, n);
 }
 
 /* Output escape sequences to switch the foreground color to NEW_COLOR.  */
@@ -1523,11 +1543,23 @@ out_hyperlink_change (term_ostream_t stream, hyperlink_t *new_hyperlink,
   if (new_hyperlink != NULL)
     {
       assert (new_hyperlink->real_id != NULL);
-      tputs ("\033]8;id=",           1, out_ch);
-      tputs (new_hyperlink->real_id, 1, out_ch);
-      tputs (";",                    1, out_ch);
-      tputs (new_hyperlink->ref,     1, out_ch);
-      tputs ("\033\\",               1, out_ch);
+      /* We need to output the hyperlink's id and ref directly, not through
+         tputs(), because
+           - The tputs() documentation says that its first argument "must be
+             a terminfo string variable or the return value from tparm,
+             tgetstr, or tgoto."
+           - Some ncurses versions do special processing if the first argument
+             starts with a digit. Cf. BSD_TPUTS in the ncurses source code.
+         Maybe we should better pass the entire escape sequence to a single
+         tputs() call.  But this would require a memory allocation, which can
+         fail.  (The length limits on id and ref are not enforced.)  */
+      void (*out_string) (const char *) =
+        (async_safe ? out_data_string_unchecked : out_data_string);
+      tputs ("\033]8;id=", 1, out_ch);
+      out_string (new_hyperlink->real_id);
+      out_string (";");
+      out_string (new_hyperlink->ref);
+      tputs ("\033\\", 1, out_ch);
     }
   else
     tputs ("\033]8;;\033\\", 1, out_ch);
@@ -2294,6 +2326,15 @@ should_enable_hyperlinks (const char *term)
               return !known_buggy;
             }
         }
+
+      /* Solaris console.
+           Program                            | TERM      | Supports hyperlinks?
+           -----------------------------------+-----------+---------------------------
+           Solaris kernel's terminal emulator | sun-color | produces garbage
+           SPARC PROM's terminal emulator     | sun       | ?
+       */
+      if (strcmp (term, "sun") == 0 || strcmp (term, "sun-color") == 0)
+        return false;
     }
 
   /* In case of doubt, enable hyperlinks.  So this code does not need to change
@@ -2363,6 +2404,7 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
   }
   #endif
   stream->filename = xstrdup (filename);
+  stream->tty_control = tty_control;
 
   /* Defaults.  */
   stream->max_colors = -1;
@@ -2440,7 +2482,7 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
           #if HAVE_TERMINFO
           int err = 1;
 
-          if (setupterm (term, fd, &err) || err == 1)
+          if (setupterm (term, fd, &err) == 0 || err == 1)
             {
               /* Retrieve particular values depending on the terminal type.  */
               stream->max_colors = tigetnum ("colors");
@@ -2458,7 +2500,11 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
               stream->exit_attribute_mode = xstrdup0 (tigetstr ("sgr0"));
             }
           #elif HAVE_TERMCAP
-          struct { char buf[1024]; char canary[4]; } termcapbuf;
+          /* The buffer size needed for termcap was 1024 bytes in the past, but
+             nowadays the largest termcap description (bq300-8-pc-w-rv) is 1507
+             bytes long.  <https://tldp.org/LDP/lpg/node91.html> suggests a
+             buffer size of 2048 bytes.  */
+          struct { char buf[2048]; char canary[4]; } termcapbuf;
           int retval;
 
           /* Call tgetent, being defensive against buffer overflow.  */
@@ -2470,7 +2516,10 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
 
           if (retval > 0)
             {
-              struct { char buf[1024]; char canary[4]; } termentrybuf;
+              /* The buffer size needed for a termcap entry was 1024 bytes in
+                 the past, but nowadays the largest one (in bq300-8-pc-w-rv)
+                 is 1034 bytes long.  */
+              struct { char buf[2048]; char canary[4]; } termentrybuf;
               char *termentryptr;
 
               /* Prepare for calling tgetstr, being defensive against buffer
@@ -2496,7 +2545,7 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
 
               #ifdef __BEOS__
               /* The BeOS termcap entry for "beterm" is broken: For "AF" and
-                 "AB" it contains balues in terminfo syntax but the system's
+                 "AB" it contains values in terminfo syntax but the system's
                  tparam() function understands only the termcap syntax.  */
               if (stream->set_a_foreground != NULL
                   && strcmp (stream->set_a_foreground, "\033[3%p1%dm") == 0)
@@ -2576,7 +2625,11 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
                 || /* Recognize *-direct.  */
                    (strlen (term) > 8
                     && strcmp (term + strlen (term) - 8, "-direct") == 0))
-            ? (stream->max_colors >= 0x7fff ? cm_xtermrgb :
+            ? (/* Note: For recognizing cm_xtermrgb,
+                  <https://github.com/termstandard/colors> recommends to test
+                  getenv ("COLORTERM"), but it does not seem like a good idea.
+                  It's more of a quick hack that causes long-term problems.  */
+               stream->max_colors >= 0x7fff ? cm_xtermrgb :
                stream->max_colors == 256 ? cm_xterm256 :
                stream->max_colors == 88 ? cm_xterm88 :
                stream->max_colors == 16 ? cm_xterm16 :
@@ -2628,9 +2681,12 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
       char *hostname = xgethostname ();
       { /* Compute a hash code, like in gnulib/lib/hash-pjw.c.  */
         uint32_t h = 0;
-        const char *p;
-        for (p = hostname; *p; p++)
-          h = (unsigned char) *p + ((h << 9) | (h >> (32 - 9)));
+        if (hostname != NULL)
+          {
+            const char *p;
+            for (p = hostname; *p; p++)
+              h = (unsigned char) *p + ((h << 9) | (h >> (32 - 9)));
+          }
         stream->hostname_hash = h;
       }
       free (hostname);
@@ -2682,7 +2738,41 @@ term_ostream_create (int fd, const char *filename, ttyctl_t tty_control)
   return stream;
 }
 
-#line 2686 "term-ostream.c"
+/* Accessors.  */
+
+static int
+term_ostream__get_descriptor (term_ostream_t stream)
+{
+  return stream->fd;
+}
+
+static const char *
+term_ostream__get_filename (term_ostream_t stream)
+{
+  return stream->filename;
+}
+
+static ttyctl_t
+term_ostream__get_tty_control (term_ostream_t stream)
+{
+  return stream->tty_control;
+}
+
+static ttyctl_t
+term_ostream__get_effective_tty_control (term_ostream_t stream)
+{
+  return stream->control_data.tty_control;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_term_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, term_ostream);
+}
+
+#line 2776 "term-ostream.c"
 
 const struct term_ostream_implementation term_ostream_vtable =
 {
@@ -2707,6 +2797,10 @@ const struct term_ostream_implementation term_ostream_vtable =
   term_ostream__get_hyperlink_id,
   term_ostream__set_hyperlink,
   term_ostream__flush_to_current_style,
+  term_ostream__get_descriptor,
+  term_ostream__get_filename,
+  term_ostream__get_tty_control,
+  term_ostream__get_effective_tty_control,
 };
 
 #if !HAVE_INLINE
@@ -2855,6 +2949,38 @@ term_ostream_flush_to_current_style (term_ostream_t first_arg)
   const struct term_ostream_implementation *vtable =
     ((struct term_ostream_representation_header *) (struct term_ostream_representation *) first_arg)->vtable;
   vtable->flush_to_current_style (first_arg);
+}
+
+int
+term_ostream_get_descriptor (term_ostream_t first_arg)
+{
+  const struct term_ostream_implementation *vtable =
+    ((struct term_ostream_representation_header *) (struct term_ostream_representation *) first_arg)->vtable;
+  return vtable->get_descriptor (first_arg);
+}
+
+const char *
+term_ostream_get_filename (term_ostream_t first_arg)
+{
+  const struct term_ostream_implementation *vtable =
+    ((struct term_ostream_representation_header *) (struct term_ostream_representation *) first_arg)->vtable;
+  return vtable->get_filename (first_arg);
+}
+
+ttyctl_t
+term_ostream_get_tty_control (term_ostream_t first_arg)
+{
+  const struct term_ostream_implementation *vtable =
+    ((struct term_ostream_representation_header *) (struct term_ostream_representation *) first_arg)->vtable;
+  return vtable->get_tty_control (first_arg);
+}
+
+ttyctl_t
+term_ostream_get_effective_tty_control (term_ostream_t first_arg)
+{
+  const struct term_ostream_implementation *vtable =
+    ((struct term_ostream_representation_header *) (struct term_ostream_representation *) first_arg)->vtable;
+  return vtable->get_effective_tty_control (first_arg);
 }
 
 #endif

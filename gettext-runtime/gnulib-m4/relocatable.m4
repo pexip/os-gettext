@@ -1,8 +1,10 @@
-# relocatable.m4 serial 23
-dnl Copyright (C) 2003, 2005-2007, 2009-2020 Free Software Foundation, Inc.
+# relocatable.m4
+# serial 26
+dnl Copyright (C) 2003, 2005-2007, 2009-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 dnl From Bruno Haible.
 
@@ -51,7 +53,7 @@ AC_DEFUN([gl_RELOCATABLE_BODY],
     AC_CHECK_HEADERS([mach-o/dyld.h])
     AC_CHECK_FUNCS([_NSGetExecutablePath])
     case "$host_os" in
-      mingw*) is_noop=yes ;;
+      mingw* | windows*) is_noop=yes ;;
       # For the platforms that support $ORIGIN, see
       # <https://lekensteyn.nl/rpath.html>.
       # glibc systems, Linux with musl libc: yes. Android: no.
@@ -68,10 +70,11 @@ AC_DEFUN([gl_RELOCATABLE_BODY],
         fi
         ;;
 changequote(,)dnl
-      # FreeBSD >= 7.3, DragonFly >= 3.0: yes.
+      # FreeBSD >= 7.3, DragonFly >= 3.0, MidnightBSD >= 1.1: yes.
       freebsd | freebsd[1-7] | freebsd[1-6].* | freebsd7.[0-2]) ;;
       dragonfly | dragonfly[1-2] | dragonfly[1-2].*) ;;
-      freebsd* | dragonfly*) use_elf_origin_trick=yes ;;
+      midnightbsd | midnightbsd0* | midnightbsd1.0*) ;;
+      freebsd* | dragonfly* | midnightbsd*) use_elf_origin_trick=yes ;;
       # NetBSD >= 8.0: yes.
       netbsd | netbsd[1-7] | netbsd[1-7].*) ;;
       netbsdelf | netbsdelf[1-7] | netbsdelf[1-7].*) ;;
@@ -147,10 +150,11 @@ AC_DEFUN([AC_LIB_LIBPATH],
 [
   AC_REQUIRE([AC_LIB_PROG_LD])            dnl we use $LD
   AC_REQUIRE([AC_CANONICAL_HOST])         dnl we use $host
+  AC_REQUIRE([gl_HOST_CPU_C_ABI_32BIT])   dnl we use $HOST_CPU_C_ABI_32BIT
   AC_REQUIRE([AC_CONFIG_AUX_DIR_DEFAULT]) dnl we use $ac_aux_dir
   AC_CACHE_CHECK([for shared library path variable], [acl_cv_libpath], [
     LD="$LD" \
-    ${CONFIG_SHELL-/bin/sh} "$ac_aux_dir/config.libpath" "$host" > conftest.sh
+    ${CONFIG_SHELL-/bin/sh} "$ac_aux_dir/config.libpath" "$host" "$HOST_CPU_C_ABI_32BIT" > conftest.sh
     . ./conftest.sh
     rm -f ./conftest.sh
     acl_cv_libpath=${acl_cv_shlibpath_var:-none}

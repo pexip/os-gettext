@@ -1,6 +1,5 @@
 /* GNU gettext - internationalization aids
-   Copyright (C) 1995-1998, 2000-2010, 2012, 2014-2015, 2018-2019 Free Software
-   Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
 
    This file was written by Peter Miller <millerp@canb.auug.org.au>
 
@@ -37,26 +36,24 @@
 
 #include <textstyle.h>
 
+#include "attribute.h"
 #include "c-ctype.h"
 #include "po-charset.h"
 #include "format.h"
 #include "unilbrk.h"
 #include "msgl-ascii.h"
+#include "pos.h"
 #include "write-catalog.h"
 #include "xalloc.h"
 #include "xmalloca.h"
 #include "c-strstr.h"
 #include "xvasprintf.h"
-#include "po-xerror.h"
+#include "verify.h"
+#include "xerror-handler.h"
 #include "gettext.h"
 
 /* Our regular abbreviation.  */
 #define _(str) gettext (str)
-
-#if HAVE_DECL_PUTC_UNLOCKED
-# undef putc
-# define putc putc_unlocked
-#endif
 
 
 /* =================== Putting together a #, flags line. =================== */
@@ -65,33 +62,34 @@
 /* Convert IS_FORMAT in the context of programming language LANG to a flag
    string for use in #, flags.  */
 
-const char *
+char *
 make_format_description_string (enum is_format is_format, const char *lang,
                                 bool debug)
 {
-  static char result[100];
+  char *result;
 
   switch (is_format)
     {
     case possible:
       if (debug)
         {
-          sprintf (result, "possible-%s-format", lang);
+          result = xasprintf ("possible-%s-format", lang);
           break;
         }
-      /* FALLTHROUGH */
+      FALLTHROUGH;
     case yes_according_to_context:
     case yes:
-      sprintf (result, "%s-format", lang);
+      result = xasprintf ("%s-format", lang);
       break;
     case no:
-      sprintf (result, "no-%s-format", lang);
+      result = xasprintf ("no-%s-format", lang);
       break;
     default:
       /* The others have already been filtered out by significant_format_p.  */
       abort ();
     }
 
+  assume (result != NULL);
   return result;
 }
 
@@ -124,7 +122,9 @@ has_significant_format_p (const enum is_format is_format[NFORMATS])
 char *
 make_range_description_string (struct argument_range range)
 {
-  return xasprintf ("range: %d..%d", range.min, range.max);
+  char *result = xasprintf ("range: %d..%d", range.min, range.max);
+  assume (result != NULL);
+  return result;
 }
 
 
@@ -159,6 +159,7 @@ make_c_width_description_string (enum is_wrap do_wrap)
 #ifdef GETTEXTDATADIR
 
 /* All ostream_t instances are in fact styled_ostream_t instances.  */
+#define is_stylable(stream) true
 
 /* Start a run of text belonging to a given CSS class.  */
 static inline void
@@ -310,7 +311,8 @@ static enum filepos_comment_type filepos_comment_type = filepos_comment_full;
 
 void
 message_print_comment_filepos (const message_ty *mp, ostream_t stream,
-                               bool uniforum, size_t page_width)
+                               const char *charset, bool uniforum,
+                               size_t page_width)
 {
   if (filepos_comment_type != filepos_comment_none
       && mp->filepos_count != 0)
@@ -368,6 +370,7 @@ message_print_comment_filepos (const message_ty *mp, ostream_t stream,
                  Solaris.  Use the Solaris form here.  */
               str = xasprintf ("File: %s, line: %ld",
                                cp, (long) pp->line_number);
+              assume (str != NULL);
               ostream_write_str (stream, str);
               end_css_class (stream, class_reference);
               ostream_write_str (stream, "\n");
@@ -376,17 +379,20 @@ message_print_comment_filepos (const message_ty *mp, ostream_t stream,
         }
       else
         {
+          const char *canon_charset;
           size_t column;
           size_t j;
+
+          canon_charset = po_charset_canonicalize (charset);
 
           ostream_write_str (stream, "#:");
           column = 2;
           for (j = 0; j < filepos_count; ++j)
             {
               lex_pos_ty *pp;
-              char buffer[21];
+              char buffer[22];
               const char *cp;
-              size_t len;
+              size_t width;
 
               pp = &filepos[j];
               cp = pp->file_name;
@@ -399,18 +405,41 @@ message_print_comment_filepos (const message_ty *mp, ostream_t stream,
                 buffer[0] = '\0';
               else
                 sprintf (buffer, ":%ld", (long) pp->line_number);
-              len = strlen (cp) + strlen (buffer) + 1;
-              if (column > 2 && column + len > page_width)
+              /* File names are usually entirely ASCII.  Therefore strlen is
+                 sufficient to determine their printed width.  */
+              width = strlen (cp) + strlen (buffer) + 1;
+              if (column > 2 && column + width > page_width)
                 {
                   ostream_write_str (stream, "\n#:");
                   column = 2;
                 }
               ostream_write_str (stream, " ");
               begin_css_class (stream, class_reference);
-              ostream_write_str (stream, cp);
+              if (pos_filename_has_spaces (pp))
+                {
+                  /* Enclose the file name within U+2068 and U+2069 characters,
+                     so that it can be parsed unambiguously.  */
+                  if (canon_charset == po_charset_utf8)
+                    {
+                      ostream_write_str (stream, "\xE2\x81\xA8"); /* U+2068 */
+                      ostream_write_str (stream, cp);
+                      ostream_write_str (stream, "\xE2\x81\xA9"); /* U+2069 */
+                    }
+                  else if (canon_charset != NULL
+                           && strcmp (canon_charset, "GB18030") == 0)
+                    {
+                      ostream_write_str (stream, "\x81\x36\xAC\x34"); /* U+2068 */
+                      ostream_write_str (stream, cp);
+                      ostream_write_str (stream, "\x81\x36\xAC\x35"); /* U+2069 */
+                    }
+                  else
+                    abort ();
+                }
+              else
+                ostream_write_str (stream, cp);
               ostream_write_str (stream, buffer);
               end_css_class (stream, class_reference);
-              column += len;
+              column += width;
             }
           ostream_write_str (stream, "\n");
         }
@@ -458,15 +487,17 @@ message_print_comment_flags (const message_ty *mp, ostream_t stream, bool debug)
       for (i = 0; i < NFORMATS; i++)
         if (significant_format_p (mp->is_format[i]))
           {
+            char *string;
+
             if (!first_flag)
               ostream_write_str (stream, ",");
 
             ostream_write_str (stream, " ");
             begin_css_class (stream, class_flag);
-            ostream_write_str (stream,
-                               make_format_description_string (mp->is_format[i],
-                                                               format_language[i],
-                                                               debug));
+            string = make_format_description_string (mp->is_format[i],
+                                                     format_language[i], debug);
+            ostream_write_str (stream, string);
+            free (string);
             end_css_class (stream, class_flag);
             first_flag = false;
           }
@@ -598,6 +629,12 @@ memcpy_small (void *dst, const void *src, size_t n)
 
 
 /* A version of memset optimized for the case n <= 1.  */
+/* Avoid false GCC warning "‘__builtin_memset’ specified bound
+   18446744073709551614 exceeds maximum object size 9223372036854775807."
+   Cf. <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=109995>.  */
+#if __GNUC__ >= 7
+# pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
 static inline void
 memset_small (void *dst, char c, size_t n)
 {
@@ -617,7 +654,7 @@ wrap (const message_ty *mp, ostream_t stream,
       const char *line_prefix, int extra_indent, const char *css_class,
       const char *name, const char *value,
       enum is_wrap do_wrap, size_t page_width,
-      const char *charset)
+      const char *charset, xerror_handler_ty xeh)
 {
   const char *canon_charset;
   char *fmtdir;
@@ -648,25 +685,6 @@ wrap (const message_ty *mp, ostream_t stream,
       /* Invalid PO file encoding.  */
       conv = (iconv_t)(-1);
     else
-      /* Avoid glibc-2.1 bug with EUC-KR.  */
-# if ((__GLIBC__ == 2 && __GLIBC_MINOR__ <= 1) && !defined __UCLIBC__) \
-     && !defined _LIBICONV_VERSION
-      if (strcmp (canon_charset, "EUC-KR") == 0)
-        conv = (iconv_t)(-1);
-      else
-# endif
-      /* Avoid Solaris 2.9 bug with GB2312, EUC-TW, BIG5, BIG5-HKSCS, GBK,
-         GB18030.  */
-# if defined __sun && !defined _LIBICONV_VERSION
-      if (   strcmp (canon_charset, "GB2312") == 0
-          || strcmp (canon_charset, "EUC-TW") == 0
-          || strcmp (canon_charset, "BIG5") == 0
-          || strcmp (canon_charset, "BIG5-HKSCS") == 0
-          || strcmp (canon_charset, "GBK") == 0
-          || strcmp (canon_charset, "GB18030") == 0)
-        conv = (iconv_t)(-1);
-      else
-# endif
       /* Use iconv() to parse multibyte characters.  */
       conv = iconv_open ("UTF-8", canon_charset);
 
@@ -808,8 +826,9 @@ wrap (const message_ty *mp, ostream_t stream,
                     {
                       if (errno == EILSEQ)
                         {
-                          po_xerror (PO_SEVERITY_ERROR, mp, NULL, 0, 0, false,
-                                     _("invalid multibyte sequence"));
+                          xeh->xerror (CAT_SEVERITY_ERROR, mp, NULL, 0, 0,
+                                       false,
+                                       _("invalid multibyte sequence"));
                           continue;
                         }
                       else if (errno == EINVAL)
@@ -817,8 +836,9 @@ wrap (const message_ty *mp, ostream_t stream,
                           /* This could happen if an incomplete
                              multibyte sequence at the end of input
                              bytes.  */
-                          po_xerror (PO_SEVERITY_ERROR, mp, NULL, 0, 0, false,
-                                     _("incomplete multibyte sequence"));
+                          xeh->xerror (CAT_SEVERITY_ERROR, mp, NULL, 0, 0,
+                                       false,
+                                       _("incomplete multibyte sequence"));
                           continue;
                         }
                       else
@@ -883,8 +903,8 @@ wrap (const message_ty *mp, ostream_t stream,
                   char *error_message =
                     xasprintf (_("internationalized messages should not contain the '\\%c' escape sequence"),
                                c);
-                  po_xerror (PO_SEVERITY_WARNING, mp, NULL, 0, 0, false,
-                             error_message);
+                  xeh->xerror (CAT_SEVERITY_WARNING, mp, NULL, 0, 0, false,
+                               error_message);
                   free (error_message);
                 }
             }
@@ -945,8 +965,8 @@ wrap (const message_ty *mp, ostream_t stream,
                     {
                       if (errno == EILSEQ)
                         {
-                          po_xerror (PO_SEVERITY_ERROR, mp, NULL, 0, 0,
-                                     false, _("invalid multibyte sequence"));
+                          xeh->xerror (CAT_SEVERITY_ERROR, mp, NULL, 0, 0,
+                                       false, _("invalid multibyte sequence"));
                           continue;
                         }
                       else
@@ -1267,7 +1287,7 @@ print_blank_line (ostream_t stream)
 static void
 message_print (const message_ty *mp, ostream_t stream,
                const char *charset, size_t page_width, bool blank_line,
-               bool debug)
+               xerror_handler_ty xeh, bool debug)
 {
   int extra_indent;
 
@@ -1299,7 +1319,7 @@ message_print (const message_ty *mp, ostream_t stream,
   /* Print the file position comments.  This will help a human who is
      trying to navigate the sources.  There is no problem of getting
      repeated positions, because duplicates are checked for.  */
-  message_print_comment_filepos (mp, stream, uniforum, page_width);
+  message_print_comment_filepos (mp, stream, charset, uniforum, page_width);
 
   /* Print flag information in special comment.  */
   message_print_comment_flags (mp, stream, debug);
@@ -1309,13 +1329,13 @@ message_print (const message_ty *mp, ostream_t stream,
   begin_css_class (stream, class_previous_comment);
   if (mp->prev_msgctxt != NULL)
     wrap (mp, stream, "#| ", 0, class_previous, "msgctxt", mp->prev_msgctxt,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   if (mp->prev_msgid != NULL)
     wrap (mp, stream, "#| ", 0, class_previous, "msgid", mp->prev_msgid,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   if (mp->prev_msgid_plural != NULL)
     wrap (mp, stream, "#| ", 0, class_previous, "msgid_plural",
-          mp->prev_msgid_plural, mp->do_wrap, page_width, charset);
+          mp->prev_msgid_plural, mp->do_wrap, page_width, charset, xeh);
   end_css_class (stream, class_previous_comment);
   extra_indent = (mp->prev_msgctxt != NULL || mp->prev_msgid != NULL
                   || mp->prev_msgid_plural != NULL
@@ -1336,7 +1356,7 @@ The following msgctxt contains non-ASCII characters.\n\
 This will cause problems to translators who use a character encoding\n\
 different from yours. Consider using a pure ASCII msgctxt instead.\n\
 %s\n"), mp->msgctxt);
-      po_xerror (PO_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
+      xeh->xerror (CAT_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
       free (warning_message);
     }
   if (!is_ascii_string (mp->msgid)
@@ -1348,21 +1368,21 @@ The following msgid contains non-ASCII characters.\n\
 This will cause problems to translators who use a character encoding\n\
 different from yours. Consider using a pure ASCII msgid instead.\n\
 %s\n"), mp->msgid);
-      po_xerror (PO_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
+      xeh->xerror (CAT_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
       free (warning_message);
     }
   if (mp->msgctxt != NULL)
     wrap (mp, stream, NULL, extra_indent, class_msgid, "msgctxt", mp->msgctxt,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   wrap (mp, stream, NULL, extra_indent, class_msgid, "msgid", mp->msgid,
-        mp->do_wrap, page_width, charset);
+        mp->do_wrap, page_width, charset, xeh);
   if (mp->msgid_plural != NULL)
     wrap (mp, stream, NULL, extra_indent, class_msgid, "msgid_plural",
-          mp->msgid_plural, mp->do_wrap, page_width, charset);
+          mp->msgid_plural, mp->do_wrap, page_width, charset, xeh);
 
   if (mp->msgid_plural == NULL)
     wrap (mp, stream, NULL, extra_indent, class_msgstr, "msgstr", mp->msgstr,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   else
     {
       char prefix_buf[20];
@@ -1375,7 +1395,7 @@ different from yours. Consider using a pure ASCII msgid instead.\n\
         {
           sprintf (prefix_buf, "msgstr[%u]", i);
           wrap (mp, stream, NULL, extra_indent, class_msgstr, prefix_buf, p,
-                mp->do_wrap, page_width, charset);
+                mp->do_wrap, page_width, charset, xeh);
         }
     }
 
@@ -1393,7 +1413,7 @@ different from yours. Consider using a pure ASCII msgid instead.\n\
 static void
 message_print_obsolete (const message_ty *mp, ostream_t stream,
                         const char *charset, size_t page_width, bool blank_line,
-                        bool debug)
+                        xerror_handler_ty xeh, bool debug)
 {
   int extra_indent;
 
@@ -1417,7 +1437,7 @@ message_print_obsolete (const message_ty *mp, ostream_t stream,
   message_print_comment_dot (mp, stream);
 
   /* Print the file position comments (normally empty).  */
-  message_print_comment_filepos (mp, stream, uniforum, page_width);
+  message_print_comment_filepos (mp, stream, charset, uniforum, page_width);
 
   /* Print flag information in special comment.
      Preserve only
@@ -1448,14 +1468,16 @@ message_print_obsolete (const message_ty *mp, ostream_t stream,
       for (i = 0; i < NFORMATS; i++)
         if (significant_format_p (mp->is_format[i]))
           {
+            char *string;
+
             if (!first_flag)
               ostream_write_str (stream, ",");
 
             ostream_write_str (stream, " ");
-            ostream_write_str (stream,
-                               make_format_description_string (mp->is_format[i],
-                                                               format_language[i],
-                                                               debug));
+            string = make_format_description_string (mp->is_format[i],
+                                                     format_language[i], debug);
+            ostream_write_str (stream, string);
+            free (string);
             first_flag = false;
           }
 
@@ -1478,13 +1500,13 @@ message_print_obsolete (const message_ty *mp, ostream_t stream,
   begin_css_class (stream, class_previous_comment);
   if (mp->prev_msgctxt != NULL)
     wrap (mp, stream, "#~| ", 0, class_previous, "msgctxt", mp->prev_msgctxt,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   if (mp->prev_msgid != NULL)
     wrap (mp, stream, "#~| ", 0, class_previous, "msgid", mp->prev_msgid,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   if (mp->prev_msgid_plural != NULL)
     wrap (mp, stream, "#~| ", 0, class_previous, "msgid_plural",
-          mp->prev_msgid_plural, mp->do_wrap, page_width, charset);
+          mp->prev_msgid_plural, mp->do_wrap, page_width, charset, xeh);
   end_css_class (stream, class_previous_comment);
   extra_indent = (mp->prev_msgctxt != NULL || mp->prev_msgid != NULL
                   || mp->prev_msgid_plural != NULL
@@ -1504,7 +1526,7 @@ The following msgctxt contains non-ASCII characters.\n\
 This will cause problems to translators who use a character encoding\n\
 different from yours. Consider using a pure ASCII msgctxt instead.\n\
 %s\n"), mp->msgctxt);
-      po_xerror (PO_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
+      xeh->xerror (CAT_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
       free (warning_message);
     }
   if (!is_ascii_string (mp->msgid)
@@ -1516,21 +1538,21 @@ The following msgid contains non-ASCII characters.\n\
 This will cause problems to translators who use a character encoding\n\
 different from yours. Consider using a pure ASCII msgid instead.\n\
 %s\n"), mp->msgid);
-      po_xerror (PO_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
+      xeh->xerror (CAT_SEVERITY_WARNING, mp, NULL, 0, 0, true, warning_message);
       free (warning_message);
     }
   if (mp->msgctxt != NULL)
     wrap (mp, stream, "#~ ", extra_indent, class_msgid, "msgctxt", mp->msgctxt,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   wrap (mp, stream, "#~ ", extra_indent, class_msgid, "msgid", mp->msgid,
-        mp->do_wrap, page_width, charset);
+        mp->do_wrap, page_width, charset, xeh);
   if (mp->msgid_plural != NULL)
     wrap (mp, stream, "#~ ", extra_indent, class_msgid, "msgid_plural",
-          mp->msgid_plural, mp->do_wrap, page_width, charset);
+          mp->msgid_plural, mp->do_wrap, page_width, charset, xeh);
 
   if (mp->msgid_plural == NULL)
     wrap (mp, stream, "#~ ", extra_indent, class_msgstr, "msgstr", mp->msgstr,
-          mp->do_wrap, page_width, charset);
+          mp->do_wrap, page_width, charset, xeh);
   else
     {
       char prefix_buf[20];
@@ -1543,7 +1565,7 @@ different from yours. Consider using a pure ASCII msgid instead.\n\
         {
           sprintf (prefix_buf, "msgstr[%u]", i);
           wrap (mp, stream, "#~ ", extra_indent, class_msgstr, prefix_buf, p,
-                mp->do_wrap, page_width, charset);
+                mp->do_wrap, page_width, charset, xeh);
         }
     }
 
@@ -1553,7 +1575,7 @@ different from yours. Consider using a pure ASCII msgid instead.\n\
 
 static void
 msgdomain_list_print_po (msgdomain_list_ty *mdlp, ostream_t stream,
-                         size_t page_width, bool debug)
+                         size_t page_width, xerror_handler_ty xeh, bool debug)
 {
   size_t j, k;
   bool blank_line;
@@ -1629,7 +1651,7 @@ msgdomain_list_print_po (msgdomain_list_ty *mdlp, ostream_t stream,
         if (!mlp->item[j]->obsolete)
           {
             message_print (mlp->item[j], stream, charset, page_width,
-                           blank_line, debug);
+                           blank_line, xeh, debug);
             blank_line = true;
           }
 
@@ -1638,7 +1660,7 @@ msgdomain_list_print_po (msgdomain_list_ty *mdlp, ostream_t stream,
         if (mlp->item[j]->obsolete)
           {
             message_print_obsolete (mlp->item[j], stream, charset, page_width,
-                                    blank_line, debug);
+                                    blank_line, xeh, debug);
             blank_line = true;
           }
 
@@ -1653,6 +1675,7 @@ const struct catalog_output_format output_format_po =
 {
   msgdomain_list_print_po,              /* print */
   false,                                /* requires_utf8 */
+  true,                                 /* requires_utf8_for_filenames_with_spaces */
   true,                                 /* supports_color */
   true,                                 /* supports_multiple_domains */
   true,                                 /* supports_contexts */

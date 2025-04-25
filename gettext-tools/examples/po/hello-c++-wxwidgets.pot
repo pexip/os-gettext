@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hello-c++-wxwidgets 0\n"
 "Report-Msgid-Bugs-To: bug-gettext@gnu.org\n"
-"POT-Creation-Date: 2020-07-17 22:38+0200\n"
+"POT-Creation-Date: 2024-12-31 12:49+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,11 +17,11 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: hello-c++-wxwidgets/hello.cc:68
+#: hello-c++-wxwidgets/hello.cc:73
 msgid "Hello, world!"
 msgstr ""
 
-#: hello-c++-wxwidgets/hello.cc:71
+#: hello-c++-wxwidgets/hello.cc:76
 #, c-format
 msgid "This program is running as process number %d."
 msgstr ""

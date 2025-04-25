@@ -1,3 +1,246 @@
+2024-12-31  Bruno Haible  <bruno@clisp.org>
+
+	Use new approach for gnulib localizations.
+	* gettext-runtime/po/POTFILES.in: Remove files that come from gnulib.
+	* gettext-tools/po/POTFILES.in: Likewise.
+	* gettext-runtime/src/envsubst.c (main): Invoke bindtextdomain for the domain
+	'gnulib'.
+	* gettext-runtime/src/gettext.c (main): Likewise.
+	* gettext-runtime/src/ngettext.c (main): Likewise.
+	* gettext-tools/src/cldr-plurals.c (main): Likewise.
+	* gettext-tools/src/hostname.c (main): Likewise.
+	* gettext-tools/src/msgattrib.c (main): Likewise.
+	* gettext-tools/src/msgcat.c (main): Likewise.
+	* gettext-tools/src/msgcmp.c (main): Likewise.
+	* gettext-tools/src/msgcomm.c (main): Likewise.
+	* gettext-tools/src/msgconv.c (main): Likewise.
+	* gettext-tools/src/msgen.c (main): Likewise.
+	* gettext-tools/src/msgexec.c (main): Likewise.
+	* gettext-tools/src/msgfilter.c (main): Likewise.
+	* gettext-tools/src/msgfmt.c (main): Likewise.
+	* gettext-tools/src/msggrep.c (main): Likewise.
+	* gettext-tools/src/msginit.c (main): Likewise.
+	* gettext-tools/src/msgmerge.c (main): Likewise.
+	* gettext-tools/src/msgunfmt.c (main): Likewise.
+	* gettext-tools/src/msguniq.c (main): Likewise.
+	* gettext-tools/src/recode-sr-latin.c (main): Likewise.
+	* gettext-tools/src/urlget.c (main): Likewise.
+	* gettext-tools/src/xgettext.c (main): Likewise.
+
+2024-12-01  Bruno Haible  <bruno@clisp.org>
+
+	Update translations from TP.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-tools/po/*.po: Update from TP.
+	* gettext-tools/po/LINGUAS: Add ka.
+	* gettext-tools/examples/po/*.po: Update from TP.
+
+2024-12-01  Bruno Haible  <bruno@clisp.org>
+
+	Prepare for 0.23 release.
+	* gettext-runtime/doc/matrix.texi: Update from TP.
+	* gettext-runtime/doc/nls.texi (STATUS): Update.
+	* gettext-runtime/po/Makefile.in.in: Bump Origin version and
+	GETTEXT_MACRO_VERSION.
+	* gettext-runtime/m4/po.m4 (AM_PO_SUBDIRS): Bump GETTEXT_MACRO_VERSION
+	accordingly.
+	* gettext-runtime/m4/gettext.m4: Update comments.
+	* gettext-runtime/intl/libgnuintl.in.h (LIBINTL_VERSION): Bump.
+	* libtextstyle/version.sh: Update VERSION_NUMBER, RELEASE_DATE.
+	* gettext-tools/libgettextpo/gettext-po.in.h (LIBGETTEXTPO_VERSION): Bump.
+	* gettext-runtime/intl/Makefile.am (LTV_*): Bump to 12:1:4.
+	* libtextstyle/lib/Makefile.am (LTV_*): Bump to 2:2:2.
+	* gettext-tools/libgettextpo/Makefile.am (LTV_*): Bump to 5:11:5.
+	* gettext-runtime/src/envsubst.c (main): Update copyright year in --version
+	output.
+	* gettext-runtime/src/gettext.c (main): Likewise.
+	* gettext-runtime/src/gettext.sh.in (func_version): Likewise.
+	* gettext-runtime/src/ngettext.c (main): Likewise.
+	* gettext-tools/src/cldr-plurals.c (main): Likewise.
+	* gettext-tools/src/hostname.c (main): Likewise.
+	* gettext-tools/src/msgattrib.c (main): Likewise.
+	* gettext-tools/src/msgcat.c (main): Likewise.
+	* gettext-tools/src/msgcmp.c (main): Likewise.
+	* gettext-tools/src/msgcomm.c (main): Likewise.
+	* gettext-tools/src/msgconv.c (main): Likewise.
+	* gettext-tools/src/msgen.c (main): Likewise.
+	* gettext-tools/src/msgexec.c (main): Likewise.
+	* gettext-tools/src/msgfilter.c (main): Likewise.
+	* gettext-tools/src/msgfmt.c (main): Likewise.
+	* gettext-tools/src/msggrep.c (main): Likewise.
+	* gettext-tools/src/msginit.c (main): Likewise.
+	* gettext-tools/src/msgmerge.c (main): Likewise.
+	* gettext-tools/src/msgunfmt.c (main): Likewise.
+	* gettext-tools/src/msguniq.c (main): Likewise.
+	* gettext-tools/src/recode-sr-latin.c (main): Likewise.
+	* gettext-tools/src/urlget.c (main): Likewise.
+	* gettext-tools/src/xgettext.c (main): Likewise.
+	* gettext-tools/misc/convert-archive.in (func_version): Likewise.
+	* gettext-tools/misc/gettextize.in (func_version): Likewise.
+	* gettext-tools/misc/autopoint.in: Likewise. Accept version 0.23.
+	* gettext-tools/configure.ac (ARCHIVE_VERSION): Bump to 0.23.
+	* NEWS, gettext-runtime/NEWS: Update.
+
+2024-11-19  Bruno Haible  <bruno@clisp.org>
+
+	po: Fix build failure with parallel make.
+	Reported by Lubomir Rintel <lkundrak@v3.sk> in
+	<https://lists.gnu.org/archive/html/bug-gettext/2022-06/msg00022.html>.
+
+	* gettext-runtime/po/Makefile.in.in (.NOTPARALLEL): Add this special target.
+
+2024-10-14  Bruno Haible  <bruno@clisp.org>
+
+	po: Add a copyright and license notice to the Rules-quot auxiliary files.
+	Reported by Joël Krähemann <jkraehemann@gmail.com>
+	at <https://savannah.gnu.org/bugs/?57973>.
+
+	* gettext-runtime/po/quot.sed: Add a copyright and all-permissive license
+	notice.
+	* gettext-runtime/po/boldquot.sed: Likewise.
+	* gettext-runtime/po/en@quot.header: Likewise.
+	* gettext-runtime/po/en@boldquot.header: Likewise.
+	* gettext-runtime/po/insert-header.sed: Use an all-permissive license notice.
+	* gettext-runtime/po/Rules-quot: Likewise.
+	(.insert-header.po-update-en): After running the *.insert-header script,
+	eliminate lines that start with %%.
+
+2024-10-14  Bruno Haible  <bruno@clisp.org>
+
+	po: Assume a 'sed' that supports '#' for introducing comments.
+	This is standardized in POSIX since POSIX:2001 (= SUSv3).
+	It is supported on all platforms that I could test:
+	GNU, macOS 10.5, FreeBSD 5, NetBSD 7, OpenBSD 6, AIX 7, Solaris 10 and 11,
+	busybox (2019).
+
+	* gettext-runtime/po/remove-potcdate.sed: Renamed from
+	gettext-runtime/po/remove-potcdate.sin.
+	* gettext-runtime/po/Makefile.in.in (DISTFILES.common): Update.
+	(.SUFFIXES): Remove .sin.
+	(.sin.sed): Remove rule.
+	($(DOMAIN).pot-update): Use remove-potcdate.sed in $(srcdir).
+	(mostlyclean): Don't remove remove-potcdate.sed.
+	* autogen.sh: Update.
+	* Makefile.am (distcheck-hook): Update.
+	* gettext-tools/examples/po/remove-potcdate.sed: Renamed from
+	gettext-tools/examples/po/remove-potcdate.sin.
+	* gettext-tools/examples/po/Makefile.am ($(DOMAIN).pot-update): Use
+	remove-potcdate.sed in $(srcdir).
+	(MOSTLYCLEANFILES): Don't add remove-potcdate.sed.
+	(EXTRA_DIST): Update.
+	* gettext-tools/examples/hello-*/po/Makefile.am ($(DOMAIN).pot-update): Use
+	remove-potcdate.sed in $(srcdir).
+	(MOSTLYCLEANFILES): Don't add remove-potcdate.sed.
+	(EXTRA_DIST): Update.
+	* gettext-tools/examples/hello-objc-gnustep/po/GNUmakefile
+	($(DOMAIN).pot-update): Remove dependency on remove-potcdate.sed.
+	(internal-clean): Remove rule.
+	* gettext-tools/examples/hello-*/autogen.sh: Update.
+	* gettext-tools/examples/hello-*/autoclean.sh: Update.
+
+2024-10-14  Bruno Haible  <bruno@clisp.org>
+
+	po: Assume a 'sed' that supports '#' for introducing comments.
+	This is standardized in POSIX since POSIX:2001 (= SUSv3).
+	It is supported on all platforms that I could test:
+	GNU, macOS 10.5, FreeBSD 5, NetBSD 7, OpenBSD 6, AIX 7, Solaris 10 and 11,
+	busybox (2019).
+
+	* gettext-runtime/po/insert-header.sed: Renamed from
+	gettext-runtime/po/insert-header.sin.
+	* gettext-runtime/po/Rules-quot (DISTFILES.common.extra1): Update.
+	(en@quot.insert-header, en@boldquot.insert-header): Use insert-header.sed
+	instead of insert-header.sin.
+	* autogen.sh: Update.
+	* Makefile.am (distcheck-hook): Update.
+	* gettext-tools/examples/hello-*/autogen.sh: Update.
+	* gettext-tools/doc/gettext.texi (po/LINGUAS): Update.
+
+2024-09-16  Bruno Haible  <bruno@clisp.org>
+
+	Update copyright year.
+
+2024-09-16  Bruno Haible  <bruno@clisp.org>
+
+	build: Fix "make distcheck" after the line-breaking algorithm changed.
+	* gettext-runtime/po/Makefile.in.in (.po.gmo, $(POFILES)): In the gettext-tools
+	package, when not cross-compiling, use the locally built msg* programs.
+	* gettext-tools/configure.ac: When not cross-compiling, set MSGMERGE and
+	MSGMERGE_FOR_MSGFMT_OPTION to point to locally built msgmerge program.
+
+2023-09-19  Bruno Haible  <bruno@clisp.org>
+
+	Merge from 0.22.x branch: Update translations from TP.
+
+2023-06-17  Bruno Haible  <bruno@clisp.org>
+
+	Update translations from TP.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-runtime/po/LINGUAS: Add ka.
+	* gettext-tools/po/*.po: Update from TP.
+	* gettext-tools/po/LINGUAS: Add hr.
+	* gettext-tools/examples/po/*.po: Update from TP.
+
+2023-06-17  Bruno Haible  <bruno@clisp.org>
+
+	Prepare for 0.22 release.
+	* gettext-runtime/doc/matrix.texi: Update from TP.
+	* gettext-runtime/doc/nls.texi (STATUS): Update.
+	* gettext-runtime/intl/libgnuintl.in.h (LIBINTL_VERSION): Bump.
+	* gettext-tools/libgettextpo/gettext-po.in.h (LIBGETTEXTPO_VERSION): Bump.
+	* libtextstyle/version.sh: Update VERSION_NUMBER, RELEASE_DATE.
+	* gettext-runtime/po/Makefile.in.in: Bump Origin version.
+	* gettext-runtime/m4/gettext.m4: Update version at the first line.
+	* gettext-runtime/m4/intl.m4: Likewise.
+	* NEWS, libtextstyle/NEWS: Update.
+	* libtextstyle/lib/Makefile.am (LTV_*): Bump to 2:0:2.
+	* gettext-tools/libgettextpo/Makefile.am (LTV_*): Bump to 5:9:5.
+	* gettext-tools/emacs/po-mode.el (po-mode-version-string): Bump.
+	* gettext-tools/configure.ac (ARCHIVE_VERSION): Bump to 0.22.
+	* gettext-tools/misc/autopoint.in: Allow version 0.22.
+
+2023-06-17  Bruno Haible  <bruno@clisp.org>
+
+	Update POTFILES.in.
+	* gettext-runtime/po/POTFILES.in: Update.
+	* gettext-tools/po/POTFILES.in: Update.
+
+2023-03-14  Bruno Haible  <bruno@clisp.org>
+
+	po: In the Makefiles, enable --quiet by default when possible.
+	This is possible because msgmerge became faster
+	- through an index-based fuzzy search (msgl-fsearch.c) in 2006,
+	- through OpenMP parallelization in 2006,
+	- through processor speedups over the years.
+	The only case where msgmerge is still slow is when a compendium is in use.
+
+	Suggested by Marcus Müller <marcus_savannah@hostalia.de> in
+	<https://lists.gnu.org/archive/html/bug-gnulib/2023-03/msg00034.html>.
+
+	* gettext-runtime/po/Makefile.in.in ($(POFILES), update-po): If msgmerge has
+	version ≥ 0.11, pass option --quiet.
+	* gettext-runtime/po/Makevars (MSGMERGE_OPTIONS): Don't suggest --quiet any
+	more.
+	* gettext-tools/po/Makevars (MSGMERGE_OPTIONS): Likewise.
+	* gettext-tools/examples/hello-*/po/Makevars (MSGMERGE_OPTIONS): Likewise.
+	* gettext-tools/examples/hello-*/po/Makefile.am ($(POFILES), update-po): If
+	msgmerge has version ≥ 0.11, pass option --quiet.
+	(MSGMERGE_OPTIONS): Don't suggest --quiet any more.
+	* gettext-tools/examples/hello-objc-gnustep/po/GNUmakefile: Likewise.
+	* gettext-tools/examples/po/Makefile.am ($(POFILES), update-po): Pass option
+	--quiet to msgmerge.
+	(MSGMERGE_OPTIONS): Don't suggest --quiet any more.
+
+2022-10-10  Bruno Haible  <bruno@clisp.org>
+
+	Merge from 0.21.x branch: Prepare for 0.21.1 release: Update translations.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-tools/po/*.po: Likewise.
+	* gettext-tools/examples/po/*.po: Likewise.
+	* gettext-tools/examples/po/LINGUAS: Add 'ka'.
+	* gettext-tools/examples/hello-*/po/LINGUAS: Likewise.
+	* gettext-tools/examples/Makefile.am (EXAMPLESPOFILES): Add ka.po.
+
 2020-07-26  Bruno Haible  <bruno@clisp.org>
 
 	Update translations (from the TP).
@@ -7,6 +250,8 @@
 	* gettext-tools/examples/po/LINGUAS: Add 'nn'.
 	* gettext-tools/examples/hello-*/po/LINGUAS: Likewise.
 	* gettext-tools/examples/Makefile.am (EXAMPLESPOFILES): Add nn.po.
+
+2020-07-26  Bruno Haible  <bruno@clisp.org>
 
 	Prepare for 0.21 release.
 	* gettext-runtime/doc/matrix.texi: Update from TP.
@@ -55,6 +300,8 @@
 2019-05-12  Bruno Haible  <bruno@clisp.org>
 
 	Update translations (from the TP).
+
+2019-05-12  Bruno Haible  <bruno@clisp.org>
 
 	Update bug reporting instructions.
 	* README: Tell users to report bugs in the bug tracker or by email. Use the
@@ -142,6 +389,8 @@
 	* gettext-tools/examples/po/LINGUAS: Add 'ta'.
 	* gettext-tools/examples/hello-*/po/LINGUAS: Likewise.
 	* gettext-tools/examples/Makefile.am (EXAMPLESPOFILES): Add ta.po.
+
+2019-04-14  Bruno Haible  <bruno@clisp.org>
 
 	Prepare for 0.20 release.
 	* gettext-runtime/intl/libgnuintl.in.h (LIBINTL_VERSION): Update.
@@ -386,6 +635,8 @@
 
 	Merge all .gitignore files into a single .gitignore file.
 
+2016-12-11  Bruno Haible  <bruno@clisp.org>
+
 	Update and organize the .gitignore files.
 
 2016-07-09  Stanislav Brabec  <sbrabec@suse.com>
@@ -421,6 +672,8 @@
 	* gettext-tools/po/uk.po: Update from Yuri Chornoivan <yurchor@ukr.net>
 	* gettext-tools/po/vi.po: Update from Trần Ngọc Quân <vnwildman@gmail.com>
 
+2016-06-09  Daiki Ueno  <ueno@gnu.org>
+
 	Prepare for 0.19.8
 
 2016-01-02  Daiki Ueno  <ueno@gnu.org>
@@ -451,6 +704,8 @@
 	* gettext-tools/po/sr.po: Update from Мирослав Николић <miroslavnikolic@rocketmail.com>.
 	* gettext-tools/po/uk.po: Update from Yuri Chornoivan <yurchor@ukr.net>.
 	* gettext-tools/po/vi.po: Update from Trần Ngọc Quân <vnwildman@gmail.com>.
+
+2015-12-27  Daiki Ueno  <ueno@gnu.org>
 
 	Prepare for 0.19.7
 

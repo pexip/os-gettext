@@ -39,7 +39,8 @@ The 'libtextstyle' binary package can be installed by doing
       make
       make install
 
-The 'gettext-tools' binary package can be installed by doing
+The 'gettext-tools' binary package can be installed by building
+'gettext-runtime' first, and then
 
       cd gettext-tools
       ./configure --with-installed-libtextstyle --with-installed-csharp-dll
@@ -73,7 +74,6 @@ is according to the following file list.
       $prefix/share/locale/*/LC_MESSAGES/gettext-runtime.mo
 
       $prefix/lib/libintl.*               (not installed on glibc and Solaris 11 systems)
-      $prefix/share/locale/locale.alias   (not installed on glibc and Solaris 11 systems)
       $prefix/include/libintl.h           (not installed on glibc and Solaris 11 systems)
       $prefix/share/man/man3/*
       $prefix/share/doc/gettext/*.3.html
@@ -82,6 +82,7 @@ is according to the following file list.
       $prefix/share/doc/gettext/javadoc2/*
 
       $prefix/lib/GNU.Gettext.dll
+      $prefix/lib/gettext/GNU.Gettext.dll
       $prefix/share/doc/gettext/csharpdoc/*
 
       $prefix/lib/libasprintf.*
@@ -120,17 +121,20 @@ is according to the following file list.
       $prefix/share/doc/gettext/FAQ.html
       $prefix/share/doc/gettext/tutorial.html
       $prefix/share/doc/gettext/examples/*
-      $prefix/share/info/gettext.info*
+      $prefix/share/info/gettext.info
       $prefix/include/gettext-po.h
       $prefix/lib/libgettextlib*
       $prefix/lib/libgettextsrc*
       $prefix/lib/libgettextpo*
-      $prefix/lib/preloadable_libintl.so  (only installed on glibc systems)
+      $prefix/lib/preloadable_libintl.so  (only installed on glibc systems;
+                                           actually installed by gettext-runtime's "make install")
       $prefix/lib/gettext/*
+      $prefix/libexec/gettext/*
       $prefix/share/locale/*/LC_MESSAGES/gettext-tools.mo
       $prefix/share/gettext/config.rpath
       $prefix/share/gettext/po/*
       $prefix/share/gettext/projects/*
+      $prefix/share/gettext/schema/*
       $prefix/share/gettext/styles/*
       $prefix/share/gettext/gettext.h
       $prefix/share/gettext/gettext.jar
@@ -139,7 +143,9 @@ is according to the following file list.
       $prefix/share/gettext/archive.git.tar.*
       $prefix/share/gettext/archive.dir.tar.*   (only installed if --without-git specified)
       $prefix/share/gettext/archive.cvs.tar.*   (only installed if --with-cvs specified)
+      $prefix/share/gettext/disclaim-translations.txt
       $prefix/share/gettext-$VERSION/its/*
+      $prefix/share/aclocal/build-to-host.m4
       $prefix/share/aclocal/gettext.m4
       $prefix/share/aclocal/host-cpu-c-abi.m4
       $prefix/share/aclocal/iconv.m4
@@ -171,4 +177,5 @@ the Java virtual machine (OpenJDK, Oracle Java, IBM Java, or other).
 C# support:
 -----------
 
-For C# support, mono must be available at build time and at run time.
+For C# support, either mono or dotnet must be available at build time and
+at run time.

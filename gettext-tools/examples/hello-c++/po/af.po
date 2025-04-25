@@ -7,7 +7,6 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hello-c++-0.13.1\n"
 "Report-Msgid-Bugs-To: bug-gettext@gnu.org\n"
-"POT-Creation-Date: 2020-07-27 01:10+0200\n"
 "PO-Revision-Date: 2003-12-31 10:30+2\n"
 "Last-Translator: Ysbeer <ysbeer@af.org.za>\n"
 "Language-Team: Afrikaans <i18n@af.org.za>\n"
@@ -17,11 +16,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Bugs: Report translation errors to the Language-Team address.\n"
 
-#: hello.cc:39
+#: hello.cc:44
 msgid "Hello, world!"
 msgstr "Hallo wêreld!"
 
-#: hello.cc:40
+#: hello.cc:45
 #, c-format
 msgid "This program is running as process number %d."
 msgstr "Hierdie program loop as prosesnommer %d."

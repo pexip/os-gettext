@@ -8,7 +8,7 @@ There are three ways to create binaries of this package for Microsoft Windows:
 ===============================================================================
 1) Native binaries, built using the mingw tool chain.
 
-   I recommend to use the Cygwin environment as the development environment
+   I recommend to use the Cygwin environment as the development environment (*)
    and mingw only as the target (runtime, deployment) environment.
    For this, you need to install
      * Cygwin (from https://cygwin.com/),
@@ -57,6 +57,13 @@ There are three ways to create binaries of this package for Microsoft Windows:
 
       make install
 
+   (*) Note: The MSYS2 environment as a development environment is *not*
+       supported.  This environment contains an ignoble and ignominious hack:
+       In a program invocation, the program *by default* receives different
+       arguments than the ones that the caller has passed.  See
+       <https://www.msys2.org/wiki/Porting/#filesystem-namespaces>.
+       All program invocations in this environment are therefore unreliable.
+
 ===============================================================================
 2) Native binaries, built using the MS Visual C/C++ tool chain.
 
@@ -70,6 +77,10 @@ There are three ways to create binaries of this package for Microsoft Windows:
    who don't have this library on their system will require to pull some files
    (api-ms-win*.dll) through the Windows Update mechanism, see
    https://support.microsoft.com/en-us/kb/2999226 .
+
+   Another constraint is that shared libraries built as part of this package
+   may not work (at least with MSVC 14.0).  Therefore, you will need to pass
+   the configure option '--disable-shared' when building this package.
 
    This recipe requires MS Visual C/C++ 9.0 or newer.
    You don't need the Visual Studio IDE, just the C/C++ tool chain.

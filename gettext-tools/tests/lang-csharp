@@ -3,7 +3,7 @@
 
 # Test of gettext facilities in the C# language.
 # Assumes an fr_FR locale is installed.
-# Assumes the following packages are installed: mono, mcs.
+# Assumes the following packages are installed: mono, mcs, or dotnet8.
 
 # Note: This test fails when a GNU gettext version < 0.17 is installed with
 # the same --prefix as mcs. mcs apparently searches ${prefix}/lib before
@@ -32,17 +32,35 @@ test "${TESTCSHARP}" = yes || {
 }
 
 cat <<\EOF > program.cs
-using System;
-using GNU.Gettext;
+using System; /* Console */
+using System.IO; /* StreamWriter */
+using System.Text; /* UTF8Encoding */
+using System.Runtime.InteropServices; /* RuntimeInformation, OSPlatform */
+using GNU.Gettext; /* GettextResourceManager */
 class Program {
   static void Main (String[] args) {
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+      {
+        // Change the Console to produce UTF-8 output with Unix end-of-lines.
+        Console.SetOut(
+            new StreamWriter(Console.OpenStandardOutput(),
+                             new UTF8Encoding(false)) {
+                NewLine = "\n",
+                AutoFlush = true
+            });
+      }
     #if __MonoCS__
-    // Some systems don't set CurrentCulture and CurrentUICulture as specified
-    // by LC_ALL. So set it by hand.
-    System.Threading.Thread.CurrentThread.CurrentCulture =
-    System.Threading.Thread.CurrentThread.CurrentUICulture =
-      new System.Globalization.CultureInfo("fr-FR");
+    if (true)
+    #else
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
     #endif
+      {
+        // Some systems don't set CurrentCulture and CurrentUICulture as
+        // specified by LC_ALL. So set it by hand.
+        System.Threading.Thread.CurrentThread.CurrentCulture =
+        System.Threading.Thread.CurrentThread.CurrentUICulture =
+          new System.Globalization.CultureInfo("fr-FR");
+      }
     int n = Int32.Parse(args[0]);
     GettextResourceManager catalog = new GettextResourceManager("prog");
     Console.WriteLine(catalog.GetString("'Your command, please?', asked the waiter."));
@@ -61,7 +79,7 @@ ${CSHARPCOMP} -o program.exe -L ../../../gettext-runtime/intl-csharp -l GNU.Gett
 ${XGETTEXT} -o prog.tmp --omit-header --no-location program.cs || Exit 1
 LC_ALL=C tr -d '\r' < prog.tmp > prog.pot || Exit 1
 
-cat <<EOF > prog.ok
+cat <<\EOF > prog.ok
 msgid "'Your command, please?', asked the waiter."
 msgstr ""
 

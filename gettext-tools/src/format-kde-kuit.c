@@ -1,5 +1,5 @@
 /* KUIT (KDE User Interface Text) format strings.
-   Copyright (C) 2015, 2018-2019 Free Software Foundation, Inc.
+   Copyright (C) 2015-2024 Free Software Foundation, Inc.
    Written by Daiki Ueno <ueno@gnu.org>, 2015.
 
    This program is free software: you can redistribute it and/or modify
@@ -239,7 +239,7 @@ format_parse (const char *format, bool translated, char *fdi,
                            | XML_PARSE_NOBLANKS);
       if (doc == NULL)
         {
-          xmlError *err = xmlGetLastError ();
+          const xmlError *err = xmlGetLastError ();
           *invalid_reason =
             xasprintf (_("error while parsing: %s"),
                        err->message);
@@ -312,14 +312,14 @@ format_get_number_of_directives (void *descr)
 
 static bool
 format_check (void *msgid_descr, void *msgstr_descr, bool equality,
-              formatstring_error_logger_t error_logger,
+              formatstring_error_logger_t error_logger, void *error_logger_data,
               const char *pretty_msgid, const char *pretty_msgstr)
 {
   struct spec *msgid_spec = msgid_descr;
   struct spec *msgstr_spec = msgstr_descr;
 
   return formatstring_kde.check (msgid_spec->base, msgstr_spec->base, equality,
-                                 error_logger,
+                                 error_logger, error_logger_data,
                                  pretty_msgid, pretty_msgstr);
 }
 

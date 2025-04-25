@@ -1,17 +1,17 @@
-/* Copyright (C) 1991-2020 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public
+   modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
-   version 3 of the License, or (at your option) any later version.
+   version 2.1 of the License, or (at your option) any later version.
 
    The GNU C Library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   General Public License for more details.
+   Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public
+   You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
@@ -270,7 +270,7 @@ FCT (const CHAR *pattern, const CHAR *string, const CHAR *string_end,
                     /* Leave room for the null.  */
                     CHAR str[CHAR_CLASS_MAX_LENGTH + 1];
                     size_t c1 = 0;
-                    wctype_t wt;
+                    WCTYPE_T wt;
                     const CHAR *startp = p;
 
                     for (;;)
@@ -310,7 +310,7 @@ FCT (const CHAR *pattern, const CHAR *string, const CHAR *string_end,
                     if (_ISCTYPE ((UCHAR) *n, wt))
                       goto matched;
 #else
-                    if (iswctype (BTOWC ((UCHAR) *n), wt))
+                    if (ISWCTYPE (UCHAR_TO_WCHAR ((UCHAR) *n), wt))
                       goto matched;
 #endif
                     c = *p++;
@@ -549,7 +549,7 @@ FCT (const CHAR *pattern, const CHAR *string, const CHAR *string_end,
                                 /* Get the collation sequence value.  */
                                 is_seqval = true;
 # if WIDE_CHAR_VERSION
-                                cold = wextra[1 + wextra[idx]];
+                                cold = wextra[1 + wextra[0]];
 # else
                                 idx += 1 + extra[idx];
                                 /* Adjust for the alignment.  */
@@ -726,7 +726,7 @@ FCT (const CHAR *pattern, const CHAR *string, const CHAR *string_end,
                                     /* Get the collation sequence value.  */
                                     is_seqval = true;
 # if WIDE_CHAR_VERSION
-                                    cend = wextra[1 + wextra[idx]];
+                                    cend = wextra[1 + wextra[0]];
 # else
                                     idx += 1 + extra[idx];
                                     /* Adjust for the alignment.  */
@@ -978,12 +978,12 @@ EXT (INT opt, const CHAR *pattern, const CHAR *string, const CHAR *string_end,
      bool no_leading_period, int flags, size_t alloca_used)
 {
   const CHAR *startp;
-  size_t level;
+  ptrdiff_t level;
   struct patternlist
   {
     struct patternlist *next;
     CHAR malloced;
-    CHAR str[FLEXIBLE_ARRAY_MEMBER];
+    CHAR str __flexarr;
   } *list = NULL;
   struct patternlist **lastp = &list;
   size_t pattern_len = STRLEN (pattern);
@@ -994,7 +994,7 @@ EXT (INT opt, const CHAR *pattern, const CHAR *string, const CHAR *string_end,
 
   /* Parse the pattern.  Store the individual parts in the list.  */
   level = 0;
-  for (startp = p = pattern + 1; ; ++p)
+  for (startp = p = pattern + 1; level >= 0; ++p)
     if (*p == L_('\0'))
       {
         /* This is an invalid pattern.  */
@@ -1036,11 +1036,11 @@ EXT (INT opt, const CHAR *pattern, const CHAR *string, const CHAR *string_end,
             struct patternlist *newp;                                         \
             size_t plen = (opt == L_('?') || opt == L_('@')                   \
                            ? pattern_len : (p - startp + 1UL));               \
-            ptrdiff_t slen = FLEXSIZEOF (struct patternlist, str, 0);         \
-            ptrdiff_t new_used = alloca_used + slen;                          \
-            ptrdiff_t plensize;                                               \
-            if (INT_MULTIPLY_WRAPV (plen, sizeof (CHAR), &plensize)           \
-                || INT_ADD_WRAPV (new_used, plensize, &new_used))             \
+            idx_t slen = FLEXSIZEOF (struct patternlist, str, 0);             \
+            idx_t new_used = alloca_used + slen;                              \
+            idx_t plensize;                                                   \
+            if (ckd_mul (&plensize, plen, sizeof (CHAR))                      \
+                || ckd_add (&new_used, new_used, plensize))                   \
               {                                                               \
                 retval = -2;                                                  \
                 goto out;                                                     \
@@ -1065,7 +1065,6 @@ EXT (INT opt, const CHAR *pattern, const CHAR *string, const CHAR *string_end,
             *lastp = newp;                                                    \
             lastp = &newp->next
             NEW_PATTERN;
-            break;
           }
       }
     else if (*p == L_('|'))
@@ -1207,6 +1206,6 @@ EXT (INT opt, const CHAR *pattern, const CHAR *string, const CHAR *string_end,
 #undef STRLEN
 #undef STRCAT
 #undef L_
-#undef BTOWC
+#undef UCHAR_TO_WCHAR
 #undef WIDE_CHAR_VERSION
 #undef FINDIDX

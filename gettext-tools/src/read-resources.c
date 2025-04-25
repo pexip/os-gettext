@@ -1,5 +1,5 @@
 /* Reading C# .resources files.
-   Copyright (C) 2003-2004, 2006-2008, 2010-2011 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <error.h>
 #include "msgunfmt.h"
 #include "relocatable.h"
 #include "csharpexec.h"
@@ -34,9 +35,10 @@
 #include "wait-process.h"
 #include "read-catalog.h"
 #include "read-po.h"
+#include "xerror-handler.h"
 #include "message.h"
 #include "concat-filename.h"
-#include "error.h"
+#include "cygpath.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
@@ -55,7 +57,8 @@ struct locals
 
 static bool
 execute_and_read_po_output (const char *progname,
-                            const char *prog_path, char **prog_argv,
+                            const char *prog_path,
+                            const char * const *prog_argv,
                             void *private_data)
 {
   struct locals *l = (struct locals *) private_data;
@@ -65,15 +68,16 @@ execute_and_read_po_output (const char *progname,
   int exitstatus;
 
   /* Open a pipe to the C# execution engine.  */
-  child = create_pipe_in (progname, prog_path, prog_argv, NULL, false,
-                          true, true, fd);
+  child = create_pipe_in (progname, prog_path, prog_argv, NULL, NULL,
+                          NULL, false, true, true, fd);
 
   fp = fdopen (fd[0], "r");
   if (fp == NULL)
     error (EXIT_FAILURE, errno, _("fdopen() failed"));
 
   /* Read the message list.  */
-  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po);
+  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po,
+                                 textmode_xerror_handler);
 
   fclose (fp);
 
@@ -91,6 +95,7 @@ execute_and_read_po_output (const char *progname,
 void
 read_resources_file (message_list_ty *mlp, const char *filename)
 {
+  char *filename_converted;
   const char *args[2];
   const char *gettextexedir;
   const char *gettextlibdir;
@@ -98,8 +103,10 @@ read_resources_file (message_list_ty *mlp, const char *filename)
   const char *libdirs[1];
   struct locals locals;
 
+  filename_converted = cygpath_w (filename);
+
   /* Prepare arguments.  */
-  args[0] = filename;
+  args[0] = filename_converted;
   args[1] = NULL;
 
   /* Make it possible to override the .exe location.  This is
@@ -135,4 +142,5 @@ read_resources_file (message_list_ty *mlp, const char *filename)
   }
 
   free (assembly_path);
+  free (filename_converted);
 }

@@ -1,19 +1,19 @@
 /* Determine a canonical name for the current locale's character encoding.
 
-   Copyright (C) 2000-2006, 2008-2020 Free Software Foundation, Inc.
+   Copyright (C) 2000-2006, 2008-2024 Free Software Foundation, Inc.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with this program; if not, see <https://www.gnu.org/licenses/>.  */
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Bruno Haible <bruno@clisp.org>.  */
 
@@ -380,7 +380,7 @@ static const struct table_entry alias_table[] =
 #  if defined OS2                                           /* OS/2 */
     /* The list of encodings is taken from "List of OS/2 Codepages"
        by Alex Taylor:
-       <http://altsan.org/os2/toolkits/uls/index.html#codepages>.
+       <https://altsan.org/os2/toolkits/uls/index.html#codepages>.
        See also "__convcp() of kLIBC":
        <https://github.com/bitwiseworks/libc/blob/master/src/emx/src/lib/locale/__convcp.c>.  */
     { "CP1004",        "CP1252" },
@@ -939,8 +939,10 @@ locale_charset (void)
       sprintf (buf, "CP%u", GetACP ());
     }
   /* For a locale name such as "French_France.65001", in Windows 10,
-     setlocale now returns "French_France.utf8" instead.  */
-  if (strcmp (buf + 2, "65001") == 0 || strcmp (buf + 2, "utf8") == 0)
+     setlocale now returns "French_France.utf8" instead, or in the UTF-8
+     environment (with modern system settings) "fr_FR.UTF-8".  */
+  if (strcmp (buf + 2, "65001") == 0 || strcmp (buf + 2, "utf8") == 0
+      || strcmp (buf + 2, "UTF-8") == 0)
     codeset = "UTF-8";
   else
     {
@@ -1054,7 +1056,7 @@ locale_charset (void)
           }
       }
     if (0)
-      done_table_lookup: ;
+      done_table_lookup: {}
     else
 # endif
       {

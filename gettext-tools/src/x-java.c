@@ -1,5 +1,5 @@
 /* xgettext Java backend.
-   Copyright (C) 2003, 2005-2009, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <error.h>
+#include "attribute.h"
 #include "message.h"
 #include "rc-str-list.h"
 #include "xgettext.h"
@@ -38,9 +40,9 @@
 #include "xg-arglist-callshape.h"
 #include "xg-arglist-parser.h"
 #include "xg-message.h"
-#include "error.h"
-#include "error-progname.h"
+#include "if-error.h"
 #include "xalloc.h"
+#include "string-buffer.h"
 #include "mem-hash-map.h"
 #include "po-charset.h"
 #include "unistr.h"
@@ -55,7 +57,12 @@
 /* The Java syntax is defined in the
      Java Language Specification
      (available from https://docs.oracle.com/javase/specs/),
-     chapter 3 "Lexical Structure".  */
+     chapter 3 "Lexical Structure".
+
+   It supports string formatting through functions and methods, namely
+   through the Java.formatted method added in Java 15:
+   https://docs.oracle.com/en%2Fjava%2Fjavase%2F17%2Fdocs%2Fapi%2F%2F/java.base/java/lang/String.html#formatted%28java.lang.Object...%29
+ */
 
 
 /* ====================== Keyword set customization.  ====================== */
@@ -519,7 +526,7 @@ phase4_getc ()
                   comment_line_end (2);
                   break;
                 }
-              /* FALLTHROUGH */
+              FALLTHROUGH;
 
             default:
               last_was_star = false;
@@ -573,7 +580,21 @@ enum token_type_ty
   token_type_number,            /* 1.23 */
   token_type_symbol,            /* identifier, keyword, null */
   token_type_plus,              /* + */
-  token_type_other              /* character literal, misc. operator */
+  token_type_conditional,       /* ? */
+  token_type_colon,             /* : */
+  token_type_assign,            /* = */
+  token_type_operator,          /* other operator:
+                                   - ++ -- ~ !
+                                   * / %
+                                   << >> >>>
+                                   < > <= >= == !=
+                                   & ^ | && ||
+                                   *= /= %= += -= <<= >>= >>>= &= ^= |=
+                                   ->
+                                   (switch expressions are not recognized yet.)
+                                 */
+  token_type_semicolon,         /* ; */
+  token_type_other              /* character literal, unknown operator */
 };
 typedef enum token_type_ty token_type_ty;
 
@@ -676,14 +697,14 @@ accumulate_escaped (struct mixed_string_buffer *literal, int delimiter)
       if (RED (c) == '\n')
         {
           phase3_ungetc (c);
-          error_with_progname = false;
           if (delimiter == '\'')
-            error (0, 0, _("%s:%d: warning: unterminated character constant"),
-                   logical_file_name, line_number);
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("unterminated character constant"));
           else
-            error (0, 0, _("%s:%d: warning: unterminated string constant"),
-                   logical_file_name, line_number);
-          error_with_progname = true;
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("unterminated string constant"));
           break;
         }
       if (RED (c) == '\\')
@@ -1060,7 +1081,7 @@ phase5_get (token_ty *tp)
         case '\n':
           if (last_non_comment_line > last_comment_line)
             savable_comment_reset ();
-          /* FALLTHROUGH */
+          FALLTHROUGH;
         case ' ':
         case '\t':
         case '\f':
@@ -1100,7 +1121,7 @@ phase5_get (token_ty *tp)
               tp->type = token_type_dot;
               return;
             }
-          /* FALLTHROUGH */
+          FALLTHROUGH;
 
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
@@ -1153,17 +1174,11 @@ phase5_get (token_ty *tp)
              characters.  This avoids conversion hassles w.r.t. the --keyword
              arguments, and shouldn't be a big problem in practice.  */
           {
-            static char *buffer;
-            static int bufmax;
-            int bufpos = 0;
+            struct string_buffer buffer;
+            sb_init (&buffer);
             for (;;)
               {
-                if (bufpos >= bufmax)
-                  {
-                    bufmax = 2 * bufmax + 10;
-                    buffer = xrealloc (buffer, bufmax);
-                  }
-                buffer[bufpos++] = RED (c);
+                sb_xappend1 (&buffer, RED (c));
                 c = phase4_getc ();
                 if (!((RED (c) >= 'A' && RED (c) <= 'Z')
                       || (RED (c) >= 'a' && RED (c) <= 'z')
@@ -1172,13 +1187,7 @@ phase5_get (token_ty *tp)
                   break;
               }
             phase4_ungetc (c);
-            if (bufpos >= bufmax)
-              {
-                bufmax = 2 * bufmax + 10;
-                buffer = xrealloc (buffer, bufmax);
-              }
-            buffer[bufpos] = '\0';
-            tp->string = xstrdup (buffer);
+            tp->string = sb_xdupfree_c (&buffer);
             tp->type = token_type_symbol;
             return;
           }
@@ -1203,10 +1212,9 @@ phase5_get (token_ty *tp)
                         int ic = phase3_getc ();
                         if (ic == P2_EOF)
                           {
-                            error_with_progname = false;
-                            error (0, 0, _("%s:%d: warning: unterminated text block"),
-                                   logical_file_name, line_number);
-                            error_with_progname = true;
+                            if_error (IF_SEVERITY_WARNING,
+                                      logical_file_name, line_number, (size_t)(-1), false,
+                                      _("unterminated text block"));
                             tp->type = token_type_other;
                             return;
                           }
@@ -1216,10 +1224,9 @@ phase5_get (token_ty *tp)
                           break;
                         else
                           {
-                            error_with_progname = false;
-                            error (0, 0, _("%s:%d: warning: invalid syntax in text block"),
-                                   logical_file_name, line_number);
-                            error_with_progname = true;
+                            if_error (IF_SEVERITY_WARNING,
+                                      logical_file_name, line_number, (size_t)(-1), false,
+                                      _("invalid syntax in text block"));
                             tp->type = token_type_other;
                             return;
                           }
@@ -1247,10 +1254,9 @@ phase5_get (token_ty *tp)
                               }
                             if (ic == P2_EOF)
                               {
-                                error_with_progname = false;
-                                error (0, 0, _("%s:%d: warning: unterminated text block"),
-                                       logical_file_name, block.line_number);
-                                error_with_progname = true;
+                                if_error (IF_SEVERITY_WARNING,
+                                          logical_file_name, block.line_number, (size_t)(-1), false,
+                                          _("unterminated text block"));
                                 break;
                               }
                             if (RED (ic) == '\\')
@@ -1299,23 +1305,238 @@ phase5_get (token_ty *tp)
           }
 
         case '+':
-          c = phase4_getc ();
+          c = phase3_getc ();
           if (RED (c) == '+')
             /* Operator ++ */
-            tp->type = token_type_other;
+            tp->type = token_type_operator;
           else if (RED (c) == '=')
             /* Operator += */
-            tp->type = token_type_other;
+            tp->type = token_type_operator;
           else
             {
               /* Operator + */
-              phase4_ungetc (c);
+              phase3_ungetc (c);
               tp->type = token_type_plus;
             }
           return;
 
+        case '-':
+          c = phase3_getc ();
+          if (RED (c) == '-')
+            /* Operator -- */
+            tp->type = token_type_operator;
+          else if (RED (c) == '>')
+            /* Operator -> */
+            tp->type = token_type_operator;
+          else if (RED (c) == '=')
+            /* Operator -= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator - */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '~':
+          /* Operator ~ */
+          tp->type = token_type_operator;
+          return;
+
+        case '!':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator != */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator ! */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '*':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator *= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator * */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '/':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator /= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator / */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '%':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator %= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator % */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '<':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator <= */
+            tp->type = token_type_operator;
+          else if (RED (c) == '<')
+            {
+              int c2 = phase3_getc ();
+              if (RED (c2) == '=')
+                /* Operator <<= */
+                tp->type = token_type_operator;
+              else
+                {
+                  /* Operator << */
+                  phase3_ungetc (c2);
+                  tp->type = token_type_operator;
+                }
+            }
+          else
+            {
+              /* Operator < */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '>':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator >= */
+            tp->type = token_type_operator;
+          else if (RED (c) == '>')
+            {
+              int c2 = phase3_getc ();
+              if (RED (c2) == '=')
+                /* Operator >>= */
+                tp->type = token_type_operator;
+              else if (RED (c) == '>')
+                {
+                  int c3 = phase3_getc ();
+                  if (RED (c3) == '=')
+                    /* Operator >>>= */
+                    tp->type = token_type_operator;
+                  else
+                    {
+                      /* Operator >>> */
+                      phase3_ungetc (c3);
+                      tp->type = token_type_operator;
+                    }
+                }
+              else
+                {
+                  /* Operator >> */
+                  phase3_ungetc (c2);
+                  tp->type = token_type_operator;
+                }
+            }
+          else
+            {
+              /* Operator > */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '&':
+          c = phase3_getc ();
+          if (RED (c) == '&')
+            /* Operator && */
+            tp->type = token_type_operator;
+          else if (RED (c) == '=')
+            /* Operator &= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator & */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '^':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator ^= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator ^ */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '|':
+          c = phase3_getc ();
+          if (RED (c) == '|')
+            /* Operator || */
+            tp->type = token_type_operator;
+          else if (RED (c) == '=')
+            /* Operator |= */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Operator | */
+              phase3_ungetc (c);
+              tp->type = token_type_operator;
+            }
+          return;
+
+        case '=':
+          c = phase3_getc ();
+          if (RED (c) == '=')
+            /* Operator == */
+            tp->type = token_type_operator;
+          else
+            {
+              /* Assignment operator = */
+              phase3_ungetc (c);
+              tp->type = token_type_assign;
+            }
+          return;
+
+        case '?':
+          /* Operator ?, used in ternary conditionals.  */
+          tp->type = token_type_conditional;
+          return;
+
+        case ':':
+          /* Operator :, used in ternary conditionals.  */
+          tp->type = token_type_colon;
+          return;
+
+
+        case ';':
+          /* Semicolon.  */
+          tp->type = token_type_semicolon;
+          return;
+
         default:
-          /* Misc. operator.  */
+          /* Unknown operator.  */
           tp->type = token_type_other;
           return;
         }
@@ -1431,6 +1652,14 @@ x_java_unlex (token_ty *tp)
 static flag_context_list_table_ty *flag_context_list_table;
 
 
+/* Maximum supported nesting depth.  */
+#define MAX_NESTING_DEPTH 1000
+
+/* Current nesting depths.  */
+static int paren_nesting_depth;
+static int brace_nesting_depth;
+
+
 /* The file is broken into tokens.  Scan the token stream, looking for
    a keyword, followed by a left paren, followed by a string.  When we
    see this sequence, we have something to remember.  We assume we are
@@ -1452,7 +1681,7 @@ static flag_context_list_table_ty *flag_context_list_table;
    Return true upon eof, false upon closing parenthesis or brace.  */
 static bool
 extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
-                       flag_context_ty outer_context,
+                       flag_region_ty *outer_region,
                        flag_context_list_iterator_ty context_iter,
                        struct arglist_parser *argparser)
 {
@@ -1466,9 +1695,10 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
   flag_context_list_iterator_ty next_context_iter =
     passthrough_context_list_iterator;
   /* Current context.  */
-  flag_context_ty inner_context =
-    inherited_context (outer_context,
-                       flag_context_list_iterator_advance (&context_iter));
+  flag_context_ty curr_context =
+    flag_context_list_iterator_advance (&context_iter);
+  /* Current region.  */
+  flag_region_ty *inner_region = new_sub_region (outer_region, curr_context);
 
   /* Start state is 0.  */
   state = 0;
@@ -1523,57 +1753,93 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
                 break;
               }
 
-            for (dottedname = sum;;)
+            /* 'return' is a keyword, not a function-like symbol.
+               It needs to be treated specially, because in
+                 return (EXPR).formatted()
+               the extracted strings in EXPR need to be marked as
+               java-printf-format, whereas in
+                 foobar (EXPR).formatted()
+               they should not.  */
+            if (strcmp (sum, "return") != 0)
               {
-                void *keyword_value;
-
-                if (hash_find_entry (&keywords, dottedname, strlen (dottedname),
-                                     &keyword_value)
-                    == 0)
+                for (dottedname = sum;;)
                   {
-                    next_shapes = (const struct callshapes *) keyword_value;
-                    state = 1;
-                    break;
+                    void *keyword_value;
+
+                    if (hash_find_entry (&keywords, dottedname, strlen (dottedname),
+                                         &keyword_value)
+                        == 0)
+                      {
+                        next_shapes = (const struct callshapes *) keyword_value;
+                        state = 1;
+                        break;
+                      }
+
+                    dottedname = strchr (dottedname, '.');
+                    if (dottedname == NULL)
+                      {
+                        state = 0;
+                        break;
+                      }
+                    dottedname++;
                   }
 
-                dottedname = strchr (dottedname, '.');
-                if (dottedname == NULL)
+                for (dottedname = sum;;)
                   {
-                    state = 0;
-                    break;
+                    context_list =
+                      flag_context_list_table_lookup (
+                        flag_context_list_table,
+                        dottedname, strlen (dottedname));
+                    if (context_list != NULL)
+                      break;
+
+                    dottedname = strchr (dottedname, '.');
+                    if (dottedname == NULL)
+                      break;
+                    dottedname++;
                   }
-                dottedname++;
+                next_context_iter = flag_context_list_iterator (context_list);
               }
-
-            for (dottedname = sum;;)
-              {
-                context_list =
-                  flag_context_list_table_lookup (
-                    flag_context_list_table,
-                    dottedname, strlen (dottedname));
-                if (context_list != NULL)
-                  break;
-
-                dottedname = strchr (dottedname, '.');
-                if (dottedname == NULL)
-                  break;
-                dottedname++;
-              }
-            next_context_iter = flag_context_list_iterator (context_list);
 
             free (sum);
             continue;
           }
 
         case token_type_lparen:
+          if (++paren_nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open parentheses"));
           if (extract_parenthesized (mlp, token_type_rparen,
-                                     inner_context, next_context_iter,
+                                     inner_region, next_context_iter,
                                      arglist_parser_alloc (mlp,
                                                            state ? next_shapes : NULL)))
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return true;
             }
+          paren_nesting_depth--;
+          /* Test whether the next tokens are '.' and 'formatted'.  */
+          {
+            token_ty token2;
+            x_java_lex (&token2);
+            if (token2.type == token_type_dot)
+              {
+                token_ty token3;
+                x_java_lex (&token3);
+                if (token3.type == token_type_symbol
+                    && strcmp (token3.string, "formatted") == 0)
+                  {
+                    /* Mark the messages found in the region as java-printf-format
+                       a posteriori.  */
+                    set_format_flag_on_region (inner_region,
+                                               XFORMAT_SECONDARY, yes_according_to_context);
+                  }
+                x_java_unlex (&token3);
+              }
+            x_java_unlex (&token2);
+          }
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
@@ -1582,28 +1848,32 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           if (terminator == token_type_rparen)
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return false;
             }
           if (terminator == token_type_rbrace)
-            {
-              error_with_progname = false;
-              error (0, 0,
-                     _("%s:%d: warning: ')' found where '}' was expected"),
-                     logical_file_name, token.line_number);
-              error_with_progname = true;
-            }
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, token.line_number, (size_t)(-1), false,
+                      _("')' found where '}' was expected"));
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
 
         case token_type_lbrace:
+          if (++brace_nesting_depth > MAX_NESTING_DEPTH)
+            if_error (IF_SEVERITY_FATAL_ERROR,
+                      logical_file_name, line_number, (size_t)(-1), false,
+                      _("too many open braces"));
           if (extract_parenthesized (mlp, token_type_rbrace,
-                                     null_context, null_context_list_iterator,
+                                     null_context_region (),
+                                     null_context_list_iterator,
                                      arglist_parser_alloc (mlp, NULL)))
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return true;
             }
+          brace_nesting_depth--;
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
@@ -1612,26 +1882,70 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           if (terminator == token_type_rbrace)
             {
               arglist_parser_done (argparser, arg);
+              unref_region (inner_region);
               return false;
             }
           if (terminator == token_type_rparen)
-            {
-              error_with_progname = false;
-              error (0, 0,
-                     _("%s:%d: warning: '}' found where ')' was expected"),
-                     logical_file_name, token.line_number);
-              error_with_progname = true;
-            }
+            if_error (IF_SEVERITY_WARNING,
+                      logical_file_name, token.line_number, (size_t)(-1), false,
+                      _("'}' found where ')' was expected"));
           next_context_iter = null_context_list_iterator;
           state = 0;
           continue;
 
         case token_type_comma:
           arg++;
-          inner_context =
-            inherited_context (outer_context,
-                               flag_context_list_iterator_advance (
-                                 &context_iter));
+          unref_region (inner_region);
+          curr_context = flag_context_list_iterator_advance (&context_iter);
+          inner_region = new_sub_region (outer_region, curr_context);
+          next_context_iter = passthrough_context_list_iterator;
+          state = 0;
+          continue;
+
+        case token_type_conditional:
+          /* In an expression A ? B : C, each of A, B, C is a distinct
+             sub-region, and since the value of A is not the value of entire
+             expression, if later set_format_flag_on_region is called on this
+             region or an ancestor region, it shall not have an effect on the
+             remembered messages of A.  */
+          inner_region->inherit_from_parent_region = false;
+          unref_region (inner_region);
+          inner_region = new_sub_region (outer_region, curr_context);
+          next_context_iter = passthrough_context_list_iterator;
+          state = 0;
+          continue;
+
+        case token_type_colon:
+          /* In an expression A ? B : C, each of A, B, C is a distinct
+             sub-region.  */
+          unref_region (inner_region);
+          inner_region = new_sub_region (outer_region, curr_context);
+          next_context_iter = passthrough_context_list_iterator;
+          state = 0;
+          continue;
+
+        case token_type_assign:
+          /* In an expression A = B, A and B are distinct sub-regions.
+             The value of B is the value of the entire expression.  */
+          inner_region->inherit_from_parent_region = false;
+          unref_region (inner_region);
+          inner_region = new_sub_region (outer_region, curr_context);
+          next_context_iter = passthrough_context_list_iterator;
+          state = 0;
+          continue;
+
+        case token_type_plus:
+        case token_type_operator:
+          /* When an expression contains one of these operators, neither the
+             value on the left of the operator nor the value on the right of the
+             operator is string-valued and the value of the entire expression.
+             Therefore, if later set_format_flag_on_region is called on this
+             region or an ancestor region, it shall not have an effect on the
+             remembered messages of this region.  */
+          inner_region->inherit_from_parent_region = false;
+          unref_region (inner_region);
+          inner_region = new_sub_region (outer_region, curr_context);
+          inner_region->inherit_from_parent_region = false;
           next_context_iter = passthrough_context_list_iterator;
           state = 0;
           continue;
@@ -1648,12 +1962,12 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
                 char *string = mixed_string_contents (token.mixed_string);
                 mixed_string_free (token.mixed_string);
                 remember_a_message (mlp, NULL, string, true, false,
-                                    inner_context, &pos,
+                                    inner_region, &pos,
                                     NULL, token.comment, true);
               }
             else
               arglist_parser_remember (argparser, arg, token.mixed_string,
-                                       inner_context,
+                                       inner_region,
                                        pos.file_name, pos.line_number,
                                        token.comment, true);
           }
@@ -1662,13 +1976,18 @@ extract_parenthesized (message_list_ty *mlp, token_type_ty terminator,
           state = 0;
           continue;
 
+        case token_type_semicolon:
+          arglist_parser_done (argparser, arg);
+          unref_region (inner_region);
+          return false;
+
         case token_type_eof:
           arglist_parser_done (argparser, arg);
+          unref_region (inner_region);
           return true;
 
         case token_type_dot:
         case token_type_number:
-        case token_type_plus:
         case token_type_other:
           next_context_iter = null_context_list_iterator;
           state = 0;
@@ -1706,13 +2025,16 @@ extract_java (FILE *f,
   phase6_last = token_type_eof;
 
   flag_context_list_table = flag_table;
+  paren_nesting_depth = 0;
+  brace_nesting_depth = 0;
 
   init_keywords ();
 
   /* Eat tokens until eof is seen.  When extract_parenthesized returns
      due to an unbalanced closing parenthesis, just restart it.  */
   while (!extract_parenthesized (mlp, token_type_eof,
-                                 null_context, null_context_list_iterator,
+                                 null_context_region (),
+                                 null_context_list_iterator,
                                  arglist_parser_alloc (mlp, NULL)))
     ;
 

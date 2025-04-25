@@ -1,10 +1,7 @@
-#! /usr/bin/dh-exec --with-scripts=filter-build-profiles
-
 usr/bin/gettext
 usr/bin/ngettext
 usr/bin/envsubst
 usr/bin/gettext.sh
 usr/share/locale/*/*/gettext-runtime.mo
-
 # C# support is currently turned off altogether
 # debian/tmp/usr/lib/GNU.Gettext.dll

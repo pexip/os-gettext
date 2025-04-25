@@ -1,6 +1,5 @@
 /* Message list concatenation and duplicate handling.
-   Copyright (C) 2001-2003, 2005-2008, 2012, 2015, 2019-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -31,15 +30,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
+#include <error.h>
 #include "xerror.h"
 #include "xvasprintf.h"
 #include "message.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "po-charset.h"
 #include "msgl-ascii.h"
+#include "msgl-ofn.h"
 #include "msgl-equal.h"
 #include "msgl-iconv.h"
+#include "xerror-handler.h"
 #include "xalloc.h"
 #include "xmalloca.h"
 #include "c-strstr.h"
@@ -163,15 +164,18 @@ catenate_msgdomain_list (string_list_ty *file_list,
                             if (canon_charset == NULL)
                               {
                                 /* Don't give an error for POT files, because
-                                   POT files usually contain only ASCII
+                                   POT files usually contain only ASCII msgids.
+                                   Also don't give an error for disguised POT
+                                   files that actually contain only ASCII
                                    msgids.  */
                                 const char *filename = files[n];
                                 size_t filenamelen = strlen (filename);
 
-                                if (filenamelen >= 4
-                                    && memcmp (filename + filenamelen - 4,
-                                               ".pot", 4) == 0
-                                    && strcmp (charset, "CHARSET") == 0)
+                                if (strcmp (charset, "CHARSET") == 0
+                                    && ((filenamelen >= 4
+                                         && memcmp (filename + filenamelen - 4,
+                                                    ".pot", 4) == 0)
+                                        || is_ascii_message_list (mlp)))
                                   canon_charset = po_charset_ascii;
                                 else
                                   error (EXIT_FAILURE, 0,
@@ -393,6 +397,16 @@ catenate_msgdomain_list (string_list_ty *file_list,
         total_mdlp->encoding = mdlps[0]->encoding;
     }
 
+  /* Determine whether we need a target encoding that contains the control
+     characters needed for escaping file names with spaces.  */
+  bool has_filenames_with_spaces = false;
+  for (n = 0; n < nfiles; n++)
+    {
+      has_filenames_with_spaces =
+        has_filenames_with_spaces
+        || msgdomain_list_has_filenames_with_spaces (mdlps[n]);
+    }
+
   /* Determine the target encoding for the remaining messages.  */
   if (to_code != NULL)
     {
@@ -402,11 +416,20 @@ catenate_msgdomain_list (string_list_ty *file_list,
         error (EXIT_FAILURE, 0,
                _("target charset \"%s\" is not a portable encoding name."),
                to_code);
+      /* Test whether the control characters required for escaping file names
+         with spaces are present in the target encoding.  */
+      if (has_filenames_with_spaces
+          && !(canon_to_code == po_charset_utf8
+               || strcmp (canon_to_code, "GB18030") == 0))
+        error (EXIT_FAILURE, 0,
+               _("Cannot write the control characters that protect file names with spaces in the %s encoding"),
+               canon_to_code);
     }
   else
     {
       /* No target encoding was specified.  Test whether the messages are
-         all in a single encoding.  If so, conversion is not needed.  */
+         all in a single encoding.  If so and if !has_filenames_with_spaces,
+         conversion is not needed.  */
       const char *first = NULL;
       const char *second = NULL;
       bool with_ASCII = false;
@@ -465,6 +488,22 @@ To select a different output encoding, use the --to-code option.\n\
 "), first, second));
           canon_to_code = po_charset_utf8;
         }
+      else if (has_filenames_with_spaces)
+        {
+          /* A conversion is needed.  Warn the user since he hasn't asked
+             for it and might be surprised.  */
+          if (first != NULL
+              && (first == po_charset_utf8 || strcmp (first, "GB18030") == 0))
+            canon_to_code = first;
+          else
+            canon_to_code = po_charset_utf8;
+          multiline_warning (xasprintf (_("warning: ")),
+                             xasprintf (_("\
+Input files contain messages referenced in file names with spaces.\n\
+Converting the output to %s.\n\
+"),
+                                        canon_to_code));
+        }
       else if (first != NULL && with_ASCII && all_ASCII_compatible)
         {
           /* The conversion is a no-op conversion.  Don't warn the user,
@@ -479,7 +518,7 @@ To select a different output encoding, use the --to-code option.\n\
         }
     }
 
-  /* Now convert the remaining messages to to_code.  */
+  /* Now convert the remaining messages to canon_to_code.  */
   if (canon_to_code != NULL)
     for (n = 0; n < nfiles; n++)
       {
@@ -494,7 +533,7 @@ To select a different output encoding, use the --to-code option.\n\
             if (!(to_code == NULL && canon_charsets[n][k] == canon_to_code))
               if (iconv_message_list (mdlp->item[k]->messages,
                                       canon_charsets[n][k], canon_to_code,
-                                      files[n]))
+                                      files[n], textmode_xerror_handler))
                 {
                   multiline_error (xstrdup (""),
                                    xasprintf (_("\

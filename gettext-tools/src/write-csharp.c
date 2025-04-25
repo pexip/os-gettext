@@ -1,5 +1,5 @@
 /* Writing C# satellite assemblies.
-   Copyright (C) 2003-2010, 2016, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -70,14 +70,16 @@
 # define S_IXOTH (S_IXUSR >> 6)
 #endif
 
+#include <error.h>
+#include "attribute.h"
 #include "c-ctype.h"
 #include "relocatable.h"
-#include "error.h"
 #include "xerror.h"
 #include "csharpcomp.h"
 #include "message.h"
 #include "msgfmt.h"
 #include "msgl-iconv.h"
+#include "xerror-handler.h"
 #include "msgl-header.h"
 #include "plural-exp.h"
 #include "po-charset.h"
@@ -402,7 +404,7 @@ write_csharp_expression (FILE *stream, const struct expression *exp, bool as_boo
               fprintf (stream, ")");
               return;
             }
-          /*FALLTHROUGH*/
+          FALLTHROUGH;
         case var:
         case mult:
         case divide:
@@ -644,7 +646,8 @@ msgdomain_write_csharp (message_list_ty *mlp, const char *canon_encoding,
   retval = 1;
 
   /* Convert the messages to Unicode.  */
-  iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL);
+  iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL,
+                      textmode_xerror_handler);
 
   /* Support for "reproducible builds": Delete information that may vary
      between builds in the same conditions.  */

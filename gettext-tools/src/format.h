@@ -1,5 +1,5 @@
 /* Format strings.
-   Copyright (C) 2001-2010, 2012-2013, 2015, 2019-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -19,11 +19,12 @@
 #define _FORMAT_H
 
 #include <stdbool.h>
+#include <stdlib.h>     /* because Gnulib's <stdlib.h> may '#define free ...' */
 
+#include <error.h>      /* Get fallback definition of __attribute__.  */
 #include "pos.h"        /* Get lex_pos_ty.  */
 #include "message.h"    /* Get NFORMATS.  */
 #include "plural-distrib.h" /* Get struct plural_distribution.  */
-#include "error.h"      /* Get fallback definition of __attribute__.  */
 
 
 #ifdef __cplusplus
@@ -52,9 +53,9 @@ enum
     fdi[(ptr) - format_start] |= (flag)/*;*/
 
 /* This type of callback is responsible for showing an error.  */
-typedef void (*formatstring_error_logger_t) (const char *format, ...)
+typedef void (*formatstring_error_logger_t) (void *data, const char *format, ...)
 #if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1)
-     __attribute__ ((__format__ (__printf__, 1, 2)))
+     __attribute__ ((__format__ (__printf__, 2, 3)))
 #endif
 ;
 
@@ -91,12 +92,15 @@ struct formatstring_parser
      msgstr_descr may omit some of the arguments of msgid_descr).
      If not, signal an error using error_logger (only if error_logger != NULL)
      and return true.  Otherwise return false.  */
-  bool (*check) (void *msgid_descr, void *msgstr_descr, bool equality, formatstring_error_logger_t error_logger, const char *pretty_msgid, const char *pretty_msgstr);
+  bool (*check) (void *msgid_descr, void *msgstr_descr, bool equality,
+                 formatstring_error_logger_t error_logger, void *error_logger_data,
+                 const char *pretty_msgid, const char *pretty_msgstr);
 };
 
 /* Format string parsers, each defined in its own file.  */
 extern DLL_VARIABLE struct formatstring_parser formatstring_c;
 extern DLL_VARIABLE struct formatstring_parser formatstring_objc;
+extern DLL_VARIABLE struct formatstring_parser formatstring_cplusplus_brace;
 extern DLL_VARIABLE struct formatstring_parser formatstring_python;
 extern DLL_VARIABLE struct formatstring_parser formatstring_python_brace;
 extern DLL_VARIABLE struct formatstring_parser formatstring_java;
@@ -156,7 +160,7 @@ extern int
                                     size_t i,
                                     struct argument_range range,
                                     const struct plural_distribution *distribution,
-                                    formatstring_error_logger_t error_logger);
+                                    formatstring_error_logger_t error_logger, void *error_logger_data);
 
 /* Check whether both formats strings contain compatible format
    specifications.
@@ -167,7 +171,7 @@ extern int
                                   const enum is_format is_format[NFORMATS],
                                   struct argument_range range,
                                   const struct plural_distribution *distribution,
-                                  formatstring_error_logger_t error_logger);
+                                  formatstring_error_logger_t error_logger, void *error_logger_data);
 
 
 #ifdef __cplusplus

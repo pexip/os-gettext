@@ -1,29 +1,31 @@
 /* Abstract sequential list data type.  -*- coding: utf-8 -*-
-   Copyright (C) 2006-2020 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifndef _GL_LIST_H
 #define _GL_LIST_H
 
-#include <stdbool.h>
-#include <stddef.h>
-
-#ifndef _GL_INLINE_HEADER_BEGIN
+/* This file uses _GL_INLINE_HEADER_BEGIN, _GL_INLINE,
+   _GL_ATTRIBUTE_NODISCARD.  */
+#if !_GL_CONFIG_H_INCLUDED
  #error "Please include config.h first."
 #endif
+
+#include <stddef.h>
+
 _GL_INLINE_HEADER_BEGIN
 #ifndef GL_LIST_INLINE
 # define GL_LIST_INLINE _GL_INLINE
@@ -73,6 +75,8 @@ extern "C" {
    gl_list_node_set_value      O(1)     O(1)     O(1)      O(1)    O((log n)²)/O(1)
    gl_list_next_node           O(1)     O(1)   O(log n)    O(1)       O(log n)
    gl_list_previous_node       O(1)     O(1)   O(log n)    O(1)       O(log n)
+   gl_list_first_node          O(1)     O(1)   O(log n)    O(1)       O(log n)
+   gl_list_last_node           O(1)     O(1)   O(log n)    O(1)       O(log n)
    gl_list_get_at              O(1)     O(n)   O(log n)    O(n)       O(log n)
    gl_list_get_first           O(1)     O(1)   O(log n)    O(1)       O(log n)
    gl_list_get_last            O(1)     O(1)   O(log n)    O(1)       O(log n)
@@ -150,13 +154,16 @@ extern gl_list_t gl_list_create_empty (gl_list_implementation_t implementation,
                                        gl_listelement_equals_fn equals_fn,
                                        gl_listelement_hashcode_fn hashcode_fn,
                                        gl_listelement_dispose_fn dispose_fn,
-                                       bool allow_duplicates);
+                                       bool allow_duplicates)
+  /*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/
+  _GL_ATTRIBUTE_RETURNS_NONNULL;
 /* Likewise.  Returns NULL upon out-of-memory.  */
 extern gl_list_t gl_list_nx_create_empty (gl_list_implementation_t implementation,
                                           gl_listelement_equals_fn equals_fn,
                                           gl_listelement_hashcode_fn hashcode_fn,
                                           gl_listelement_dispose_fn dispose_fn,
-                                          bool allow_duplicates);
+                                          bool allow_duplicates)
+  /*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/;
 
 /* Creates a list with given contents.
    IMPLEMENTATION is one of GL_ARRAY_LIST, GL_CARRAY_LIST, GL_LINKED_LIST,
@@ -175,14 +182,17 @@ extern gl_list_t gl_list_create (gl_list_implementation_t implementation,
                                  gl_listelement_hashcode_fn hashcode_fn,
                                  gl_listelement_dispose_fn dispose_fn,
                                  bool allow_duplicates,
-                                 size_t count, const void **contents);
+                                 size_t count, const void **contents)
+  /*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/
+  _GL_ATTRIBUTE_RETURNS_NONNULL;
 /* Likewise.  Returns NULL upon out-of-memory.  */
 extern gl_list_t gl_list_nx_create (gl_list_implementation_t implementation,
                                     gl_listelement_equals_fn equals_fn,
                                     gl_listelement_hashcode_fn hashcode_fn,
                                     gl_listelement_dispose_fn dispose_fn,
                                     bool allow_duplicates,
-                                    size_t count, const void **contents);
+                                    size_t count, const void **contents)
+  /*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/;
 
 /* Returns the current number of elements in a list.  */
 extern size_t gl_list_size (gl_list_t list);
@@ -195,9 +205,9 @@ extern const void * gl_list_node_value (gl_list_t list, gl_list_node_t node);
 extern void gl_list_node_set_value (gl_list_t list, gl_list_node_t node,
                                     const void *elt);
 /* Likewise.  Returns 0 upon success, -1 upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern int gl_list_node_nx_set_value (gl_list_t list, gl_list_node_t node,
-                                      const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                      const void *elt);
 
 /* Returns the node immediately after the given node in the list, or NULL
    if the given node is the last (rightmost) one in the list.  */
@@ -206,6 +216,23 @@ extern gl_list_node_t gl_list_next_node (gl_list_t list, gl_list_node_t node);
 /* Returns the node immediately before the given node in the list, or NULL
    if the given node is the first (leftmost) one in the list.  */
 extern gl_list_node_t gl_list_previous_node (gl_list_t list, gl_list_node_t node);
+
+/* Returns the first node in the list, or NULL if the list is empty.
+   This function is useful for iterating through the list like this:
+     gl_list_node_t node;
+     for (node = gl_list_first_node (list); node != NULL; node = gl_list_next_node (node))
+       ...
+ */
+extern gl_list_node_t gl_list_first_node (gl_list_t list);
+
+/* Returns the last node in the list, or NULL if the list is empty.
+   This function is useful for iterating through the list in backward order,
+   like this:
+     gl_list_node_t node;
+     for (node = gl_list_last_node (list); node != NULL; node = gl_list_previous_node (node))
+       ...
+ */
+extern gl_list_node_t gl_list_last_node (gl_list_t list);
 
 /* Returns the element at a given position in the list.
    POSITION must be >= 0 and < gl_list_size (list).  */
@@ -226,9 +253,9 @@ extern const void * gl_list_get_last (gl_list_t list);
 extern gl_list_node_t gl_list_set_at (gl_list_t list, size_t position,
                                       const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern gl_list_node_t gl_list_nx_set_at (gl_list_t list, size_t position,
-                                         const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                         const void *elt);
 
 /* Replaces the element at the first position in the list.
    Returns its node.
@@ -236,8 +263,8 @@ extern gl_list_node_t gl_list_nx_set_at (gl_list_t list, size_t position,
 /* declared in gl_xlist.h */
 extern gl_list_node_t gl_list_set_first (gl_list_t list, const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
-extern gl_list_node_t gl_list_nx_set_first (gl_list_t list, const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+_GL_ATTRIBUTE_NODISCARD
+extern gl_list_node_t gl_list_nx_set_first (gl_list_t list, const void *elt);
 
 /* Replaces the element at the last position in the list.
    Returns its node.
@@ -245,8 +272,8 @@ extern gl_list_node_t gl_list_nx_set_first (gl_list_t list, const void *elt)
 /* declared in gl_xlist.h */
 extern gl_list_node_t gl_list_set_last (gl_list_t list, const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
-extern gl_list_node_t gl_list_nx_set_last (gl_list_t list, const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+_GL_ATTRIBUTE_NODISCARD
+extern gl_list_node_t gl_list_nx_set_last (gl_list_t list, const void *elt);
 
 /* Searches whether an element is already in the list.
    Returns its node if found, or NULL if not present in the list.  */
@@ -288,16 +315,16 @@ extern size_t gl_list_indexof_from_to (gl_list_t list,
 /* declared in gl_xlist.h */
 extern gl_list_node_t gl_list_add_first (gl_list_t list, const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
-extern gl_list_node_t gl_list_nx_add_first (gl_list_t list, const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+_GL_ATTRIBUTE_NODISCARD
+extern gl_list_node_t gl_list_nx_add_first (gl_list_t list, const void *elt);
 
 /* Adds an element as the last element of the list.
    Returns its node.  */
 /* declared in gl_xlist.h */
 extern gl_list_node_t gl_list_add_last (gl_list_t list, const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
-extern gl_list_node_t gl_list_nx_add_last (gl_list_t list, const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+_GL_ATTRIBUTE_NODISCARD
+extern gl_list_node_t gl_list_nx_add_last (gl_list_t list, const void *elt);
 
 /* Adds an element before a given element node of the list.
    Returns its node.  */
@@ -305,10 +332,10 @@ extern gl_list_node_t gl_list_nx_add_last (gl_list_t list, const void *elt)
 extern gl_list_node_t gl_list_add_before (gl_list_t list, gl_list_node_t node,
                                           const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern gl_list_node_t gl_list_nx_add_before (gl_list_t list,
                                              gl_list_node_t node,
-                                             const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                             const void *elt);
 
 /* Adds an element after a given element node of the list.
    Returns its node.  */
@@ -316,9 +343,9 @@ extern gl_list_node_t gl_list_nx_add_before (gl_list_t list,
 extern gl_list_node_t gl_list_add_after (gl_list_t list, gl_list_node_t node,
                                          const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern gl_list_node_t gl_list_nx_add_after (gl_list_t list, gl_list_node_t node,
-                                            const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                            const void *elt);
 
 /* Adds an element at a given position in the list.
    POSITION must be >= 0 and <= gl_list_size (list).  */
@@ -326,9 +353,9 @@ extern gl_list_node_t gl_list_nx_add_after (gl_list_t list, gl_list_node_t node,
 extern gl_list_node_t gl_list_add_at (gl_list_t list, size_t position,
                                       const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern gl_list_node_t gl_list_nx_add_at (gl_list_t list, size_t position,
-                                         const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                         const void *elt);
 
 /* Removes an element from the list.
    Returns true.  */
@@ -469,10 +496,10 @@ extern gl_list_node_t gl_sortedlist_add (gl_list_t list,
                                          gl_listelement_compar_fn compar,
                                          const void *elt);
 /* Likewise.  Returns NULL upon out-of-memory.  */
+_GL_ATTRIBUTE_NODISCARD
 extern gl_list_node_t gl_sortedlist_nx_add (gl_list_t list,
                                             gl_listelement_compar_fn compar,
-                                            const void *elt)
-  _GL_ATTRIBUTE_NODISCARD;
+                                            const void *elt);
 
 /* Searches and removes an element from the list.
    The list is assumed to be sorted with COMPAR.
@@ -507,6 +534,8 @@ struct gl_list_implementation
                             const void *elt);
   gl_list_node_t (*next_node) (gl_list_t list, gl_list_node_t node);
   gl_list_node_t (*previous_node) (gl_list_t list, gl_list_node_t node);
+  gl_list_node_t (*first_node) (gl_list_t list);
+  gl_list_node_t (*last_node) (gl_list_t list);
   const void * (*get_at) (gl_list_t list, size_t position);
   gl_list_node_t (*nx_set_at) (gl_list_t list, size_t position,
                                const void *elt);
@@ -570,7 +599,9 @@ struct gl_list_impl_base
 /* Define all functions of this file as accesses to the
    struct gl_list_implementation.  */
 
-GL_LIST_INLINE gl_list_t
+GL_LIST_INLINE
+/*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/
+gl_list_t
 gl_list_nx_create_empty (gl_list_implementation_t implementation,
                          gl_listelement_equals_fn equals_fn,
                          gl_listelement_hashcode_fn hashcode_fn,
@@ -582,7 +613,9 @@ gl_list_nx_create_empty (gl_list_implementation_t implementation,
                                           allow_duplicates);
 }
 
-GL_LIST_INLINE gl_list_t
+GL_LIST_INLINE
+/*_GL_ATTRIBUTE_DEALLOC (gl_list_free, 1)*/
+gl_list_t
 gl_list_nx_create (gl_list_implementation_t implementation,
                    gl_listelement_equals_fn equals_fn,
                    gl_listelement_hashcode_fn hashcode_fn,
@@ -609,7 +642,7 @@ gl_list_node_value (gl_list_t list, gl_list_node_t node)
          ->node_value (list, node);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD int
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE int
 gl_list_node_nx_set_value (gl_list_t list, gl_list_node_t node,
                            const void *elt)
 {
@@ -631,6 +664,20 @@ gl_list_previous_node (gl_list_t list, gl_list_node_t node)
          ->previous_node (list, node);
 }
 
+GL_LIST_INLINE gl_list_node_t
+gl_list_first_node (gl_list_t list)
+{
+  return ((const struct gl_list_impl_base *) list)->vtable
+         ->first_node (list);
+}
+
+GL_LIST_INLINE gl_list_node_t
+gl_list_last_node (gl_list_t list)
+{
+  return ((const struct gl_list_impl_base *) list)->vtable
+         ->last_node (list);
+}
+
 GL_LIST_INLINE const void *
 gl_list_get_at (gl_list_t list, size_t position)
 {
@@ -650,20 +697,20 @@ gl_list_get_last (gl_list_t list)
   return gl_list_get_at (list, gl_list_size (list) - 1);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_set_at (gl_list_t list, size_t position, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
          ->nx_set_at (list, position, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_set_first (gl_list_t list, const void *elt)
 {
   return gl_list_nx_set_at (list, 0, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_set_last (gl_list_t list, const void *elt)
 {
   return gl_list_nx_set_at (list, gl_list_size (list) - 1, elt);
@@ -717,35 +764,35 @@ gl_list_indexof_from_to (gl_list_t list, size_t start_index, size_t end_index,
          ->indexof_from_to (list, start_index, end_index, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_add_first (gl_list_t list, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
          ->nx_add_first (list, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_add_last (gl_list_t list, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
          ->nx_add_last (list, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_add_before (gl_list_t list, gl_list_node_t node, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
          ->nx_add_before (list, node, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_add_after (gl_list_t list, gl_list_node_t node, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
          ->nx_add_after (list, node, elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_list_nx_add_at (gl_list_t list, size_t position, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable
@@ -856,7 +903,7 @@ gl_sortedlist_indexof_from_to (gl_list_t list, gl_listelement_compar_fn compar, 
                                        elt);
 }
 
-GL_LIST_INLINE _GL_ATTRIBUTE_NODISCARD gl_list_node_t
+_GL_ATTRIBUTE_NODISCARD GL_LIST_INLINE gl_list_node_t
 gl_sortedlist_nx_add (gl_list_t list, gl_listelement_compar_fn compar, const void *elt)
 {
   return ((const struct gl_list_impl_base *) list)->vtable

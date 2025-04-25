@@ -1,5 +1,5 @@
 ## Makefile for the toplevel directory of GNU libtextstyle
-## Copyright (C) 1995-2019 Free Software Foundation, Inc.
+## Copyright (C) 1995-2024 Free Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 ## Process this file with automake to produce Makefile.in.
 
-AUTOMAKE_OPTIONS = 1.13 gnu no-dependencies
+AUTOMAKE_OPTIONS = 1.13 gnu
 ACLOCAL_AMFLAGS = -I m4 -I gnulib-m4
 
 # The list of subdirectories containing Makefiles.
@@ -25,6 +25,7 @@ SUBDIRS = lib tests adhoc-tests doc
 EXTRA_DIST = \
   version.sh \
   DEPENDENCIES \
+  INSTALL.generic \
   HACKING \
   autogen.sh \
   gnulib-local/build-aux/moopp \
@@ -55,6 +56,7 @@ EXTRA_DIST = \
   gnulib-local/lib/html-styled-ostream.oo.h \
   gnulib-local/lib/iconv-ostream.oo.c \
   gnulib-local/lib/iconv-ostream.oo.h \
+  gnulib-local/lib/isatty.c.diff \
   gnulib-local/lib/libcroco/cr-additional-sel.c \
   gnulib-local/lib/libcroco/cr-additional-sel.h \
   gnulib-local/lib/libcroco/cr-attr-sel.c \
@@ -120,20 +122,13 @@ EXTRA_DIST = \
   gnulib-local/lib/ostream.oo.h \
   gnulib-local/lib/styled-ostream.oo.c \
   gnulib-local/lib/styled-ostream.oo.h \
-  gnulib-local/lib/termcap.h \
-  gnulib-local/lib/terminfo.h \
   gnulib-local/lib/term-ostream.oo.c \
   gnulib-local/lib/term-ostream.oo.h \
   gnulib-local/lib/term-styled-ostream.oo.c \
   gnulib-local/lib/term-styled-ostream.oo.h \
-  gnulib-local/lib/tparm.c \
-  gnulib-local/lib/tputs.c \
-  gnulib-local/m4/curses.m4 \
   gnulib-local/m4/libcroco.m4 \
   gnulib-local/m4/libglib.m4 \
   gnulib-local/m4/moo.m4 \
-  gnulib-local/m4/termcap.m4 \
-  gnulib-local/m4/terminfo.m4 \
   gnulib-local/m4/term-ostream.m4 \
   gnulib-local/modules/fd-ostream \
   gnulib-local/modules/file-ostream \
@@ -150,10 +145,6 @@ EXTRA_DIST = \
   gnulib-local/modules/noop-styled-ostream \
   gnulib-local/modules/ostream \
   gnulib-local/modules/styled-ostream \
-  gnulib-local/modules/termcap \
-  gnulib-local/modules/termcap-h \
-  gnulib-local/modules/terminfo \
-  gnulib-local/modules/terminfo-h \
   gnulib-local/modules/term-ostream \
   gnulib-local/modules/term-ostream-tests \
   gnulib-local/modules/term-styled-ostream \
@@ -184,12 +175,14 @@ EXTRA_DIST = \
   gnulib-local/tests/test-term-ostream-xterm-linux-debian.out \
   gnulib-local/tests/test-term-ostream-xterm-linux-mandriva.out \
   gnulib-local/tests/test-term-ostream-xterm-mingw.out \
+  gnulib-local/tests/test-term-ostream-xterm-msys2.out \
   gnulib-local/tests/test-term-ostream-xterm-netbsd3.out \
   gnulib-local/tests/test-term-ostream-xterm-osf51.out \
   gnulib-local/tests/test-term-ostream-xterm-r6.out \
   gnulib-local/tests/test-term-ostream-xterm-solaris10.out \
   gnulib-local/tests/test-term-ostream-xterm-xf86-v32.out \
   build-aux/moopp \
+  build-aux/join-v-1 \
   build-aux/texi2html \
   build-aux/run-test \
   build-aux/test-driver.diff \

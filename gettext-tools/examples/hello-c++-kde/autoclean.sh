@@ -17,6 +17,7 @@ fi
 # Brought in by autopoint.
 rm -f ABOUT-NLS
 rm -f m4/gettext.m4
+rm -f m4/build-to-host.m4
 rm -f m4/host-cpu-c-abi.m4
 rm -f m4/iconv.m4
 rm -f m4/intlmacosx.m4
@@ -27,7 +28,7 @@ rm -f m4/nls.m4
 rm -f m4/po.m4
 rm -f m4/progtest.m4
 rm -f po/Makefile.in.in
-rm -f po/remove-potcdate.sin
+rm -f po/remove-potcdate.sed
 rm -f admin/config.rpath
 
 # Generated through admin/cvs.sh.

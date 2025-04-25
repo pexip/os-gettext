@@ -2,7 +2,7 @@
 # This is not a development library in the usual sense, but a module to be
 # LD_PRELOADed. Usage is explained in section "Prioritizing messages".
 #
-gettext: lacks-versioned-link-to-shared-library usr/lib/*/libgnuintl.so.8 usr/lib/*/preloadable_libintl.so libgnuintl.so.8
+gettext: lacks-versioned-link-to-shared-library usr/lib/*/libgnuintl.so.8 [usr/lib/*/preloadable_libintl.so]
 gettext: shared-library-is-multi-arch-foreign usr/lib/*/preloadable_libintl.so
 gettext: no-symbols-control-file usr/lib/*/preloadable_libintl.so
 #
@@ -13,10 +13,15 @@ gettext: hardening-no-fortify-functions [usr/lib/*/preloadable_libintl.so]
 #
 # Not for use by other packages.
 #
-gettext: package-name-doesnt-match-sonames libgettextlib-0.21 libgettextsrc-0.21 libgnuintl8
-gettext: no-symbols-control-file usr/lib/*/libgettextsrc-0.21.so
+gettext: package-name-doesnt-match-sonames libgettextlib-0.23.1 libgettextsrc-0.23.1 libgnuintl8 libtextstyle0
+gettext: no-symbols-control-file usr/lib/*/libgettextsrc-0.23.1.so
 #
 # These files are not really documentation, and must be in their current locations
 # for some programs shipped in this package to work correctly.
 #
 gettext: package-contains-documentation-outside-usr-share-doc [usr/share/gettext/projects/*/teams.html]
+#
+# This is as designed.
+#
+gettext: bad-jar-name [usr/share/java/gettext.jar]
+gettext: package-installs-java-bytecode [usr/share/gettext/javaversion.class]

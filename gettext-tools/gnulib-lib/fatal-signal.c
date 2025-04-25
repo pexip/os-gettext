@@ -1,18 +1,18 @@
 /* Emergency actions in case of a fatal signal.
-   Copyright (C) 2003-2004, 2006-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2004, 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 
@@ -21,14 +21,14 @@
 /* Specification.  */
 #include "fatal-signal.h"
 
-#include <stdbool.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 
 #include "glthread/lock.h"
+#include "glthread/once.h"
+#include "thread-optim.h"
 #include "sig-handler.h"
-#include "xalloc.h"
 
 #define SIZEOF(a) (sizeof(a) / sizeof(a[0]))
 
@@ -210,10 +210,12 @@ gl_lock_define_initialized (static, at_fatal_signal_lock)
 
 /* Register a cleanup function to be executed when a catchable fatal signal
    occurs.  */
-void
+int
 at_fatal_signal (action_t action)
 {
-  gl_lock_lock (at_fatal_signal_lock);
+  bool mt = gl_multithreaded ();
+
+  if (mt) gl_lock_lock (at_fatal_signal_lock);
 
   static bool cleanup_initialized = false;
   if (!cleanup_initialized)
@@ -222,6 +224,8 @@ at_fatal_signal (action_t action)
       install_handlers ();
       cleanup_initialized = true;
     }
+
+  int ret = 0;
 
   if (actions_count == actions_allocated)
     {
@@ -232,9 +236,15 @@ at_fatal_signal (action_t action)
       size_t old_actions_allocated = actions_allocated;
       size_t new_actions_allocated = 2 * actions_allocated;
       actions_entry_t *new_actions =
-        XNMALLOC (new_actions_allocated, actions_entry_t);
-      size_t k;
+        (actions_entry_t *)
+        malloc (new_actions_allocated * sizeof (actions_entry_t));
+      if (new_actions == NULL)
+        {
+          ret = -1;
+          goto done;
+        }
 
+      size_t k;
       /* Don't use memcpy() here, because memcpy takes non-volatile arguments
          and is therefore not guaranteed to complete all memory stores before
          the next statement.  */
@@ -260,7 +270,10 @@ at_fatal_signal (action_t action)
   actions[actions_count].action = action;
   actions_count++;
 
-  gl_lock_unlock (at_fatal_signal_lock);
+ done:
+  if (mt) gl_lock_unlock (at_fatal_signal_lock);
+
+  return ret;
 }
 
 
@@ -300,7 +313,9 @@ static unsigned int fatal_signals_block_counter = 0;
 void
 block_fatal_signals (void)
 {
-  gl_lock_lock (fatal_signals_block_lock);
+  bool mt = gl_multithreaded ();
+
+  if (mt) gl_lock_lock (fatal_signals_block_lock);
 
   if (fatal_signals_block_counter++ == 0)
     {
@@ -308,14 +323,16 @@ block_fatal_signals (void)
       sigprocmask (SIG_BLOCK, &fatal_signal_set, NULL);
     }
 
-  gl_lock_unlock (fatal_signals_block_lock);
+  if (mt) gl_lock_unlock (fatal_signals_block_lock);
 }
 
 /* Stop delaying the catchable fatal signals.  */
 void
 unblock_fatal_signals (void)
 {
-  gl_lock_lock (fatal_signals_block_lock);
+  bool mt = gl_multithreaded ();
+
+  if (mt) gl_lock_lock (fatal_signals_block_lock);
 
   if (fatal_signals_block_counter == 0)
     /* There are more calls to unblock_fatal_signals() than to
@@ -327,7 +344,7 @@ unblock_fatal_signals (void)
       sigprocmask (SIG_UNBLOCK, &fatal_signal_set, NULL);
     }
 
-  gl_lock_unlock (fatal_signals_block_lock);
+  if (mt) gl_lock_unlock (fatal_signals_block_lock);
 }
 
 

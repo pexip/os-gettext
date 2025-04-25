@@ -1,5 +1,5 @@
 /* Unicode CLDR plural rule parser and converter
-   Copyright (C) 2015, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2015-2024 Free Software Foundation, Inc.
 
    This file was written by Daiki Ueno <ueno@gnu.org>, 2015.
 
@@ -36,7 +36,7 @@
 #include "relocatable.h"
 #include <stdlib.h>
 #include <string.h>
-#include "xalloc.h"
+#include "string-buffer.h"
 
 #define _(s) gettext(s)
 
@@ -49,9 +49,9 @@ extract_rules (FILE *fp,
   xmlDocPtr doc;
   xmlNodePtr node, n;
   size_t locale_length;
-  char *buffer = NULL, *p;
-  size_t bufmax = 0;
-  size_t buflen = 0;
+  struct string_buffer buffer;
+
+  sb_init (&buffer);
 
   doc = xmlReadFd (fileno (fp), logical_filename, NULL,
                    XML_PARSE_NONET
@@ -128,10 +128,6 @@ extract_rules (FILE *fp,
 
       for (n2 = n->children; n2; n2 = n2->next)
         {
-          xmlChar *count;
-          xmlChar *content;
-          size_t length;
-
           if (n2->type != XML_ELEMENT_NODE
               || !xmlStrEqual (n2->name, BAD_CAST "pluralRule"))
             continue;
@@ -146,38 +142,24 @@ extract_rules (FILE *fp,
               break;
             }
 
-          count = xmlGetProp (n2, BAD_CAST "count");
-          content = xmlNodeGetContent (n2);
-          length = xmlStrlen (count) + strlen (": ")
-            + xmlStrlen (content) + strlen ("; ");
-
-          if (buflen + length + 1 > bufmax)
-            {
-              bufmax *= 2;
-              if (bufmax < buflen + length + 1)
-                bufmax = buflen + length + 1;
-              buffer = (char *) xrealloc (buffer, bufmax);
-            }
-
-          sprintf (buffer + buflen, "%s: %s; ", count, content);
+          xmlChar *count = xmlGetProp (n2, BAD_CAST "count");
+          xmlChar *content = xmlNodeGetContent (n2);
+          sb_xappendf (&buffer, "%s: %s; ", count, content);
           xmlFree (count);
           xmlFree (content);
-
-          buflen += length;
         }
     }
 
-  if (buffer)
-    {
-      /* Scrub the last semicolon, if any.  */
-      p = strrchr (buffer, ';');
-      if (p)
-        *p = '\0';
-    }
+  {
+    /* Scrub the last semicolon, if any.  */
+    char *p = strrchr (sb_xcontents_c (&buffer), ';');
+    if (p)
+      *p = '\0';
+  }
 
  out:
   xmlFreeDoc (doc);
-  return buffer;
+  return sb_xdupfree_c (&buffer);
 }
 
 /* Display usage information and exit.  */
@@ -254,6 +236,7 @@ main (int argc, char **argv)
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -294,7 +277,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2015-2020", "https://gnu.org/licenses/gpl.html");
+              "2015-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Daiki Ueno"));
       exit (EXIT_SUCCESS);
     }

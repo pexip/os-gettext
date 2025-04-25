@@ -1,5 +1,5 @@
 /* GNU gettext - internationalization aids
-   Copyright (C) 1997-1998, 2000-2007, 2009-2020 Free Software Foundation, Inc.
+   Copyright (C) 1997-2024 Free Software Foundation, Inc.
 
    This file was written by Peter Miller <millerp@canb.auug.org.au>
 
@@ -28,12 +28,12 @@
 
 #include <textstyle.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "dir-list.h"
 #include "str-list.h"
 #include "file-list.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
@@ -47,6 +47,7 @@
 #include "write-po.h"
 #include "write-properties.h"
 #include "write-stringtable.h"
+#include "xerror-handler.h"
 #include "msgl-cat.h"
 #include "propername.h"
 #include "gettext.h"
@@ -120,12 +121,14 @@ main (int argc, char *argv[])
   /* Set program name for messages.  */
   set_program_name (argv[0]);
   error_print_progname = maybe_print_progname;
+  gram_max_allowed_errors = 20;
 
   /* Set locale via LC_ALL.  */
   setlocale (LC_ALL, "");
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -284,7 +287,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "1995-2020", "https://gnu.org/licenses/gpl.html");
+              "1995-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Peter Miller"));
       exit (EXIT_SUCCESS);
     }
@@ -338,7 +341,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
     msgdomain_list_sort_by_msgid (result);
 
   /* Write the PO file.  */
-  msgdomain_list_print (result, output_file, output_syntax, force_po, false);
+  msgdomain_list_print (result, output_file, output_syntax,
+                        textmode_xerror_handler, force_po, false);
 
   exit (error_message_count > 0 ? EXIT_FAILURE : EXIT_SUCCESS);
 }

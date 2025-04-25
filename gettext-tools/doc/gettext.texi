@@ -14,7 +14,18 @@
 @documentencoding UTF-8
 @end ifset
 @settitle GNU @code{gettext} utilities
+
+@c Remove the black boxes generated in the GPL appendix.
 @finalout
+
+@c In PDF output, use a brown colour for interactive links,
+@c like it was before commit
+@c https://git.savannah.gnu.org/gitweb/?p=texinfo.git;a=commitdiff;h=b4f50b9f4c083327e81ec5c7cde9b87234a19646
+@tex
+\global\def\linkcolor{\rgbDarkRed}
+\global\def\urlcolor{\rgbDarkRed}
+@end tex
+
 @c Indices:
 @c   am = autoconf macro  @amindex
 @c   cp = concept         @cindex
@@ -39,6 +50,7 @@
 @syncodeindex ev em
 @syncodeindex fn cp
 @syncodeindex kw cp
+
 @ifclear texi2html
 @firstparagraphindent insert
 @end ifclear
@@ -79,7 +91,7 @@ This file provides documentation for GNU @code{gettext} utilities.
 It also serves as a reference for the free Translation Project.
 
 @copying
-Copyright (C) 1995-1998, 2001-2020 Free Software Foundation, Inc.
+Copyright (C) 1995-1998, 2001-2024 Free Software Foundation, Inc.
 
 This manual is free documentation.  It is dually licensed under the
 GNU FDL and the GNU GPL.  This means that you can redistribute this
@@ -114,7 +126,7 @@ A copy of the license is included in @ref{GNU GPL}.
 @page
 @vskip 0pt plus 1filll
 @c @insertcopying
-Copyright (C) 1995-1998, 2001-2020 Free Software Foundation, Inc.
+Copyright (C) 1995-1998, 2001-2024 Free Software Foundation, Inc.
 
 This manual is free documentation.  It is dually licensed under the
 GNU FDL and the GNU GPL.  This means that you can redistribute this
@@ -208,6 +220,7 @@ Preparing Program Sources
 * Preparing Strings::           Preparing Translatable Strings
 * Mark Keywords::               How Marks Appear in Sources
 * Marking::                     Marking Translatable Strings
+* Translator advice::           Adding advice for translators
 * c-format Flag::               Telling something about the following string
 * Special cases::               Special Cases of Translatable Strings
 * Bug Report Address::          Letting Users Report Translation Bugs
@@ -217,6 +230,7 @@ Preparing Program Sources
 Making the PO Template File
 
 * xgettext Invocation::         Invoking the @code{xgettext} Program
+* Combining POTs::              Combining PO Template Files
 
 Creating a New PO File
 
@@ -229,9 +243,14 @@ Updating Existing PO Files
 
 Editing PO Files
 
-* KBabel::                      KDE's PO File Editor
+* Web based localization::      Web-based PO editing
+* Lokalize::                    KDE's PO File Editor
 * Gtranslator::                 GNOME's PO File Editor
+* Poedit::                      A simple PO File Editor
+* OmegaT::                      A powerful Translation Editor
+* Virtaal::                     The Virtaal Translation Editor
 * PO Mode::                     Emacs's PO File Editor
+* Vim::                         Editing PO Files in vim
 * Compendium::                  Using Translation Compendia
 
 Emacs's PO File Editor
@@ -318,24 +337,11 @@ Temporary Notes for the Programmers Chapter
 
 The Translator's View
 
-* Trans Intro 0::               Introduction 0
-* Trans Intro 1::               Introduction 1
-* Discussions::                 Discussions
 * Organization::                Organization
-* Information Flow::            Information Flow
+* Responsibilities::            Responsibilities in the Translation Project
+* Dialects::                    Language dialects
 * Translating plural forms::    How to fill in @code{msgstr[0]}, @code{msgstr[1]}
 * Prioritizing messages::       How to find which messages to translate first
-
-Organization
-
-* Central Coordination::        Central Coordination
-* National Teams::              National Teams
-* Mailing Lists::               Mailing Lists
-
-National Teams
-
-* Sub-Cultures::                Sub-Cultures
-* Organizational Ideas::        Organizational Ideas
 
 The Maintainer's View
 
@@ -390,6 +396,7 @@ The Translator's View
 
 * c-format::                    C Format Strings
 * objc-format::                 Objective C Format Strings
+* c++-format::                  C++ Format Strings
 * python-format::               Python Format Strings
 * java-format::                 Java Format Strings
 * csharp-format::               C# Format Strings
@@ -462,7 +469,7 @@ Perl
 * Default Keywords::            Which Keywords Will xgettext Look For?
 * Special Keywords::            How to Extract Hash Keys
 * Quote-like Expressions::      What are Strings And Quote-like Expressions?
-* Interpolation I::             Invalid String Interpolation
+* Interpolation I::             Unsupported String Interpolation
 * Interpolation II::            Valid String Interpolation
 * Parentheses::                 When To Use Parentheses
 * Long Lines::                  How To Grok with Long Lines
@@ -481,6 +488,11 @@ Internationalizable Data Formats
 * GSettings::                   GSettings - GNOME user configuration schema
 * AppData::                     AppData - freedesktop.org application description
 * Preparing ITS Rules::         Preparing Rules for XML Internationalization
+
+Preparing Rules for XML Internationalization
+
+* ITS Rules::                   Specifying ITS Rules
+* Locating Rules::              Specifying where to find the ITS Rules
 
 Localized Data Formats
 
@@ -1176,8 +1188,8 @@ installers only ask for the language once.
 This determines the system-wide default language for all users.  But the
 installers often give the possibility to install extra localizations for
 additional languages.  For example, the localizations of KDE (the K
-Desktop Environment) and OpenOffice.org are often bundled separately,
-as one installable package per language.
+Desktop Environment) and LibreOffice are often bundled separately, as one
+installable package per language.
 
 At this point it is good to consider the intended use of the machine: If
 it is a machine designated for personal use, additional localizations are
@@ -1242,8 +1254,18 @@ prompt, merely execute
 @subsection Locale Names
 
 A locale name usually has the form @samp{@var{ll}_@var{CC}}.  Here
-@samp{@var{ll}} is an @w{ISO 639} two-letter language code, and
-@samp{@var{CC}} is an @w{ISO 3166} two-letter country code.  For example,
+
+@itemize @bullet
+@item
+@samp{@var{ll}} is an @w{ISO 639} two-letter language code.
+For some languages,
+a two-letter code does not exist, and a three-letter code is used instead.
+@item
+@samp{@var{CC}} is an @w{ISO 3166} two-letter code of a country or territory.
+@end itemize
+
+@noindent
+For example,
 for German in Germany, @var{ll} is @code{de}, and @var{CC} is @code{DE}.
 You find a list of the language codes in appendix @ref{Language Codes} and
 a list of the country codes in appendix @ref{Country Codes}.
@@ -1277,7 +1299,9 @@ On other systems, some variations of this scheme are used, such as
 @samp{@var{ll}}.  You can get the list of locales supported by your system
 for your language by running the command @samp{locale -a | grep '^@var{ll}'}.
 
-There is also a special locale, called @samp{C}.
+There are also two special locales:
+@itemize @bullet
+@item The locale called @samp{C}.@*
 @c Don't mention that this locale also has the name "POSIX". When we talk about
 @c the "POSIX locale", we mean the "locale as specified in the POSIX way", and
 @c mentioning a locale called "POSIX" would bring total confusion.
@@ -1285,6 +1309,12 @@ When it is used, it disables all localization: in this locale, all programs
 standardized by POSIX use English messages and an unspecified character
 encoding (often US-ASCII, but sometimes also ISO-8859-1 or UTF-8, depending on
 the operating system).
+@item The locale called @samp{C.UTF-8}.@*
+This locale exists on all modern GNU and Unix systems,
+but not on all operating systems.
+When it is used, it disables all localization as well.
+It uses UTF-8 as character encoding.
+@end itemize
 
 @node Locale Environment Variables
 @subsection Locale Environment Variables
@@ -1373,6 +1403,18 @@ abbreviated as @samp{@var{ll}} to denote the language's main dialect.
 For example, @samp{de} is equivalent to @samp{de_DE} (German as spoken in
 Germany), and @samp{pt} to @samp{pt_PT} (Portuguese as spoken in Portugal)
 in this context.
+
+Special advice for Chinese users:
+Users who want to see translations with Simplified Chinese characters
+should set @code{LANGUAGE} to @code{zh_CN},
+whereas users who want to see translations with Traditional Chinese characters
+should set @code{LANGUAGE} to @code{zh_TW}.
+Chinese users in Singapore will want to set it to @code{zh_SG:zh_CN},
+Chinese users in Hong Kong will want to set it to @code{zh_HK:zh_TW},
+and Chinese users in Macao will want to set it to @code{zh_MO:zh_TW}.
+Here @code{zh_CN} or @code{zh_TW}, respectively, acts as fallback,
+since only few packages have translations
+for @code{zh_SG}, @code{zh_HK}, or @code{zh_MO}.
 
 Note: The variable @code{LANGUAGE} is ignored if the locale is set to
 @samp{C}.  In other words, you have to first enable localization, by setting
@@ -1504,6 +1546,11 @@ a translation.
 
 All comments, of either kind, are optional.
 
+References to the program's source code, in lines that start with @code{#:},
+are of the form @code{@var{file_name}:@var{line_number}} or just
+@var{file_name}.  If the @var{file_name} contains spaces. it is enclosed
+within Unicode characters U+2068 and U+2069.
+
 @kwindex msgid
 @kwindex msgstr
 After white space and comments, entries show two strings, namely
@@ -1565,6 +1612,12 @@ program does some more tests to check the validity of the translation.
 @itemx no-objc-format
 @kwindex no-objc-format@r{ flag}
 Likewise for Objective C, see @ref{objc-format}.
+
+@item c++-format
+@kwindex c++-format@r{ flag}
+@itemx no-c++-format
+@kwindex no-c++-format@r{ flag}
+Likewise for C++, see @ref{c++-format}.
 
 @item python-format
 @kwindex python-format@r{ flag}
@@ -1823,8 +1876,9 @@ not be used anywhere else.
 
 Each of @var{untranslated-string} and @var{translated-string} respects
 the C syntax for a character string, including the surrounding quotes
-and embedded backslashed escape sequences.  When the time comes
-to write multi-line strings, one should not use escaped newlines.
+and embedded backslashed escape sequences, except that universal character
+escape sequences (@code{\u} and @code{\U}) are not allowed.  When the time
+comes to write multi-line strings, one should not use escaped newlines.
 Instead, a closing quote should follow the last character on the
 line to be continued, and an opening quote should resume the string
 at the beginning of the following PO file line.  For example:
@@ -1869,6 +1923,11 @@ this comment is most likely generated and managed by specialized GNU
 tools, and might disappear or be replaced unexpectedly when the PO
 file is given to @code{msgmerge}.
 
+For a PO file to be valid, no two entries without @code{msgctxt} may have
+the same @var{untranslated-string} or @var{untranslated-string-singular}.
+Similarly, no two entries may have the same @code{msgctxt} and the same
+@var{untranslated-string} or @var{untranslated-string-singular}.
+
 @node Sources
 @chapter Preparing Program Sources
 @cindex preparing programs for translation
@@ -1889,6 +1948,7 @@ needing translation.
 * Preparing Strings::           Preparing Translatable Strings
 * Mark Keywords::               How Marks Appear in Sources
 * Marking::                     Marking Translatable Strings
+* Translator advice::           Adding advice for translators
 * c-format Flag::               Telling something about the following string
 * Special cases::               Special Cases of Translatable Strings
 * Bug Report Address::          Letting Users Report Translation Bugs
@@ -2000,9 +2060,14 @@ declared in the @code{<string.h>} and @code{<stdlib.h>} standard headers.
 If this is not
 desirable in your application (for example in a compiler's parser),
 you can use a set of substitute functions which hardwire the C locale,
-such as found in the modules @samp{c-ctype}, @samp{c-strcase},
-@samp{c-strcasestr}, @samp{c-strtod}, @samp{c-strtold} in the GNU gnulib
-source distribution.
+such as found in the modules
+@samp{c-ctype},
+@samp{c-strcase},
+@samp{c-strcasestr},
+@samp{c-snprintf},
+@samp{c-strtod}, @samp{c-strtold},
+@samp{c-dtoastr}, @samp{c-ldtoastr}
+in the GNU gnulib source distribution.
 
 It is also possible to switch the locale forth and back between the
 environment dependent locale and the C locale, but this approach is
@@ -2038,13 +2103,28 @@ Use format strings instead of string concatenation.
 Use placeholders in format strings instead of embedded URLs.
 
 @item
+Use placeholders in format strings instead of programmer-defined format
+string directives.
+
+@item
 Avoid unusual markup and unusual control characters.
 @end itemize
 
 @noindent
 Let's look at some examples of these guidelines.
 
-@subheading Decent English style
+@menu
+* Decent English style::
+* Entire sentences::
+* Split at paragraphs::
+* No string concatenation::
+* No embedded URLs::
+* No custom format directives::
+* No unusual markup::
+@end menu
+
+@node Decent English style
+@subsection Decent English style
 
 @cindex style
 Translatable strings should be in good English style.  If slang language
@@ -2073,7 +2153,8 @@ of the objects"?
 In both cases, adding more words to the message will help both the
 translator and the English speaking user.
 
-@subheading Entire sentences
+@node Entire sentences
+@subsection Entire sentences
 
 @cindex sentences
 Translatable strings should be entire sentences.  It is often not possible
@@ -2142,9 +2223,10 @@ makes it easier for the translator to understand and translate both.  On
 the other hand, if one of the two messages is a stereotypic one, occurring
 in other places as well, you will do a favour to the translator by not
 merging the two.  (Identical messages occurring in several places are
-combined by xgettext, so the translator has to handle them once only.)
+combined by @code{xgettext}, so the translator has to handle them once only.)
 
-@subheading Split at paragraphs
+@node Split at paragraphs
+@subsection Split at paragraphs
 
 @cindex paragraphs
 Translatable strings should be limited to one paragraph; don't let a
@@ -2164,7 +2246,8 @@ such as the input options, the output options, and the informative
 output options.  This will help every user to find the option he is
 looking for.
 
-@subheading No string concatenation
+@node No string concatenation
+@subsection No string concatenation
 
 @cindex string concatenation
 @cindex concatenation of strings
@@ -2188,6 +2271,232 @@ to use a format string:
 @example
 sprintf (s, "Replace %s with %s?", object1, object2);
 @end example
+
+@subheading String concatenation operator
+
+In many programming languages,
+a particular operator denotes string concatenation
+at runtime (or possibly at compile time, if the compiler supports that).
+
+@cindex Shell, string concatenation
+@cindex Python, string concatenation
+@cindex Smalltalk, string concatenation
+@cindex Java, string concatenation
+@cindex C#, string concatenation
+@cindex awk, string concatenation
+@cindex Perl, string concatenation
+@cindex PHP, string concatenation
+@cindex Ruby, string concatenation
+@cindex Lua, string concatenation
+@cindex JavaScript, string concatenation
+@cindex Vala, string concatenation
+@itemize @bullet
+@item
+In C++, string concatenation of @code{std::string} objects
+is denoted by the @samp{+} operator.
+@c Reference: https://en.cppreference.com/w/cpp/string/basic_string/operator%2B
+@item
+In Shell, string concatenation is denoted by mere juxtaposition of strings.
+@c Reference: https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html
+@item
+In Python, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://docs.python.org/3.12/reference/expressions.html#binary-arithmetic-operations
+@item
+In Smalltalk, string concatenation is denoted by the @samp{,} operator.
+@c Reference: https://rmod-files.lille.inria.fr/FreeBooks/ByExample/14%20-%20Chapter%2012%20-%20Strings.pdf
+@item
+In Java, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.18.1
+@item
+In C#, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://learn.microsoft.com/en-us/dotnet/csharp/how-to/concatenate-multiple-strings
+@item
+In awk, string concatenation is denoted by mere juxtaposition of strings.
+@c Reference: https://www.gnu.org/software/gawk/manual/html_node/Concatenation.html
+@item
+In Perl, string concatenation is denoted by the @samp{.} operator.
+@c Reference: https://perldoc.perl.org/perlop#Additive-Operators
+@item
+In PHP, string concatenation is denoted by the @samp{.} operator.
+@c Reference: https://www.php.net/manual/en/language.operators.string.php
+@item
+In Ruby, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://en.wikibooks.org/wiki/Ruby_Programming/Syntax/Operators
+@c (Ignore ruby-doc.org! It is hopelessly outdated.)
+@item
+In Lua, string concatenation is denoted by the @samp{..} operator.
+@c Reference: https://www.lua.org/pil/3.4.html
+@item
+In JavaScript, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Addition
+@item
+In Vala, string concatenation is denoted by the @samp{+} operator.
+@c Reference: https://docs.vala.dev/tutorials/programming-language/main/02-00-basics/02-05-operators.html
+@end itemize
+
+So, for example, in Java, you would change
+
+@example
+System.out.println("Replace "+object1+" with "+object2+"?");
+@end example
+
+@noindent
+into a statement involving a format string:
+
+@example
+System.out.println(
+    MessageFormat.format("Replace @{0@} with @{1@}?",
+                         new Object[] @{ object1, object2 @}));
+@end example
+
+@noindent
+Similarly, in C#, you would change
+
+@example
+Console.WriteLine("Replace "+object1+" with "+object2+"?");
+@end example
+
+@noindent
+into a statement involving a format string:
+
+@example
+Console.WriteLine(
+    String.Format("Replace @{0@} with @{1@}?", object1, object2));
+@end example
+
+@subheading Strings with embedded expressions
+
+In some programming languages,
+it is possible to have strings with embedded expressions.
+The expressions can refer to variables of the program.
+The value of such an expression is converted to a string
+and inserted in place of the expression;
+but no formatting function is called.
+
+@cindex Shell, strings with embedded expressions
+@cindex Python, strings with embedded expressions
+@cindex C#, strings with embedded expressions
+@cindex Tcl, strings with embedded expressions
+@cindex Perl, strings with embedded expressions
+@cindex PHP, strings with embedded expressions
+@cindex Ruby, strings with embedded expressions
+@cindex JavaScript, strings with embedded expressions
+@itemize @bullet
+@item
+In Shell language, double-quoted strings can contain
+references to variables, along with default values and string operations.
+Such as @code{"Hello, $name!"} or @code{"Hello, $@{name@}!"}.
+@c Reference: https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html#tag_19_02_03
+@item
+In Python, @emph{f-strings} can contain expressions.
+Such as @code{f"Hello, @{name@}!"}.
+@c Reference: https://docs.python.org/3.12/reference/lexical_analysis.html#formatted-string-literals
+@c @item
+@c In Java, since Java 21, @emph{string templates} can contain expressions.
+@c Such as @code{STR."Hello, \@{name\@}!"}.
+@c Reference: https://openjdk.org/jeps/430 https://openjdk.org/jeps/459
+@c Withdrawn: https://mail.openjdk.org/pipermail/amber-spec-experts/2024-April/004106.html
+@item
+In C#, since C# 6.0, @emph{interpolated strings} can contain expressions.
+Such as @code{$"Hello, @{name@}!"}.
+@c Reference: https://learn.microsoft.com/en-us/dotnet/csharp/how-to/concatenate-multiple-strings
+@item
+In Tcl, strings are subject to @emph{variable substitution}.
+Such as @code{"Hello, $name!"}.
+@c Reference: https://wiki.tcl-lang.org/page/Dodekalogue
+@c Reference: https://wiki.tcl-lang.org/page/Variable+Substitution
+@item
+In Perl, @emph{interpolated strings} can contain expressions.
+Such as @code{"Hello, $name!"}.
+@c Reference: https://perldoc.perl.org/perlintro#Basic-syntax-overview
+@item
+In PHP, string literals are subject to @emph{variable parsing}.
+Such as @code{"Hello, $name!"}.
+@c Reference: https://www.php.net/manual/en/language.variables.basics.php
+@item
+In Ruby, @emph{interpolated strings} can contain expressions.
+Such as @code{"Hello, #@{name@}!"}.
+@c Reference: https://en.wikibooks.org/wiki/Ruby_Programming/Syntax/Literals#Interpolation
+@c (Ignore ruby-doc.org! It is hopelessly outdated.)
+@item
+In JavaScript, since ES6, @emph{template literals} can contain expressions.
+Such as @code{`Hello, $@{name@}!`}.
+@c Reference: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals
+@end itemize
+
+These cases are effectively string concatenation as well,
+just with a different syntax.
+
+So, for example, in Python, you would change
+
+@example
+print (f'Replace @{object1.name@} with @{object2.name@}?')
+@end example
+
+@noindent
+into a statement involving a format string:
+
+@example
+print ('Replace %(name1)s with %(name2)s?'
+       % @{ 'name1': object1.name, 'name2': object2.name @})
+@end example
+
+@noindent
+or equivalently
+@example
+print ('Replace @{name1@} with @{name2@}?'
+       .format(name1 = object1.name, name2 = object2.name))
+@end example
+
+And in JavaScript, you would change
+
+@example
+print (`Replace $@{object1.name@} with $@{object2.name@}?`)
+@end example
+
+@noindent
+into a statement involving a format string:
+
+@example
+print ('Replace %s with %s?'.format(object1.name, object2.name))
+@end example
+
+@noindent
+Specifically in JavaScript,
+an alternative is to use a @emph{tagged} template literal:
+
+@example
+print (@var{tag}`Replace $@{object1.name@} with $@{object2.name@}?`)
+@end example
+
+@noindent
+and pass an option @samp{--tag=@var{tag}:@var{format}} to @code{xgettext}.
+
+@subheading Format strings with embedded named references
+
+Format strings with embedded named references are different:
+They are suitable for internationalization, because it is possible
+to insert a call to the @code{gettext} function (that will return a
+translated format string) @emph{before} the argument values are
+inserted in place of the placeholders.
+
+The format string types that allow embedded named references are:
+
+@itemize @bullet
+@item
+@ref{sh-format, Shell format strings}.
+@item
+In Python, those @ref{python-format, Python format strings}
+that take a dictionary as argument,
+and the @ref{python-format, Python brace format strings}.
+@item
+In Ruby, those @ref{ruby-format, Ruby format strings}
+that take a hash table as argument.
+@item
+In Perl, the @ref{perl-format, Perl brace format strings}.
+@end itemize
+
+@subheading The @code{<inttypes.h>} macros
 
 @cindex @code{inttypes.h}
 A similar case is compile time concatenation of strings.  The ISO C 99
@@ -2232,41 +2541,8 @@ of 100 is safe, because all available hardware integer types are limited to
 128 bits, and to print a 128 bit integer one needs at most 54 characters,
 regardless whether in decimal, octal or hexadecimal.
 
-@cindex Java, string concatenation
-@cindex C#, string concatenation
-All this applies to other programming languages as well.  For example, in
-Java and C#, string concatenation is very frequently used, because it is a
-compiler built-in operator.  Like in C, in Java, you would change
-
-@example
-System.out.println("Replace "+object1+" with "+object2+"?");
-@end example
-
-@noindent
-into a statement involving a format string:
-
-@example
-System.out.println(
-    MessageFormat.format("Replace @{0@} with @{1@}?",
-                         new Object[] @{ object1, object2 @}));
-@end example
-
-@noindent
-Similarly, in C#, you would change
-
-@example
-Console.WriteLine("Replace "+object1+" with "+object2+"?");
-@end example
-
-@noindent
-into a statement involving a format string:
-
-@example
-Console.WriteLine(
-    String.Format("Replace @{0@} with @{1@}?", object1, object2));
-@end example
-
-@subheading No embedded URLs
+@node No embedded URLs
+@subsection No embedded URLs
 
 It is good to not embed URLs in translatable strings, for several reasons:
 @itemize @bullet
@@ -2284,20 +2560,65 @@ The same holds for email addresses.
 
 So, you would change
 
-@example
+@smallexample
 fputs (_("GNU GPL version 3 <https://gnu.org/licenses/gpl.html>\n"),
        stream);
-@end example
+@end smallexample
 
 @noindent
 to
 
-@example
+@smallexample
 fprintf (stream, _("GNU GPL version 3 <%s>\n"),
          "https://gnu.org/licenses/gpl.html");
-@end example
+@end smallexample
 
-@subheading No unusual markup
+@node No custom format directives
+@subsection No programmer-defined format string directives
+
+The GNU C Library's @code{<printf.h>} facility and the C++ standard library's @code{<format>} header file make it possible for the programmer to define their own format string directives.  However, such format directives cannot be used in translatable strings, for two reasons:
+@itemize @bullet
+@item
+There is no reference documentation for format strings with such directives, that the translators could consult.  They would therefore have to guess where the directive starts and where it ends.
+@item
+An @samp{msgfmt -c} invocation cannot check whether the translator has produced a compatible translation of the format string.  As a consequence, when a format string contains a programmer-defined directive, the program may crash at runtime when it uses the translated format string.
+@end itemize
+
+To avoid this situation, you need to move the formatting with the custom directive into a format string that does not get translated.
+
+For example, assuming code that makes use of a @code{%r} directive:
+
+@smallexample
+fprintf (stream, _("The contents is: %r"), data);
+@end smallexample
+
+@noindent
+you would rewrite it to:
+
+@smallexample
+char *tmp;
+if (asprintf (&tmp, "%r", data) < 0)
+  error (...);
+fprintf (stream, _("The contents is: %s"), tmp);
+free (tmp);
+@end smallexample
+
+Similarly, in C++, assuming you have defined a custom @code{formatter} for the type of @code{data}, the code
+
+@smallexample
+cout << format (_("The contents is: @{:#$#@}"), data);
+@end smallexample
+
+@noindent
+should be rewritten to:
+
+@smallexample
+string tmp = format ("@{:#$#@}", data);
+cout << format (_("The contents is: @{@}"), tmp);
+@end smallexample
+
+@node No unusual markup
+@subsection No unusual markup
 
 @cindex markup
 @cindex control characters
@@ -2402,6 +2723,19 @@ Note also that long strings can be split across lines, into multiple
 adjacent string tokens.  Automatic string concatenation is performed
 at compile time according to ISO C and ISO C++; @code{xgettext} also
 supports this syntax.
+
+In C++, marking a C++ format string requires a small code change,
+because the first argument to @code{std::format} must be a constant
+expression.
+For example,
+@smallexample
+std::format ("@{@} @{@}!", "Hello", "world")
+@end smallexample
+@noindent
+needs to be changed to
+@smallexample
+std::vformat (gettext ("@{@} @{@}!"), std::make_format_args("Hello", "world"))
+@end smallexample
 
 Later on, the maintenance is relatively easy.  If, as a programmer,
 you add or modify a string, you will have to ask yourself if the
@@ -2567,6 +2901,63 @@ it afresh.  When a PO file is newly brought up in an Emacs window, only
 is preferred for the @kbd{M-.} command.  In fact, this is not useful to
 prefer @samp{_}, as this one is already built in the @kbd{M-,} command.
 
+@node Translator advice
+@section Adding advice for translators
+
+Sometimes you might want to add advice for the translators to a
+particular message.
+For example:
+@itemize @bullet
+@item
+The translatable string might be decent English but nevertheless ambiguous.
+@item
+The translatable string refers to something in English culture (such as
+a film's name) that is different in other cultures.
+@item
+The translator should make an adjustment that is specific to her locale.
+@end itemize
+
+The way to do this is to add comments,
+before the @code{gettext} invocation or inside the @code{gettext} invocation
+but before the string, that start with the substring @samp{TRANSLATORS:}.
+These comments will be extracted into the POT file, so that translators
+can see them.
+For example, when you write
+
+@example
+/* TRANSLATORS: This is an English idiom,
+   meaning not to reveal a secret. */
+puts (gettext ("Don't spill the beans!"));
+@end example
+
+@noindent
+the POT file will contain:
+
+@example
+#. TRANSLATORS: This is an English idiom,
+#. meaning not to reveal a secret.
+#: source.c:213
+msgid "Don't spill the beans!"
+msgstr ""
+@end example
+
+@noindent
+and the translators will be shown the advice
+in a particular place in their translation tool.
+
+Only comments that immediately precede the @code{gettext} invocation or
+the translatable string are considered.
+Intervening blank lines are OK,
+but if there is other code between the comment and the translatable string,
+the comment no longer applies.
+
+Note: The string @code{TRANSLATORS:} is a convention, enabled by the
+@code{Makefile.in.in} file that is part of a package's build system.
+It is not enabled by default in @code{xgettext}.
+If you are using @code{xgettext}
+without the @code{Makefile.in.in} infrastructure,
+you will need to pass the option @code{--add-comments=TRANSLATORS:} yourself.
+
 @node c-format Flag
 @section Special Comments preceding Keywords
 
@@ -2637,7 +3028,9 @@ the @code{c-format} flag.  This kind of comment should be used when
 @code{xgettext} does not recognize the string as a format string but
 it really is one and it should be tested.  Please note that when the
 comment is in the same line as the @code{gettext} keyword, it must be
-before the string to be translated.
+before the string to be translated.  Also note that a comment such as
+@code{xgettext:c-format} applies only to the first string in the same
+or the next line, not to multiple strings.
 
 This situation happens quite often.  The @code{printf} function is often
 called with strings which do not contain a format specifier.  Of course
@@ -2941,11 +3334,14 @@ invocation.  However, you usually don't need to export and document this
 initialization function: It is sufficient that all entry points of the
 library call the initialization function if it hasn't been called before.
 The typical idiom used to achieve this is a static boolean variable that
-indicates whether the initialization function has been called. Like this:
+indicates whether the initialization function has been called.  If the
+library is meant to be used in multithreaded applications, this variable
+needs to be marked @code{volatile}, so that its value get propagated
+between threads. Like this:
 
 @example
 @group
-static bool libfoo_initialized;
+static volatile bool libfoo_initialized;
 
 static void
 libfoo_initialize (void)
@@ -2975,6 +3371,10 @@ foo_refcount (struct foo *argument)
 @}
 @end group
 @end example
+
+@noindent
+The more general solution for initialization functions, POSIX
+@code{pthread_once}, is not needed in this case.
 
 @item
 The usual declaration of the @samp{_} macro in each source file was
@@ -3016,12 +3416,69 @@ was fuzzy, and the suffix @samp{.pot} wasn't in use at that time.)
 
 @menu
 * xgettext Invocation::         Invoking the @code{xgettext} Program
+* Combining POTs::              Combining PO Template Files
 @end menu
 
 @node xgettext Invocation
 @section Invoking the @code{xgettext} Program
 
 @include xgettext.texi
+
+@node Combining POTs
+@section Combining PO Template Files
+
+When a package contains sources in different programming languages and
+different, incompatible @code{xgettext} command line options are required
+for these different parts of the package, the solution is to create
+intermediate PO template files for each of the parts and then combine (merge)
+them together.
+
+@cindex merging two POT files
+@cindex combining two POT files
+For example, assume you have two source files @file{a.c} and @file{b.py},
+and want to extract their translatable strings in separate steps.
+
+Each of the following command sequences does this.  The output is the same.
+
+@itemize @bullet
+@item
+This command sequence creates intermediate POT files and then combines them.
+@smallexample
+xgettext -o part-c.pot a.c
+xgettext -o part-py.pot b.py
+xgettext -o all.pot part-c.pot part-py.pot
+@end smallexample
+@item
+This command sequence does several @code{xgettext} invocations, with a
+single POT file that accumulates the translatable strings.
+@smallexample
+xgettext -o all.pot a.c
+xgettext -o all.pot --join-existing b.py
+@end smallexample
+@item
+Likewise here, but a @samp{--default-domain} option is used to denote
+the output file rather than a @samp{-o} option.
+@smallexample
+xgettext --default-domain=all a.c
+xgettext --default-domain=all --join-existing b.py
+mv all.po all.pot
+@end smallexample
+@end itemize
+
+One might be tempted to think that @samp{msgcat} can do the same thing,
+through a command sequence such as:
+@smallexample
+xgettext -o part-c.pot a.c
+xgettext -o part-py.pot b.py
+msgcat -o all.pot part-c.pot part-py.pot
+@end smallexample
+@noindent
+But no, this does not work reliably, because sometimes @code{part-c.pot}
+and @code{part-py.pot} will contain different @code{POT-Creation-Date}
+values, and @code{msgcat} then produces an @code{all.pot} file that has
+conflict markers in the header entry.
+This is because @code{msgcat} generally is meant to produce PO files that
+are to be reviewed and edited by a translator; this is not desired here.
 
 @node Creating
 @chapter Creating a New PO File
@@ -3126,10 +3583,13 @@ forms:
 @itemize -
 @item
 @samp{@var{ll}}, an @w{ISO 639} two-letter language code (lowercase).
+For some languages,
+a two-letter code does not exist, and a three-letter code is used instead.
 See @ref{Language Codes} for the list of codes.
 
 @item
 @samp{@var{ll}_@var{CC}}, where @samp{@var{ll}} is an @w{ISO 639} two-letter
+or three-letter
 language code (lowercase) and @samp{@var{CC}} is an @w{ISO 3166} two-letter
 country code (uppercase).  The country code specification is not redundant:
 Some languages have dialects in different countries.  For example,
@@ -3139,7 +3599,9 @@ code serves to distinguish the dialects. See @ref{Language Codes} and
 
 @item
 @samp{@var{ll}_@var{CC}@@@var{variant}}, where @samp{@var{ll}} is an
-@w{ISO 639} two-letter language code (lowercase), @samp{@var{CC}} is an
+@w{ISO 639} two-letter
+or three-letter
+language code (lowercase), @samp{@var{CC}} is an
 @w{ISO 3166} two-letter country code (uppercase), and @samp{@var{variant}} is
 a variant designator. The variant designator (lowercase) can be a script
 designator, such as @samp{latin} or @samp{cyrillic}.
@@ -3206,7 +3668,7 @@ In the GNU system, the following encodings are frequently used for the
 corresponding languages.
 
 @cindex encoding for your language
-@itemize
+@itemize @bullet
 @item @code{ISO-8859-1} for
 Afrikaans, Albanian, Basque, Breton, Catalan, Cornish, Danish, Dutch,
 English, Estonian, Faroese, Finnish, French, Galician, German,
@@ -3295,20 +3757,121 @@ format of the plural forms field is described in @ref{Plural forms} and
 @chapter Editing PO Files
 @cindex Editing PO Files
 
+As a translator, you will typically edit a PO file
+in an editor that has built-in knowledge about the PO file format.
+You most probably won't want to edit a PO file
+in a text editor for plain-text files,
+because that would be cumbersome regarding cursor navigation
+and would also easily lead to syntax mistakes.
+
 @menu
-* KBabel::                      KDE's PO File Editor
+* Web based localization::      Web-based PO editing
+* Lokalize::                    KDE's PO File Editor
 * Gtranslator::                 GNOME's PO File Editor
+* Poedit::                      A simple PO File Editor
+* OmegaT::                      A powerful Translation Editor
+* Virtaal::                     The Virtaal Translation Editor
 * PO Mode::                     Emacs's PO File Editor
+* Vim::                         Editing PO Files in vim
 * Compendium::                  Using Translation Compendia
 @end menu
 
-@node KBabel
+@node Web based localization
+@section Web-based PO editing
+@cindex weblate
+
+There are two ways to edit a PO file:
+either through a web-based PO editor, in a browser,
+or through a PO editor that you can install on your computer.
+Which one you choose, depends on your habits.
+
+Typically, the software project for which you want to provide translations
+has set up a workflow that you, as a translator, have to follow.
+
+@itemize @bullet
+@item
+There are projects which use the @url{https://weblate.org/, Weblate}
+localization suite.
+In this case, you have the choice between a
+@url{https://docs.weblate.org/en/latest/user/translating.html, web-based PO editor}
+and a @url{https://docs.weblate.org/en/latest/user/files.html, workflow}
+where you download the previous translation,
+update it with your preferred PO editor,
+and then upload it back.
+
+@item
+There are projects which offer you only a web-based PO editor, as only choice.
+Since web-based tools restrict your freedom as a user -- you cannot make
+modifications on your own to that tool --,
+you should complain to that project and claim the choice of using a locally
+installed PO editor, because that is the only way that can guarantee
+your freedom of choice and freedom to modify the software.
+
+@item
+There are projects which do not support web-based localizations.
+In this case, pick a PO file editor as listed in the next few sections.
+Examples for such projects are
+the @url{https://translationproject.org/, Free Translation Project},
+as well as projects where you directly interact with the version control
+system of the project.
+@end itemize
+
+@node Lokalize
 @section KDE's PO File Editor
 @cindex KDE PO file editor
+
+Lokalize (@url{https://apps.kde.org/lokalize/})
+is the PO file editor made by the KDE project.
+It is present in @url{https://repology.org/project/lokalize/versions, many}
+GNU/Linux distributions.
 
 @node Gtranslator
 @section GNOME's PO File Editor
 @cindex GNOME PO file editor
+
+Gtranslator (@url{https://wiki.gnome.org/Apps/Gtranslator})
+is the PO file editor made by the GNOME project.
+It is present in @url{https://repology.org/project/gtranslator/versions, many}
+GNU/Linux distributions.
+
+@node Poedit
+@section Poedit
+
+Poedit (@url{https://github.com/vslavik/poedit})
+is another decent PO file editor.
+It works on all major desktop OSes and
+is present in @url{https://repology.org/project/poedit/versions, many}
+GNU/Linux distributions.
+
+@node OmegaT
+@section OmegaT
+
+OmegaT
+(Wikipedia: @url{https://en.wikipedia.org/wiki/OmegaT},
+home page: @url{https://omegat.org/},
+code: @url{https://github.com/omegat-org/omegat})
+is a translation editor
+that focuses on speeding up the translator's work through advanced features
+like translation memory, spell-checking, glossaries, dictionaries.
+It supports not only PO files, but also
+direct translation of various file formats
+(such as plain text, web pages, OpenDocument files, DocBook XML, etc.)
+without using intermediate files.
+It is present in @url{https://repology.org/omegat/poedit/versions, many}
+GNU/Linux distributions.
+
+@node Virtaal
+@section The Virtaal Translation Editor
+
+Virtaal
+(Wikipedia: @url{https://en.wikipedia.org/wiki/Virtaal},
+home page: @url{https://virtaal.translatehouse.org/},
+code: @url{https://github.com/translate/virtaal})
+is a translation editor
+that supports not only PO files but also XLIFF files.
+It is present in @url{https://repology.org/project/virtaal/versions, some}
+GNU/Linux distributions,
+such as Debian up to Debian 11.
 
 @node PO Mode
 @section Emacs's PO File Editor
@@ -4623,6 +5186,27 @@ files resulting of the @samp{M-x normalize} command.  Until these
 discrepancies between PO mode and other GNU @code{gettext} tools get
 fully resolved, the translator should stay aware of normalisation issues.
 
+@node Vim
+@section Editing PO Files in vim
+
+FIXME: Try these scripts. Do they work well? How do they compare?
+
+There are two @code{vim} plugins for editing PO files in @code{vim}:
+
+@itemize @bullet
+@item
+The one by Aleksandar Jelenak (2005), at
+@url{https://www.vim.org/scripts/script.php?script_id=695}.
+
+@item
+A fork of it (2009), at
+@url{https://www.vim.org/scripts/script.php?script_id=2530}.
+@end itemize
+
+Additionally, if you only need syntax highlighting, not editing, of PO files,
+there is a @code{vim} script for that at
+@url{https://www.vim.org/scripts/script.php?script_id=913}.
+
 @node Compendium
 @section Using Translation Compendia
 @emindex using translation compendia
@@ -4764,6 +5348,7 @@ performed automatically than by hand.  GNU @code{gettext} includes a
 complete set of tools for this purpose.
 
 @cindex merging two PO files
+@cindex combining two PO files
 When merging two packages into a single package, the resulting POT file
 will be the concatenation of the two packages' POT files.  Thus the
 maintainer must concatenate the two existing package translations into
@@ -5296,11 +5881,13 @@ esac
 @node Other tools
 @section Other tools for manipulating PO files
 
+@subheading Pology
+
 @cindex Pology
 The ``Pology'' package is a Free Software package for manipulating PO files.
 It features, in particular:
 
-@itemize
+@itemize @bullet
 @item
 Examination and in-place modification of collections of PO files.
 @item
@@ -5317,6 +5904,18 @@ Language and project specific support.
 
 Its home page is at @url{http://pology.nedohodnik.net/}.
 
+@subheading Translate Toolkit
+
+@cindex Translate Toolkit
+The ``Translate Toolkit'' is a Free Software package.
+It contains a set of programs to
+convert between PO files and other file formats,
+merge translations,
+and perform various checks.
+
+Its home page is at @url{https://toolkit.translatehouse.org/}.
+The code is at @url{https://github.com/translate/translate}.
+
 @node libgettextpo
 @section Writing your own programs that process PO files
 
@@ -5330,6 +5929,13 @@ provided too.
 
 The functions are declared in the header file @samp{<gettext-po.h>}, and are
 defined in a library called @samp{libgettextpo}.
+
+The library is multithread-safe in the following sense:
+Different threads can safely use the various functions simultaneously on
+unrelated data objects.
+For example, if several threads have created separate @code{po_file_t} objects,
+each of them can safely work on its respective @code{po_file_t} object,
+without caring about the other threads.
 
 @menu
 * Error Handling::              Error handling functions
@@ -5691,8 +6297,14 @@ is marked as being a format string of @var{format_type}.
 @end deftypefun
 
 @deftypefun {void} po_message_set_format (po_message_t@tie{}@var{message}, const@tie{}char@tie{}*@var{format_type}, int@tie{}@var{value})
-The @code{po_message_set_fuzzy} function changes the format mark of
-the message for the @var{format_type} provided.
+The @code{po_message_set_format} function changes
+the format string mark of the message for the @var{format_type} provided.
+Pass @var{value} = 1
+to assert the format string mark (leading to e.g. @samp{c-format}),
+@var{value} = 0
+to assert the opposite (leading to e.g. @samp{no-c-format}),
+or @var{value} = -1
+to remove the format string mark and its opposite.
 @end deftypefun
 
 @deftypefun {int} po_message_is_range (po_message_t@tie{}@var{message}, int@tie{}*@var{minp}, int@tie{}*@var{maxp})
@@ -5907,6 +6519,14 @@ takes part in the hash table lookup.  The plural variants of the
 translation are all stored consecutively, separated through a
 @key{NUL} byte.  Here also, the length in the string descriptor
 includes all of them.
+
+@cindex encoding in MO files
+The character encoding of the strings can be any standard ASCII-compatible
+encoding, such as UTF-8, ISO-8859-1, EUC-JP, etc., as long as the
+encoding's name is stated in the header entry (@pxref{Header Entry}).
+Starting with GNU @code{gettext} version 0.22, the MO files produced by
+@code{msgfmt} have them in UTF-8 encoding, unless the @code{msgfmt}
+option @samp{--no-convert} is used.
 
 Nothing prevents a MO file from having embedded @key{NUL}s in strings.
 However, the program interface currently used already presumes
@@ -7422,440 +8042,169 @@ Solaris is not the only system having @code{gettext}.
 @node Translators
 @chapter The Translator's View
 
-@c FIXME: Reorganize whole chapter.
-
 @menu
-* Trans Intro 0::               Introduction 0
-* Trans Intro 1::               Introduction 1
-* Discussions::                 Discussions
 * Organization::                Organization
-* Information Flow::            Information Flow
+* Responsibilities::            Responsibilities in the Translation Project
+* Dialects::                    Language dialects
 * Translating plural forms::    How to fill in @code{msgstr[0]}, @code{msgstr[1]}
 * Prioritizing messages::       How to find which messages to translate first
 @end menu
 
-@node Trans Intro 0
-@section Introduction 0
-
-@strong{ NOTE: } This documentation section is outdated and needs to be
-revised.
-
-Free software is going international!  The Translation Project is a way
-to get maintainers, translators and users all together, so free software
-will gradually become able to speak many native languages.
-
-The GNU @code{gettext} tool set contains @emph{everything} maintainers
-need for internationalizing their packages for messages.  It also
-contains quite useful tools for helping translators at localizing
-messages to their native language, once a package has already been
-internationalized.
-
-To achieve the Translation Project, we need many interested
-people who like their own language and write it well, and who are also
-able to synergize with other translators speaking the same language.
-If you'd like to volunteer to @emph{work} at translating messages,
-please send mail to your translating team.
-
-Each team has its own mailing list, courtesy of Linux
-International.  You may reach your translating team at the address
-@file{@var{ll}@@li.org}, replacing @var{ll} by the two-letter @w{ISO 639}
-code for your language.  Language codes are @emph{not} the same as
-country codes given in @w{ISO 3166}.  The following translating teams
-exist:
-
-@quotation
-Chinese @code{zh}, Czech @code{cs}, Danish @code{da}, Dutch @code{nl},
-Esperanto @code{eo}, Finnish @code{fi}, French @code{fr}, Irish
-@code{ga}, German @code{de}, Greek @code{el}, Italian @code{it},
-Japanese @code{ja}, Indonesian @code{in}, Norwegian @code{no}, Polish
-@code{pl}, Portuguese @code{pt}, Russian @code{ru}, Spanish @code{es},
-Swedish @code{sv} and Turkish @code{tr}.
-@end quotation
-
-@noindent
-For example, you may reach the Chinese translating team by writing to
-@file{zh@@li.org}.  When you become a member of the translating team
-for your own language, you may subscribe to its list.  For example,
-Swedish people can send a message to @w{@file{sv-request@@li.org}},
-having this message body:
-
-@example
-subscribe
-@end example
-
-Keep in mind that team members should be interested in @emph{working}
-at translations, or at solving translational difficulties, rather than
-merely lurking around.  If your team does not exist yet and you want to
-start one, please write to @w{@file{coordinator@@translationproject.org}};
-you will then reach the coordinator for all translator teams.
-
-A handful of GNU packages have already been adapted and provided
-with message translations for several languages.  Translation
-teams have begun to organize, using these packages as a starting
-point.  But there are many more packages and many languages for
-which we have no volunteer translators.  If you would like to
-volunteer to work at translating messages, please send mail to
-@file{coordinator@@translationproject.org} indicating what language(s)
-you can work on.
-
-@node Trans Intro 1
-@section Introduction 1
-
-@strong{ NOTE: } This documentation section is outdated and needs to be
-revised.
-
-This is now official, GNU is going international!  Here is the
-announcement submitted for the January 1995 GNU Bulletin:
-
-@quotation
-A handful of GNU packages have already been adapted and provided
-with message translations for several languages.  Translation
-teams have begun to organize, using these packages as a starting
-point.  But there are many more packages and many languages
-for which we have no volunteer translators.  If you'd like to
-volunteer to work at translating messages, please send mail to
-@samp{coordinator@@translationproject.org} indicating what language(s)
-you can work on.
-@end quotation
-
-This document should answer many questions for those who are curious about
-the process or would like to contribute.  Please at least skim over it,
-hoping to cut down a little of the high volume of e-mail generated by this
-collective effort towards internationalization of free software.
-
-Most free programming which is widely shared is done in English, and
-currently, English is used as the main communicating language between
-national communities collaborating to free software.  This very document
-is written in English.  This will not change in the foreseeable future.
-
-However, there is a strong appetite from national communities for
-having more software able to write using national language and habits,
-and there is an on-going effort to modify free software in such a way
-that it becomes able to do so.  The experiments driven so far raised
-an enthusiastic response from pretesters, so we believe that
-internationalization of free software is dedicated to succeed.
-
-For suggestion clarifications, additions or corrections to this
-document, please e-mail to @file{coordinator@@translationproject.org}.
-
-@node Discussions
-@section Discussions
-
-@strong{ NOTE: } This documentation section is outdated and needs to be
-revised.
-
-Facing this internationalization effort, a few users expressed their
-concerns.  Some of these doubts are presented and discussed, here.
-
-@itemize @bullet
-@item Smaller groups
-
-Some languages are not spoken by a very large number of people, so people
-speaking them sometimes consider that there may not be all that much
-demand such versions of free software packages.  Moreover, many people
-being @emph{into computers}, in some countries, generally seem to prefer
-English versions of their software.
-
-On the other end, people might enjoy their own language a lot, and be
-very motivated at providing to themselves the pleasure of having their
-beloved free software speaking their mother tongue.  They do themselves
-a personal favor, and do not pay that much attention to the number of
-people benefiting of their work.
-
-@item Misinterpretation
-
-Other users are shy to push forward their own language, seeing in this
-some kind of misplaced propaganda.  Someone thought there must be some
-users of the language over the networks pestering other people with it.
-
-But any spoken language is worth localization, because there are
-people behind the language for whom the language is important and
-dear to their hearts.
-
-@item Odd translations
-
-The biggest problem is to find the right translations so that
-everybody can understand the messages.  Translations are usually a
-little odd.  Some people get used to English, to the extent they may
-find translations into their own language ``rather pushy, obnoxious
-and sometimes even hilarious.''  As a French speaking man, I have
-the experience of those instruction manuals for goods, so poorly
-translated in French in Korea or Taiwan@dots{}
-
-The fact is that we sometimes have to create a kind of national
-computer culture, and this is not easy without the collaboration of
-many people liking their mother tongue.  This is why translations are
-better achieved by people knowing and loving their own language, and
-ready to work together at improving the results they obtain.
-
-@item Dependencies over the GPL or LGPL
-
-Some people wonder if using GNU @code{gettext} necessarily brings their
-package under the protective wing of the GNU General Public License or
-the GNU Lesser General Public License, when they do not want to make
-their program free, or want other kinds of freedom.  The simplest
-answer is ``normally not''.
-
-The @code{gettext-runtime} part of GNU @code{gettext}, i.e.@: the
-contents of @code{libintl}, is covered by the GNU Lesser General Public
-License.  The @code{gettext-tools} part of GNU @code{gettext}, i.e.@: the
-rest of the GNU @code{gettext} package, is covered by the GNU General
-Public License.
-
-The mere marking of localizable strings in a package, or conditional
-inclusion of a few lines for initialization, is not really including
-GPL'ed or LGPL'ed code.  However, since the localization routines in
-@code{libintl} are under the LGPL, the LGPL needs to be considered.
-It gives the right to distribute the complete unmodified source of
-@code{libintl} even with non-free programs.  It also gives the right
-to use @code{libintl} as a shared library, even for non-free programs.
-But it gives the right to use @code{libintl} as a static library or
-to incorporate @code{libintl} into another library only to free
-software.
-
-@end itemize
-
 @node Organization
 @section Organization
 
-@strong{ NOTE: } This documentation section is outdated and needs to be
-revised.
+For some software packages, each translator works on her own
+and communicates directly with the developers of the package.
+For some other software packages, on the other hand,
+translators are organized
+into @emph{translation projects} and @emph{translation teams}.
 
-On a larger scale, the true solution would be to organize some kind of
-fairly precise set up in which volunteers could participate.  I gave
-some thought to this idea lately, and realize there will be some
-touchy points.  I thought of writing to Richard Stallman to launch
-such a project, but feel it might be good to shake out the ideas
-between ourselves first.  Most probably that Linux International has
-some experience in the field already, or would like to orchestrate
-the volunteer work, maybe.  Food for thought, in any case!
+A @emph{translation project} applies to a group of software packages
+and shares procedures and methodologies regarding the translation.
 
-I guess we have to setup something early, somehow, that will help
-many possible contributors of the same language to interlock and avoid
-work duplication, and further be put in contact for solving together
-problems particular to their tongue (in most languages, there are many
-difficulties peculiar to translating technical English).  My Swedish
-contributor acknowledged these difficulties, and I'm well aware of
-them for French.
-
-This is surely not a technical issue, but we should manage so the
-effort of locale contributors be maximally useful, despite the national
-team layer interface between contributors and maintainers.
-
-The Translation Project needs some setup for coordinating language
-coordinators.  Localizing evolving programs will surely
-become a permanent and continuous activity in the free software community,
-once well started.
-The setup should be minimally completed and tested before GNU
-@code{gettext} becomes an official reality.  The e-mail address
-@file{coordinator@@translationproject.org} has been set up for receiving
-offers from volunteers and general e-mail on these topics.  This address
-reaches the Translation Project coordinator.
-
-@menu
-* Central Coordination::        Central Coordination
-* National Teams::              National Teams
-* Mailing Lists::               Mailing Lists
-@end menu
-
-@node Central Coordination
-@subsection Central Coordination
-
-I also think GNU will need sooner than it thinks, that someone set up
-a way to organize and coordinate these groups.  Some kind of group
-of groups.  My opinion is that it would be good that GNU delegates
-this task to a small group of collaborating volunteers, shortly.
-Perhaps in @file{gnu.announce} a list of this national committee's
-can be published.
-
-My role as coordinator would simply be to refer to Ulrich any German
-speaking volunteer interested to localization of free software packages, and
-maybe helping national groups to initially organize, while maintaining
-national registries for until national groups are ready to take over.
-In fact, the coordinator should ease volunteers to get in contact with
-one another for creating national teams, which should then select
-one coordinator per language, or country (regionalized language).
-If well done, the coordination should be useful without being an
-overwhelming task, the time to put delegations in place.
-
-@node National Teams
-@subsection National Teams
-
-I suggest we look for volunteer coordinators/editors for individual
-languages.  These people will scan contributions of translation files
-for various programs, for their own languages, and will ensure high
-and uniform standards of diction.
-
-From my current experience with other people in these days, those who
-provide localizations are very enthusiastic about the process, and are
-more interested in the localization process than in the program they
-localize, and want to do many programs, not just one.  This seems
-to confirm that having a coordinator/editor for each language is a
-good idea.
-
-We need to choose someone who is good at writing clear and concise
-prose in the language in question.  That is hard---we can't check
-it ourselves.  So we need to ask a few people to judge each others'
-writing and select the one who is best.
-
-I announce my prerelease to a few dozen people, and you would not
-believe all the discussions it generated already.  I shudder to think
-what will happen when this will be launched, for true, officially,
-world wide.  Who am I to arbitrate between two Czekolsovak users
-contradicting each other, for example?
-
-I assume that your German is not much better than my French so that
-I would not be able to judge about these formulations.  What I would
-suggest is that for each language there is a group for people who
-maintain the PO files and judge about changes.  I suspect there will
-be cultural differences between how such groups of people will behave.
-Some will have relaxed ways, reach consensus easily, and have anyone
-of the group relate to the maintainers, while others will fight to
-death, organize heavy administrations up to national standards, and
-use strict channels.
-
-The German team is putting out a good example.  Right now, they are
-maybe half a dozen people revising translations of each other and
-discussing the linguistic issues.  I do not even have all the names.
-Ulrich Drepper is taking care of coordinating the German team.
-He subscribed to all my pretest lists, so I do not even have to warn
-him specifically of incoming releases.
-
-I'm sure, that is a good idea to get teams for each language working
-on translations.  That will make the translations better and more
-consistent.
-
-@menu
-* Sub-Cultures::                Sub-Cultures
-* Organizational Ideas::        Organizational Ideas
-@end menu
-
-@node Sub-Cultures
-@subsubsection Sub-Cultures
-
-Taking French for example, there are a few sub-cultures around computers
-which developed diverging vocabularies.  Picking volunteers here and
-there without addressing this problem in an organized way, soon in the
-project, might produce a distasteful mix of internationalized programs,
-and possibly trigger endless quarrels among those who really care.
-
-Keeping some kind of unity in the way French localization of
-internationalized programs is achieved is a difficult (and delicate) job.
-Knowing the latin character of French people (:-), if we take this
-the wrong way, we could end up nowhere, or spoil a lot of energies.
-Maybe we should begin to address this problem seriously @emph{before}
-GNU @code{gettext} become officially published.  And I suspect that this
-means soon!
-
-@node Organizational Ideas
-@subsubsection Organizational Ideas
-
-I expect the next big changes after the official release.  Please note
-that I use the German translation of the short GPL message.  We need
-to set a few good examples before the localization goes out for true
-in the free software community.  Here are a few points to discuss:
+There are currently three major translation projects:
 
 @itemize @bullet
 @item
-Each group should have one FTP server (at least one master).
+The ``Translation Project'', which is used
+by all kinds of Free Software packages, but in particular by GNU packages.
+It has its home at @url{https://translationproject.org/}.
 
 @item
-The files on the server should reflect the latest version (of
-course!) and it should also contain a RCS directory with the
-corresponding archives (I don't have this now).
+The ``KDE Localization Project'', which is used by KDE packages.
+It is at @url{https://l10n.kde.org/}.
 
 @item
-There should also be a ChangeLog file (this is more useful than the
-RCS archive but can be generated automatically from the later by
-Emacs).
-
-@item
-A @dfn{core group} should judge about questionable changes (for now
-this group consists solely by me but I ask some others occasionally;
-this also seems to work).
-
+The ``GNOME Localization Project'', which is used by GNOME packages.
+It is at @url{https://l10n.gnome.org/}.
 @end itemize
 
-@node Mailing Lists
-@subsection Mailing Lists
+A @emph{translation team} is a group of translators for a single language,
+in the scope of a translation project.
 
-If we get any inquiries about GNU @code{gettext}, send them on to:
+@node Responsibilities
+@section Responsibilities in the Translation Project
 
-@example
-@file{coordinator@@translationproject.org}
-@end example
+The following rules and habits apply to the Translation Project.
 
-The @file{*-pretest} lists are quite useful to me, maybe the idea could
-be generalized to many GNU, and non-GNU packages.  But each maintainer
-his/her way!
+The translator's responsibilities are:
+@itemize @bullet
+@item
+She submits a translations disclaimer to the Free Software Foundation
+(once only, and
+only when she wants to translate a package that requires a disclaimer).
 
-Fran@,{c}ois, we have a mechanism in place here at
-@file{gnu.ai.mit.edu} to track teams, support mailing lists for
-them and log members.  We have a slight preference that you use it.
-If this is OK with you, I can get you clued in.
+A disclaimer is a legal document
+that allows the software package to distribute her translation work.
+It is not as strong as a copyright assignment.
+Merely, it says that the signer
+will never make use of the copyright on her translations:
+will never forbid copying them,
+and will never ask for some kind of compensation.
+This guarantees that the FSF (and everyone else)
+will always be allowed to freely distribute these translations.
+The FSF wishes to have this guarantee in a legally binding manner,
+to be on the safe side.
 
-Things are changing!  A few years ago, when Daniel Fekete and I
-asked for a mailing list for GNU localization, nested at the FSF, we
-were politely invited to organize it anywhere else, and so did we.
-For communicating with my pretesters, I later made a handful of
-mailing lists located at iro.umontreal.ca and administrated by
-@code{majordomo}.  These lists have been @emph{very} dependable
-so far@dots{}
+There are two ways to submit the disclaimer:
+@c In 2024, the <copyright-clerk@fsf.org> wrote:
+@c "I do like giving people options, so please include both."
+Either online through
+@url{https://crm.fsf.org/civicrm/profile/create?gid=91&reset=1,,this form}
+on the FSF's web site,
+or by printing, signing, and submitting
+the file @file{disclaim-translations.txt} found in the GNU gettext distribution.
 
-I suspect that the German team will organize itself a mailing list
-located in Germany, and so forth for other countries.  But before they
-organize for true, it could surely be useful to offer mailing lists
-located at the FSF to each national team.  So yes, please explain me
-how I should proceed to create and handle them.
+@item
+Agree with the other translators of the same team
+who is ``in charge'' for the translations of a particular package.
+@end itemize
 
-We should create temporary mailing lists, one per country, to help
-people organize.  Temporary, because once regrouped and structured, it
-would be fair the volunteers from country bring back @emph{their} list
-in there and manage it as they want.  My feeling is that, in the long
-run, each team should run its own list, from within their country.
-There also should be some central list to which all teams could
-subscribe as they see fit, as long as each team is represented in it.
+The Translation Project has a coordinator.
+He can be reached at @samp{coordinator@@translationproject.org}.
+His responsibilities are:
+@itemize @bullet
+@item
+He maintains the web site @url{https://translationproject.org/}.
+@item
+When he receives a release or prerelease announcement
+from one of the software package maintainers,
+he extracts the POT file(s)
+and sends notifications to all translation teams about it.
+@end itemize
 
-@node Information Flow
-@section Information Flow
+The responsibilities of the package maintainers are:
+@itemize @bullet
+@item
+To incorporate the translations in the software package before a release.
+@item
+To forward bug reports about the translations
+to the respective translation team.
+A developer or maintainer should never apply a translation fix himself,
+because that would cause conflicts with the translation team.
+@end itemize
 
-@strong{ NOTE: } This documentation section is outdated and needs to be
-revised.
+@c FIXME: Move to an FAQ.
+@c
+@c @item Dependencies over the GPL or LGPL
+@c
+@c Some people wonder if using GNU @code{gettext} necessarily brings their
+@c package under the protective wing of the GNU General Public License or
+@c the GNU Lesser General Public License, when they do not want to make
+@c their program free, or want other kinds of freedom.  The simplest
+@c answer is ``normally not''.
+@c
+@c The @code{gettext-runtime} part of GNU @code{gettext}, i.e.@: the
+@c contents of @code{libintl}, is covered by the GNU Lesser General Public
+@c License.  The @code{gettext-tools} part of GNU @code{gettext}, i.e.@: the
+@c rest of the GNU @code{gettext} package, is covered by the GNU General
+@c Public License.
+@c
+@c The mere marking of localizable strings in a package, or conditional
+@c inclusion of a few lines for initialization, is not really including
+@c GPL'ed or LGPL'ed code.  However, since the localization routines in
+@c @code{libintl} are under the LGPL, the LGPL needs to be considered.
+@c It gives the right to distribute the complete unmodified source of
+@c @code{libintl} even with non-free programs.  It also gives the right
+@c to use @code{libintl} as a shared library, even for non-free programs.
+@c But it gives the right to use @code{libintl} as a static library or
+@c to incorporate @code{libintl} into another library only to free
+@c software.
 
-There will surely be some discussion about this messages after the
-packages are finally released.  If people now send you some proposals
-for better messages, how do you proceed?  Jim, please note that
-right now, as I put forward nearly a dozen of localizable programs, I
-receive both the translations and the coordination concerns about them.
+@node Dialects
+@section Language dialects
 
-If I put one of my things to pretest, Ulrich receives the announcement
-and passes it on to the German team, who make last minute revisions.
-Then he submits the translation files to me @emph{as the maintainer}.
-For free packages I do not maintain, I would not even hear about it.
-This scheme could be made to work for the whole Translation Project,
-I think.  For security reasons, maybe Ulrich (national coordinators,
-in fact) should update central registry kept at the Translation Project
-(Jim, me, or Len's recruits) once in a while.
+For many languages, a translation into the main dialect is intelligible
+by all speakers of the language.
+Speakers of another dialect can have a separate translation if they wish so.
+In fact, since the fallback mechanism implemented in GNU libc and GNU libintl
+applies on a per-message basis,
+the message catalog for the dialect needs only to contain
+the translations that differ from those in the main language.
 
-In December/January, I was aggressively ready to internationalize
-all of GNU, giving myself the duty of one small GNU package per week
-or so, taking many weeks or months for bigger packages.  But it does
-not work this way.  I first did all the things I'm responsible for.
-I've nothing against some missionary work on other maintainers, but
-I'm also losing a lot of energy over it---same debates over again.
+For example,
+French speakers in Canada (that is, users in the locale @code{fr_CA})
+can use and do accept translations
+produced by French speakers in France (typical file name: @code{fr.po}).
+Nevertheless, the translation system with PO files
+enables them to produce special message catalogs (file name: @code{fr_CA.po})
+that will take priority over @code{fr.po} for users in that locale.
+Similarly for users in Austria,
+where message catalogs @code{de_AT.po} take priority
+over the catalogs named @code{de.po} that reflect German as spoken in Germany.
 
-And when the first localized packages are released we'll get a lot of
-responses about ugly translations :-).  Surely, and we need to have
-beforehand a fairly good idea about how to handle the information
-flow between the national teams and the package maintainers.
-
-Please start saving somewhere a quick history of each PO file.  I know
-for sure that the file format will change, allowing for comments.
-It would be nice that each file has a kind of log, and references for
-those who want to submit comments or gripes, or otherwise contribute.
-I sent a proposal for a fast and flexible format, but it is not
-receiving acceptance yet by the GNU deciders.  I'll tell you when I
-have more information about this.
+The situation is different for Chinese, though:
+Since users in the People's Republic of China and in Singapore
+want translations with Simplified Chinese characters,
+whereas Chinese users in other territories
+(such as Taiwan, Hong Kong, and Macao)
+want translations with Traditional Chinese characters,
+no translator should ever submit a file named @code{zh.po}.
+Instead, there will typically be two separate translation teams:
+a team that produces translations with Simplified Chinese characters
+(file name @code{zh_CN.po})
+and a team that produces translations with Traditional Chinese characters
+(file name @code{zh_TW.po}).
 
 @node Translating plural forms
 @section Translating plural forms
@@ -8051,9 +8400,9 @@ $ msgattrib --set-obsolete --ignore-file $domain-missing.po $domain.$lang.po \
   > $domain.$lang-urgent.po
 @end smallexample
 
-The she translates @file{$domain.$lang-urgent.po} by use of a PO file editor
+Then she translates @file{$domain.$lang-urgent.po} by use of a PO file editor
 (@pxref{Editing}).
-(FIXME: I don't know whether @code{KBabel} and @code{gtranslator} also
+(FIXME: I don't know whether @code{Lokalize} and @code{gtranslator} also
 preserve obsolete messages, as they should.)
 Finally she restores the not urgent messages (with their earlier
 translations, for those which were already translated) through this command:
@@ -8329,7 +8678,7 @@ a terminal emulator which supports the VT100 escape sequences (such as
 These extra message catalogs @samp{en@@quot} and @samp{en@@boldquot}
 are constructed automatically, not by translators; to support them, you
 need the files @file{Rules-quot}, @file{quot.sed}, @file{boldquot.sed},
-@file{en@@quot.header}, @file{en@@boldquot.header}, @file{insert-header.sin}
+@file{en@@quot.header}, @file{en@@boldquot.header}, @file{insert-header.sed}
 in the @file{po/} directory.  You can copy them from GNU gettext's @file{po/}
 directory; they are also installed by running @code{gettextize}.
 
@@ -8490,11 +8839,11 @@ more.  You can remove it.
 @cindex @file{aclocal.m4} file
 
 If you do not have an @file{aclocal.m4} file in your distribution,
-the simplest is to concatenate the files @file{gettext.m4},
-@file{host-cpu-c-abi.m4}, @file{intlmacosx.m4}, @file{iconv.m4},
-@file{lib-ld.m4}, @file{lib-link.m4}, @file{lib-prefix.m4}, @file{nls.m4},
-@file{po.m4}, @file{progtest.m4} from GNU @code{gettext}'s @file{m4/}
-directory into a single file.
+the simplest is to concatenate the files @file{build-to-host.m4},
+@file{gettext.m4}, @file{host-cpu-c-abi.m4}, @file{intlmacosx.m4},
+@file{iconv.m4}, @file{lib-ld.m4}, @file{lib-link.m4}, @file{lib-prefix.m4},
+@file{nls.m4}, @file{po.m4}, @file{progtest.m4} from GNU @code{gettext}'s
+@file{m4/} directory into a single file.
 
 If you already have an @file{aclocal.m4} file, then you will have
 to merge the said macro files into your @file{aclocal.m4}.  Note that if
@@ -8506,11 +8855,11 @@ Their contents may vary as we get more experience with strange systems
 out there.
 
 You should be using GNU @code{automake} 1.9 or newer.  With it, you need
-to copy the files @file{gettext.m4}, @file{host-cpu-c-abi.m4},
-@file{intlmacosx.m4}, @file{iconv.m4}, @file{lib-ld.m4}, @file{lib-link.m4},
-@file{lib-prefix.m4}, @file{nls.m4}, @file{po.m4}, @file{progtest.m4} from
-GNU @code{gettext}'s @file{m4/} directory to a subdirectory named @file{m4/}
-and add the line
+to copy the files @file{build-to-host.m4}, @file{gettext.m4},
+@file{host-cpu-c-abi.m4}, @file{intlmacosx.m4}, @file{iconv.m4},
+@file{lib-ld.m4}, @file{lib-link.m4}, @file{lib-prefix.m4}, @file{nls.m4},
+@file{po.m4}, @file{progtest.m4} from GNU @code{gettext}'s @file{m4/}
+directory to a subdirectory named @file{m4/} and add the line
 
 @example
 ACLOCAL_AMFLAGS = -I m4
@@ -8678,9 +9027,12 @@ To make LOCALEDIR known to the program, add the following lines to
 datadir = @@datadir@@
 datarootdir= @@datarootdir@@
 localedir = @@localedir@@
-DEFS = -DLOCALEDIR=\"$(localedir)\" @@DEFS@@
+DEFS = -DLOCALEDIR=$(localedir_c_make) @@DEFS@@
 @end example
 
+@noindent
+@code{$(localedir_c_make)} expands to the value of @code{localedir}, in
+C syntax, escaped for use in a @code{Makefile}.
 Note that @code{@@datadir@@} defaults to @samp{$(prefix)/share}, and
 @code{$(localedir)} defaults to @samp{$(prefix)/share/locale}.
 
@@ -8733,23 +9085,17 @@ To make LOCALEDIR known to the program, add the following to
 @file{Makefile.am}:
 
 @example
-<module>_CPPFLAGS = -DLOCALEDIR=\"$(localedir)\"
+<module>_CPPFLAGS = -DLOCALEDIR=$(localedir_c_make)
 @end example
 
 @noindent
 for each specific module or compilation unit, or
 
 @example
-AM_CPPFLAGS = -DLOCALEDIR=\"$(localedir)\"
+AM_CPPFLAGS = -DLOCALEDIR=$(localedir_c_make)
 @end example
 
-for all modules and compilation units together.  Furthermore, if you are
-using an Autoconf version older then 2.60, add this line to define
-@samp{localedir}:
-
-@example
-localedir = $(datadir)/locale
-@end example
+for all modules and compilation units together.
 
 @item
 To ensure that the final linking will use @code{@@LIBINTL@@} or
@@ -8861,7 +9207,7 @@ library (shared or static libraries are both supported).  It also invokes
 @code{AM_PO_SUBDIRS}, thus preparing the @file{po/} directories of the
 package for building.
 
-@code{AM_GNU_GETTEXT} accepts up to three optional arguments.  The general
+@code{AM_GNU_GETTEXT} accepts up to two optional arguments.  The general
 syntax is
 
 @example
@@ -8912,10 +9258,10 @@ path (@code{CPPFLAGS} for the include file search path, @code{LDFLAGS} for
 the library search path).
 
 @item
-Except for glibc, the operating system's native @code{gettext} cannot
-exploit the GNU mo files, doesn't have the necessary locale dependency
-features, and cannot convert messages from the catalog's text encoding
-to the user's locale encoding.
+Except for glibc and the Solaris 11 libc, the operating system's native
+@code{gettext} cannot exploit the GNU mo files, doesn't have the
+necessary locale dependency features, and cannot convert messages from
+the catalog's text encoding to the user's locale encoding.
 
 @item
 GNU @code{libintl}, if installed, is not necessarily already in the
@@ -8930,6 +9276,25 @@ GNU @code{libintl} relies on POSIX/XSI @code{iconv}.  The macro checks for
 linker options needed to use iconv and appends them to the @code{LIBINTL}
 and @code{LTLIBINTL} variables.
 @end itemize
+
+Additionally, the @code{AM_GNU_GETTEXT} macro sets two variables, for
+convenience.  Both are derived from the @code{--localedir} configure
+option.  They are correct even on native Windows, where directories
+frequently contain backslashes.
+@table @code
+@item localedir_c
+This is the value of @code{localedir}, in C syntax.  This variable is
+meant to be substituted into C or C++ code through
+@code{AC_CONFIG_FILES}.
+
+@item localedir_c_make
+This is the value of @code{localedir}, in C syntax, escaped for use in
+a @code{Makefile}.  This variable is meant to be used in Makefiles,
+for example for defining a C macro named @code{LOCALEDIR}:
+@smallexample
+AM_CPPFLAGS = ... -DLOCALEDIR=$(localedir_c_make) ...
+@end smallexample
+@end table
 
 @node AM_GNU_GETTEXT_VERSION
 @subsection AM_GNU_GETTEXT_VERSION in @file{gettext.m4}
@@ -9283,12 +9648,33 @@ produces programs totally unable to translate messages.
 
 @vindex LINGUAS@r{, environment variable}
 Internationalized packages have usually many @file{@var{ll}.po}
-files.  Unless
-translations are disabled, all those available are installed together
+or @file{@var{ll}_@var{CC}.po} files, where
+
+@itemize @bullet
+@item
+@var{ll} gives an @w{ISO 639} two-letter code identifying the language.
+For some languages,
+a two-letter code does not exist, and a three-letter code is used instead.
+@item
+The optional @var{CC} is an @w{ISO 3166} two-letter code of a country or
+territory.
+@end itemize
+
+@noindent
+Unless translations are disabled, all those available are installed together
 with the package.  However, the environment variable @code{LINGUAS}
 may be set, prior to configuration, to limit the installed set.
-@code{LINGUAS} should then contain a space separated list of two-letter
-codes, stating which languages are allowed.
+@code{LINGUAS} should then contain a space separated list of locale names
+(of the form @code{@var{ll}} or @code{@var{ll}_@var{CC}}),
+stating which languages or language variants are allowed.
+
+GNU @code{gettext} uses *.its and *.loc files (@pxref{Preparing ITS Rules})
+from other packages, provided they are installed in
+@file{@var{prefix}/share/gettext/its/},
+where @code{@var{prefix}} is the value of the @code{--prefix} option
+passed to @code{gettext}'s @code{configure} script.
+So, this is the canonical location for installing *.its and *.loc files
+from other packages.
 
 @node Programming Languages
 @chapter Other Programming Languages
@@ -9462,6 +9848,7 @@ strings.
 @menu
 * c-format::                    C Format Strings
 * objc-format::                 Objective C Format Strings
+* c++-format::                  C++ Format Strings
 * python-format::               Python Format Strings
 * java-format::                 Java Format Strings
 * csharp-format::               C# Format Strings
@@ -9494,10 +9881,9 @@ strings.
 
 C format strings are described in POSIX (IEEE P1003.1 2001), section
 XSH 3 fprintf(),
-@uref{http://www.opengroup.org/onlinepubs/007904975/functions/fprintf.html}.
-See also the fprintf() manual page,
-@uref{http://www.linuxvalley.it/encyclopedia/ldp/manpage/man3/printf.3.php},
-@uref{http://informatik.fh-wuerzburg.de/student/i510/man/printf.html}.
+@uref{https://pubs.opengroup.org/onlinepubs/9799919799/functions/fprintf.html}.
+See also the fprintf() manual page
+@uref{https://www.kernel.org/doc/man-pages/online/pages/man3/fprintf.3.html,,man fprintf}.
 
 Although format strings with positions that reorder arguments, such as
 
@@ -9518,6 +9904,19 @@ on this reordering ability: On the few platforms where @code{printf()},
 @code{fprintf()} etc. don't support this feature natively, @file{libintl.a}
 or @file{libintl.so} provides replacement functions, and GNU @code{<libintl.h>}
 activates these replacement functions automatically.
+
+@cindex @code{inttypes.h}
+C format strings can contain placeholders
+that reference macros defined in ISO C 99 @code{<inttypes.h>}.
+For example, @code{<PRId64>} references the macro @code{PRId64}.
+The value of such a macro is system-dependent,
+but programmers and translators do not need to know this value.
+ISO C 23 specifies system-independent format string elements,
+for example, @code{"%w64d"} instead of @code{"%" PRId64};
+however, as of 2024, these are not implemented across systems
+and therefore cannot be used portably.
+@c We need it implemented in glibc and in gcc and clang; <libintl.h> could
+@c then do the rest, with the help of gnulib's *printf functions.
 
 @cindex outdigits
 @cindex Arabic digits
@@ -9540,6 +9939,21 @@ glibc when NLS is disabled.)
 Objective C format strings are like C format strings.  They support an
 additional format directive: "%@@", which when executed consumes an argument
 of type @code{Object *}.
+
+@cindex @code{inttypes.h}
+Objective C format strings, like C format strings, can contain placeholders
+that reference macros defined in ISO C 99 @code{<inttypes.h>}.
+
+@node c++-format
+@subsection C++ Format Strings
+
+C++ format strings are described in ISO C++ 20, namely in
+@uref{https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/n4861.pdf},
+section 20.20.2 Format string [format.string].
+
+An easier-to-read description is found at
+@uref{https://en.cppreference.com/w/cpp/utility/format/format#Parameters} and
+@uref{https://en.cppreference.com/w/cpp/utility/format/formatter#Standard_format_specification}.
 
 @node python-format
 @subsection Python Format Strings
@@ -10103,6 +10517,19 @@ appdata-tools, appstream, libappstream-glib-dev
 @subsection Preparing Rules for XML Internationalization
 @cindex preparing rules for XML translation
 
+@c The ITS support in GNU gettext was designed so as to supersede
+@c the GNOME itstool <https://itstool.org/>.  See
+@c <https://lists.gnu.org/archive/html/bug-gettext/2015-10/msg00001.html> and
+@c <https://mail.gnome.org/archives/desktop-devel-list/2015-October/msg00013.html>.
+
+@menu
+* ITS Rules::                   Specifying ITS Rules
+* Locating Rules::              Specifying where to find the ITS Rules
+@end menu
+
+@node ITS Rules
+@subsubsection Specifying ITS Rules
+
 Marking translatable strings in an XML file is done through a separate
 "rule" file, making use of the Internationalization Tag Set standard
 (ITS, @uref{https://www.w3.org/TR/its20/}).  The currently supported ITS
@@ -10113,11 +10540,12 @@ categories:
 
 @table @samp
 @item Context
+@c Rationale: Glade 2.
 
 This data category associates @code{msgctxt} to the extracted text.  In
 the global rule, the @code{contextRule} element contains the following:
 
-@itemize
+@itemize @bullet
 @item
 A required @code{selector} attribute.  It contains an absolute selector
 that selects the nodes to which this rule applies.
@@ -10131,23 +10559,8 @@ An optional @code{textPointer} attribute that contains a relative
 selector pointing to a node that holds the @code{msgid} value.
 @end itemize
 
-@item Escape Special Characters
-
-This data category indicates whether the special XML characters
-(@code{<}, @code{>}, @code{&}, @code{"}) are escaped with entity
-reference.  In the global rule, the @code{escapeRule} element contains
-the following:
-
-@itemize
-@item
-A required @code{selector} attribute.  It contains an absolute selector
-that selects the nodes to which this rule applies.
-
-@item
-A required @code{escape} attribute with the value @code{yes} or @code{no}.
-@end itemize
-
 @item Extended Preserve Space
+@c Rationale: GSettings.
 
 This data category extends the standard @samp{Preserve Space} data
 category with the additional values @samp{trim} and @samp{paragraph}.
@@ -10157,7 +10570,7 @@ content, but not to normalize whitespaces in the middle.
 boundaries.  In the global
 rule, the @code{preserveSpaceRule} element contains the following:
 
-@itemize
+@itemize @bullet
 @item
 A required @code{selector} attribute.  It contains an absolute selector
 that selects the nodes to which this rule applies.
@@ -10166,6 +10579,50 @@ that selects the nodes to which this rule applies.
 A required @code{space} attribute with the value @code{default},
 @code{preserve}, @code{trim}, or @code{paragraph}.
 @end itemize
+
+@item Escape Special Characters
+
+This data category indicates whether the special XML characters
+(@code{<}, @code{>}, @code{&}, @code{"}) are escaped with entity
+references.  In the global rule, the @code{escapeRule} element contains
+the following:
+
+@itemize @bullet
+@item
+A required @code{selector} attribute.  It contains an absolute selector
+that selects the nodes to which this rule applies.
+
+@item
+A required @code{escape} attribute with the value @code{yes} or @code{no}.
+
+@item
+An optional @code{unescape-if} attribute with the value
+@code{xml}, @code{xhtml}, @code{html}, or @code{no}.
+@end itemize
+
+@noindent
+The default values, @code{escape="no"} and @code{unescape-if="no"},
+should be good for most XML file types.
+A rule with @code{escape="no"},
+that was necessary with GNU gettext versions before 0.23,
+is now redundant.
+
+The @code{unescape-if} attribute is useful for XML file types
+which present messages with embedded XML elements to the translator.
+Such file types are for example DocBook or XHTML.
+If @code{unescape-if="xml"} is specified and the translation
+of a message looks like valid XML, the usual escaping of @code{<},
+@code{>}, and character references is omitted.
+The resulting XML document then is likely what the translator intended.
+However, if the translator did not merely copy the XML markup from the
+message to the translation, but added or removed markup,
+the resulting XML document may be invalid.
+It is therefore useful if, after invoking @code{msgfmt}, you check
+the resulting XML document against the appropriate XML schema or DTD.
+
+Similarly, if @code{unescape-if="xhtml"} is specified and the translation
+looks like valid XHTML, the usual escaping is omitted.
+And likewise for @code{unescape-if="html"}.
 
 @end table
 
@@ -10203,9 +10660,17 @@ second ("A non-translatable string"), the following ITS rules can be used:
 </its:rules>
 @end example
 
-@samp{xgettext} needs another file called "locating rule" to associate
+ITS rules files must have the @file{.its} file extension and obey
+the XML schema version 1.0 encoded by @code{its.xsd10} or
+the XML schema version 1.1 encoded by @code{its.xsd11}
+and its auxiliary schema @code{its-extensions.xsd}.
+
+@node Locating Rules
+@subsubsection Specifying where to find the ITS Rules
+
+@samp{xgettext} needs another file called "locating rules" to associate
 an ITS rule with an XML file.  If the above ITS file is saved as
-@file{messages.its}, the locating rule would look like:
+@file{messages.its}, the locating rules file would look like:
 
 @example
 <?xml version="1.0"?>
@@ -10231,37 +10696,50 @@ file.
 The first rule matches any file with the @file{.xml} file extension, but
 it only applies to XML files whose root element is @samp{<messages>}.
 
-The second rule indicates that the same ITS rule file are also
+The second rule indicates that the same ITS rules file are also
 applicable to any file with the @file{.msg} file extension.  The
 optional @code{name} attribute of @code{locatingRule} allows to choose
 rules by name, typically with @code{xgettext}'s @code{-L} option.
 
-The associated ITS rule file is indicated by the @code{target} attribute
+The associated ITS rules file is indicated by the @code{target} attribute
 of @code{locatingRule} or @code{documentRule}.  If it is specified in a
 @code{documentRule} element, the parent @code{locatingRule} shouldn't
 have the @code{target} attribute.
 
-Locating rule files must have the @file{.loc} file extension.  Both ITS
-rule files and locating rule files must be installed in the
+Locating rules files must have the @file{.loc} file extension and obey
+the XML schema version 1.0 encoded by @code{locating-rules.xsd10} or
+the XML schema version 1.1 encoded by @code{locating-rules.xsd11}.
+Both ITS rules files and locating rules files must be installed in the
 @file{$prefix/share/gettext/its} directory.  Once those files are
 properly installed, @code{xgettext} can extract translatable strings
 from the matching XML files.
 
 @subsubsection Two Use-cases of Translated Strings in XML
 
-For XML, there are two use-cases of translated strings.  One is the case
-where the translated strings are directly consumed by programs, and the
-other is the case where the translated strings are merged back to the
-original XML document.  In the former case, special characters in the
-extracted strings shouldn't be escaped, while they should in the latter
-case.  To control wheter to escape special characters, the @samp{Escape
-Special Characters} data category can be used.
+After strings have been extracted from an XML file to a POT file
+through @code{xgettext}
+and the translator has produced a PO file with translations,
+it can be used in two ways:
 
-To merge the translations, the @samp{msgfmt} program can be used with
-the option @code{--xml}.  @xref{msgfmt Invocation}, for more details
-about how one calls the @samp{msgfmt} program.  @samp{msgfmt}'s
-@code{--xml} option doesn't perform character escaping, so translated
-strings can have arbitrary XML constructs, such as elements for markup.
+@itemize @bullet
+@item
+The PO file (or the MO file generated from it) can be directly consumed
+by a program.
+
+@item
+Or the translated strings can be merged back to the original XML document.
+To do this use the @code{msgfmt} program with the option @code{--xml}.
+@xref{msgfmt Invocation}, for more details about how one calls
+the @samp{msgfmt} program.
+
+During this merge from a PO file into an XML file, it may happen that
+more escaping of special characters for XML is needed
+than what @code{msgfmt} does by default.
+In this case, you can enforce more escaping
+either throuch an @code{<escapeRule>} ITS rule,
+or through an attribute @code{gt:escape="yes"} on the particular XML element.
+
+@end itemize
 
 @c This is the template for new data formats.
 @ignore

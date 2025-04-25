@@ -75,7 +75,7 @@ static const typeinfo_t * const term_styled_ostream_superclasses[] =
 
 #define super styled_ostream_vtable
 
-#line 82 "term-styled-ostream.oo.c"
+#line 84 "term-styled-ostream.oo.c"
 
 /* Implementation of ostream_t methods.  */
 
@@ -101,6 +101,7 @@ term_styled_ostream__flush (term_styled_ostream_t stream, ostream_flush_scope_t 
 static void
 term_styled_ostream__free (term_styled_ostream_t stream)
 {
+  free (stream->css_filename);
   term_ostream_free (stream->destination);
   cr_cascade_destroy (stream->css_document);
   cr_sel_eng_destroy (stream->css_engine);
@@ -642,11 +643,13 @@ term_styled_ostream_create (int fd, const char *filename, ttyctl_t tty_control,
 
   stream->base.base.vtable = &term_styled_ostream_vtable;
   stream->destination = term_ostream_create (fd, filename, tty_control);
+  stream->css_filename = xstrdup (css_filename);
 
   if (cr_om_parser_simply_parse_file ((const guchar *) css_filename,
                                       CR_UTF_8, /* CR_AUTO is not supported */
                                       &css_file_contents) != CR_OK)
     {
+      free (stream->css_filename);
       term_ostream_free (stream->destination);
       free (stream);
       return NULL;
@@ -665,7 +668,29 @@ term_styled_ostream_create (int fd, const char *filename, ttyctl_t tty_control,
   return stream;
 }
 
-#line 669 "term-styled-ostream.c"
+/* Accessors.  */
+
+static term_ostream_t
+term_styled_ostream__get_destination (term_styled_ostream_t stream)
+{
+  return stream->destination;
+}
+
+static const char *
+term_styled_ostream__get_css_filename (term_styled_ostream_t stream)
+{
+  return stream->css_filename;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_term_styled_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, term_styled_ostream);
+}
+
+#line 694 "term-styled-ostream.c"
 
 const struct term_styled_ostream_implementation term_styled_ostream_vtable =
 {
@@ -681,6 +706,8 @@ const struct term_styled_ostream_implementation term_styled_ostream_vtable =
   term_styled_ostream__get_hyperlink_id,
   term_styled_ostream__set_hyperlink,
   term_styled_ostream__flush_to_current_style,
+  term_styled_ostream__get_destination,
+  term_styled_ostream__get_css_filename,
 };
 
 #if !HAVE_INLINE
@@ -757,6 +784,22 @@ term_styled_ostream_flush_to_current_style (term_styled_ostream_t first_arg)
   const struct term_styled_ostream_implementation *vtable =
     ((struct term_styled_ostream_representation_header *) (struct term_styled_ostream_representation *) first_arg)->vtable;
   vtable->flush_to_current_style (first_arg);
+}
+
+term_ostream_t
+term_styled_ostream_get_destination (term_styled_ostream_t first_arg)
+{
+  const struct term_styled_ostream_implementation *vtable =
+    ((struct term_styled_ostream_representation_header *) (struct term_styled_ostream_representation *) first_arg)->vtable;
+  return vtable->get_destination (first_arg);
+}
+
+const char *
+term_styled_ostream_get_css_filename (term_styled_ostream_t first_arg)
+{
+  const struct term_styled_ostream_implementation *vtable =
+    ((struct term_styled_ostream_representation_header *) (struct term_styled_ostream_representation *) first_arg)->vtable;
+  return vtable->get_css_filename (first_arg);
 }
 
 #endif

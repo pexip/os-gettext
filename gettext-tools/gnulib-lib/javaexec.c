@@ -1,10 +1,10 @@
 /* Execute a Java program.
-   Copyright (C) 2001-2003, 2006-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -32,10 +32,10 @@
 #include "concat-filename.h"
 #include "xalloc.h"
 #include "xmalloca.h"
-#include "error.h"
+#include <error.h>
 #include "gettext.h"
 
-#define _(str) gettext (str)
+#define _(msgid) dgettext ("gnulib", msgid)
 
 
 /* Survey of Java virtual machines.
@@ -48,11 +48,9 @@
    Program    from         A B  C              T
 
    $JAVA      unknown      N Y  n/a            true
-   gij        GCC 3.0      Y Y  n/a            gij --version >/dev/null
    java       JDK 1.1.8    Y Y  -classpath P   java -version 2>/dev/null
    jre        JDK 1.1.8    N Y  -classpath P   jre 2>/dev/null; test $? = 1
    java       JDK 1.3.0    Y Y  -classpath P   java -version 2>/dev/null
-   jview      MS IE        Y Y  -cp P          jview -? >nul; %errorlevel% = 1
 
    The CLASSPATH is a colon separated list of pathnames. (On Windows: a
    semicolon separated list of pathnames.)
@@ -60,10 +58,8 @@
    We try the Java virtual machines in the following order:
      1. getenv ("JAVA"), because the user must be able to override our
         preferences,
-     2. "gij", because it is a completely free JVM,
-     3. "java", because it is a standard JVM,
-     4. "jre", comes last because it requires a CLASSPATH environment variable,
-     5. "jview", on Windows only, because it is frequently installed.
+     2. "java", because it is a standard JVM,
+     3. "jre", comes last because it requires a CLASSPATH environment variable.
 
    We unset the JAVA_HOME environment variable, because a wrong setting of
    this variable can confuse the JDK's javac.
@@ -96,7 +92,8 @@ execute_java_class (const char *class_name,
     {
       char *exe_pathname = xconcatenated_filename (exe_dir, class_name, EXEEXT);
       char *old_classpath;
-      char **argv = (char **) xmalloca ((1 + nargs + 1) * sizeof (char *));
+      const char **argv =
+        (const char **) xmalloca ((1 + nargs + 1) * sizeof (const char *));
       unsigned int i;
 
       /* Set CLASSPATH.  */
@@ -106,7 +103,7 @@ execute_java_class (const char *class_name,
 
       argv[0] = exe_pathname;
       for (i = 0; i <= nargs; i++)
-        argv[1 + i] = (char *) args[i];
+        argv[1 + i] = args[i];
 
       if (verbose)
         {
@@ -136,7 +133,7 @@ execute_java_class (const char *class_name,
         char *old_classpath;
         unsigned int command_length;
         char *command;
-        char *argv[4];
+        const char *argv[4];
         const char * const *arg;
         char *p;
 
@@ -196,72 +193,20 @@ execute_java_class (const char *class_name,
     }
 
   {
-    static bool gij_tested;
-    static bool gij_present;
-
-    if (!gij_tested)
-      {
-        /* Test for presence of gij: "gij --version > /dev/null"  */
-        char *argv[3];
-        int exitstatus;
-
-        argv[0] = "gij";
-        argv[1] = "--version";
-        argv[2] = NULL;
-        exitstatus = execute ("gij", "gij", argv, false, false, true, true,
-                              true, false, NULL);
-        gij_present = (exitstatus == 0);
-        gij_tested = true;
-      }
-
-    if (gij_present)
-      {
-        char *old_classpath;
-        char **argv = (char **) xmalloca ((2 + nargs + 1) * sizeof (char *));
-        unsigned int i;
-
-        /* Set CLASSPATH.  */
-        old_classpath =
-          set_classpath (classpaths, classpaths_count, use_minimal_classpath,
-                         verbose);
-
-        argv[0] = "gij";
-        argv[1] = (char *) class_name;
-        for (i = 0; i <= nargs; i++)
-          argv[2 + i] = (char *) args[i];
-
-        if (verbose)
-          {
-            char *command = shell_quote_argv (argv);
-            printf ("%s\n", command);
-            free (command);
-          }
-
-        err = executer ("gij", "gij", argv, private_data);
-
-        /* Reset CLASSPATH.  */
-        reset_classpath (old_classpath);
-
-        freea (argv);
-
-        goto done2;
-      }
-  }
-
-  {
     static bool java_tested;
     static bool java_present;
 
     if (!java_tested)
       {
         /* Test for presence of java: "java -version 2> /dev/null"  */
-        char *argv[3];
+        const char *argv[3];
         int exitstatus;
 
         argv[0] = "java";
         argv[1] = "-version";
         argv[2] = NULL;
-        exitstatus = execute ("java", "java", argv, false, false, true, true,
+        exitstatus = execute ("java", "java", argv, NULL, NULL,
+                              false, false, true, true,
                               true, false, NULL);
         java_present = (exitstatus == 0);
         java_tested = true;
@@ -270,7 +215,8 @@ execute_java_class (const char *class_name,
     if (java_present)
       {
         char *old_classpath;
-        char **argv = (char **) xmalloca ((2 + nargs + 1) * sizeof (char *));
+        const char **argv =
+          (const char **) xmalloca ((2 + nargs + 1) * sizeof (const char *));
         unsigned int i;
 
         /* Set CLASSPATH.  We don't use the "-classpath ..." option because
@@ -281,9 +227,9 @@ execute_java_class (const char *class_name,
                          verbose);
 
         argv[0] = "java";
-        argv[1] = (char *) class_name;
+        argv[1] = class_name;
         for (i = 0; i <= nargs; i++)
-          argv[2 + i] = (char *) args[i];
+          argv[2 + i] = args[i];
 
         if (verbose)
           {
@@ -310,12 +256,13 @@ execute_java_class (const char *class_name,
     if (!jre_tested)
       {
         /* Test for presence of jre: "jre 2> /dev/null ; test $? = 1"  */
-        char *argv[2];
+        const char *argv[2];
         int exitstatus;
 
         argv[0] = "jre";
         argv[1] = NULL;
-        exitstatus = execute ("jre", "jre", argv, false, false, true, true,
+        exitstatus = execute ("jre", "jre", argv, NULL, NULL,
+                              false, false, true, true,
                               true, false, NULL);
         jre_present = (exitstatus == 0 || exitstatus == 1);
         jre_tested = true;
@@ -324,7 +271,8 @@ execute_java_class (const char *class_name,
     if (jre_present)
       {
         char *old_classpath;
-        char **argv = (char **) xmalloca ((2 + nargs + 1) * sizeof (char *));
+        const char **argv =
+          (const char **) xmalloca ((2 + nargs + 1) * sizeof (const char *));
         unsigned int i;
 
         /* Set CLASSPATH.  We don't use the "-classpath ..." option because
@@ -335,9 +283,9 @@ execute_java_class (const char *class_name,
                          verbose);
 
         argv[0] = "jre";
-        argv[1] = (char *) class_name;
+        argv[1] = class_name;
         for (i = 0; i <= nargs; i++)
-          argv[2 + i] = (char *) args[i];
+          argv[2 + i] = args[i];
 
         if (verbose)
           {
@@ -357,64 +305,8 @@ execute_java_class (const char *class_name,
       }
   }
 
-#if defined _WIN32 || defined __CYGWIN__
-  /* Native Windows, Cygwin */
-  {
-    static bool jview_tested;
-    static bool jview_present;
-
-    if (!jview_tested)
-      {
-        /* Test for presence of jview: "jview -? >nul ; test $? = 1"  */
-        char *argv[3];
-        int exitstatus;
-
-        argv[0] = "jview";
-        argv[1] = "-?";
-        argv[2] = NULL;
-        exitstatus = execute ("jview", "jview", argv, false, false, true, true,
-                              true, false, NULL);
-        jview_present = (exitstatus == 0 || exitstatus == 1);
-        jview_tested = true;
-      }
-
-    if (jview_present)
-      {
-        char *old_classpath;
-        char **argv = (char **) xmalloca ((2 + nargs + 1) * sizeof (char *));
-        unsigned int i;
-
-        /* Set CLASSPATH.  */
-        old_classpath =
-          set_classpath (classpaths, classpaths_count, use_minimal_classpath,
-                         verbose);
-
-        argv[0] = "jview";
-        argv[1] = (char *) class_name;
-        for (i = 0; i <= nargs; i++)
-          argv[2 + i] = (char *) args[i];
-
-        if (verbose)
-          {
-            char *command = shell_quote_argv (argv);
-            printf ("%s\n", command);
-            free (command);
-          }
-
-        err = executer ("jview", "jview", argv, private_data);
-
-        /* Reset CLASSPATH.  */
-        reset_classpath (old_classpath);
-
-        freea (argv);
-
-        goto done2;
-      }
-  }
-#endif
-
   if (!quiet)
-    error (0, 0, _("Java virtual machine not found, try installing gij or set $JAVA"));
+    error (0, 0, _("Java virtual machine not found, try setting $JAVA"));
   err = true;
 
  done2:

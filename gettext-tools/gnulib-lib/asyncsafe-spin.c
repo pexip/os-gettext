@@ -1,18 +1,18 @@
 /* Spin locks for communication between threads and signal handlers.
-   Copyright (C) 2020 Free Software Foundation, Inc.
+   Copyright (C) 2020-2024 Free Software Foundation, Inc.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, see <https://www.gnu.org/licenses/>.  */
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Bruno Haible <bruno@clisp.org>, 2020.  */
 
@@ -21,10 +21,12 @@
 /* Specification.  */
 #include "asyncsafe-spin.h"
 
-#include <stdbool.h>
 #include <stdlib.h>
 #if defined _AIX
 # include <sys/atomic_op.h>
+#endif
+#if 0x590 <= __SUNPRO_C && __STDC__
+# define asm __asm
 #endif
 
 #if defined _WIN32 && ! defined __CYGWIN__
@@ -67,9 +69,11 @@ asyncsafe_spin_destroy (asyncsafe_spinlock_t *lock)
    We don't use the C11 <stdatomic.h> (available in GCC >= 4.9) because it would
    require to link with -latomic.  */
 
-#  if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)) && !defined __ibmxl__
-/* Use GCC built-ins (available in GCC >= 4.7) that operate on the first byte of
-   the lock.
+#  if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7) \
+       || __clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 1)) \
+      && !defined __ibmxl__
+/* Use GCC built-ins (available in GCC >= 4.7 and clang >= 3.1) that operate on
+   the first byte of the lock.
    Documentation:
    <https://gcc.gnu.org/onlinedocs/gcc-4.7.0/gcc/_005f_005fatomic-Builtins.html>
  */
@@ -129,8 +133,11 @@ do_unlock (asyncsafe_spinlock_t *lock)
 
 #   endif
 
-#  elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) && !defined __ibmxl__
-/* Use GCC built-ins (available in GCC >= 4.1).
+#  elif (((__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1)) \
+          || __clang_major__ >= 3) \
+         && HAVE_ATOMIC_COMPARE_AND_SWAP_GCC41)
+/* Use GCC built-ins (available on many platforms with GCC >= 4.1 or
+   clang >= 3.0).
    Documentation:
    <https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html>  */
 
@@ -184,18 +191,24 @@ do_unlock (asyncsafe_spinlock_t *lock)
     abort ();
 }
 
-#  elif (defined __GNUC__ || defined __SUNPRO_C) && (defined __sparc || defined __i386 || defined __x86_64__)
-/* For older versions of GCC, use inline assembly.
-   GCC and the Oracle Studio C 12 compiler understand GCC's extended asm syntax,
-   but the plain Oracle Studio C 11 compiler understands only simple asm.  */
+#  elif ((defined __GNUC__ || defined __clang__ || defined __SUNPRO_C) && (defined __sparc || defined __i386 || defined __x86_64__)) || (defined __TINYC__ && (defined __i386 || defined __x86_64__))
+/* For older versions of GCC or clang, use inline assembly.
+   GCC, clang, and the Oracle Studio C 12 compiler understand GCC's extended
+   asm syntax, but the plain Oracle Studio C 11 compiler understands only
+   simple asm.  */
 /* An implementation that verifies the unlocks.  */
 
 static void
 memory_barrier (void)
 {
-#   if defined __GNUC__ || __SUNPRO_C >= 0x590
+#   if defined __GNUC__ || defined __clang__ || __SUNPRO_C >= 0x590 || defined __TINYC__
 #    if defined __i386 || defined __x86_64__
+#     if defined __TINYC__ && defined __i386
+  /* Cannot use the SSE instruction "mfence" with this compiler.  */
+  asm volatile ("lock orl $0,(%esp)");
+#     else
   asm volatile ("mfence");
+#     endif
 #    endif
 #    if defined __sparc
   asm volatile ("membar 2");
@@ -216,7 +229,7 @@ static unsigned int
 atomic_compare_and_swap (volatile unsigned int *vp, unsigned int cmp,
                          unsigned int newval)
 {
-#   if defined __GNUC__ || __SUNPRO_C >= 0x590
+#   if defined __GNUC__ || defined __clang__ || __SUNPRO_C >= 0x590 || defined __TINYC__
   unsigned int oldval;
 #    if defined __i386 || defined __x86_64__
   asm volatile (" lock\n cmpxchgl %3,(%1)"

@@ -1,97 +1,105 @@
-This is the Debian prepackaged version of the GNU gettext utilities.
-GNU gettext was written by Ulrich Drepper <drepper@gnu.org>.
-emacs po-mode was written by François Pinard <pinard@iro.umontreal.ca>.
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: GNU gettext
+Upstream-Contact: bug-gettext@gnu.org
+Source: https://ftp.gnu.org/pub/gnu/gettext/
 
-This package was first created by Erick Branderhorst <branderh@debian.org>,
-and is currently maintained by Santiago Vila <sanvila@debian.org>.
+Files: *
+Copyright: 1995-2024 Free Software Foundation, Inc.
+License: GPL-3+
 
-This release has been built using sources from:
+Files: gettext-runtime/intl/*
+Comment: libintl library
+Copyright: 1984-2024 Free Software Foundation, Inc.
+License: LGPL-2.1+
 
-https://ftp.gnu.org/pub/gnu/gettext/
+Files: gettext-runtime/libasprintf/*
+Comment: libasprintf library
+Copyright: 1991-2024 Free Software Foundation, Inc.
+License: LGPL-2.1+
 
-The changes were fairly minimal, and consisted solely of adding
-various debian/* files to the distribution.
+Files: gettext-runtime/intl-java/*
+Comment: libintl.jar Java library
+Copyright: 1994-2013 Free Software Foundation, Inc.
+License: LGPL-2.1+
 
+Files: gettext-runtime/intl-csharp/*
+Comment: GNU.Gettext.dll C# library
+Copyright: 1994-2021 Free Software Foundation, Inc.
+License: LGPL-2.1+
 
-Copyright and license for the gettext tools:
+Files: gettext-runtime/src/gettext.sh.in
+Comment: gettext.sh shells script function library
+Copyright: 2003-2023 Free Software Foundation, Inc.
+License: LGPL-2.1+
 
-  Copyright (C) 1995-2020 Free Software Foundation, Inc.
+Files: gettext-tools/*
+Comment: gettext tools
+Copyright: 1983-2024 Free Software Foundation, Inc.
+License: GPL-3+
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 3 of the License, or
-  (at your option) any later version.
+Files: gettext-tools/libgettextpo/*
+Comment: libgettextpo library
+Copyright: 1988-2024 Free Software Foundation, Inc.
+License: GPL-3+
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+Files: gettext-tools/doc/*
+Comment: gettext documentation
+Copyright: 1994-2023 Free Software Foundation, Inc.
+License: FDL-1.2+ or GPL-2+
 
-Copyright and license for the libintl library:
+Files: libtextstyle/*
+Comment: libtextstyle library
+Copyright: 1985-2024 Free Software Foundation, Inc.
+License: GPL-3+
 
-  Copyright (C) 1995-2020 Free Software Foundation, Inc.
+Files: libtextstyle/doc/*
+Comment: libtextstyle library documentation
+Copyright: 1994-2021 Free Software Foundation, Inc.
+License: FDL-1.2+ or GPL-2+
 
-  This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU Lesser General Public License as published
-  by the Free Software Foundation; either version 2.1 of the License, or
-  (at your option) any later version.
+License: GPL-2+
+ This program is free software: You can redistribute it and/or
+ modify it under the terms of the GNU General Public License (GPL),
+ either version 2 of the License, or (at your option) any later
+ version published by the Free Software Foundation (FSF).
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in `/usr/share/common-licenses/GPL-2'.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 3 can be found in `/usr/share/common-licenses/GPL-3'.
 
-Copyright and license for libasprintf library:
+License: LGPL-2.1+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published
+ by the Free Software Foundation; either version 2.1 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU Lesser General Public License
+ version 2.1 can be found in `/usr/share/common-licenses/LGPL-2.1'.
 
-  Copyright (C) 1999-2020 Free Software Foundation, Inc.
-
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
-   the Free Software Foundation; either version 2.1 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
-
-Copyright and license for libgettextpo library:
-
-   Copyright (C) 1999-2020 Free Software Foundation, Inc.
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-Copyright and license for gettext documentation:
-
-   Copyright (C) 1995-2020 Free Software Foundation, Inc.
-
-   This manual is free documentation.  It is dually licensed under the
-GNU FDL and the GNU GPL.  This means that you can redistribute this
-manual under either of these two licenses, at your choice.
-
-   This manual is covered by the GNU FDL.  Permission is granted to
-copy, distribute and/or modify this document under the terms of the GNU
-Free Documentation License (FDL), either version 1.2 of the License, or
-(at your option) any later version published by the Free Software
-Foundation (FSF); with no Invariant Sections, with no Front-Cover Text,
-and with no Back-Cover Texts.
-
-   This manual is covered by the GNU GPL.  You can redistribute it
-and/or modify it under the terms of the GNU General Public License
-(GPL), either version 2 of the License, or (at your option) any later
-version published by the Free Software Foundation (FSF).
-
-
-On Debian systems, the complete text of the GNU General Public License
-can be found in `/usr/share/common-licenses/GPL', the complete text of
-the GNU Lesser General Public License can be found in
-`/usr/share/common-licenses/LGPL', and the complete text of the GNU
-Free Documentation License can be found in `/usr/share/common-licenses/GFDL'
+License: FDL-1.2+
+ Permission is granted to copy, distribute and/or modify this document
+ under the terms of the GNU Free Documentation License (FDL), either
+ version 1.2 of the License, or (at your option) any later version
+ published by the Free Software Foundation (FSF); with no Invariant
+ Sections, with no Front-Cover Texts, and with no Back-Cover Texts.
+ .
+ On Debian systems, the complete text of the GNU Free Documentation License
+ version 1.2 can be found in `/usr/share/common-licenses/GFDL-1.2'.

@@ -1,18 +1,18 @@
 /* Like <fcntl.h>, but with non-working flags defined to 0.
 
-   Copyright (C) 2006-2020 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* written by Paul Eggert */
@@ -51,7 +51,8 @@
 #ifndef _@GUARD_PREFIX@_FCNTL_H
 
 /* Needed before <sys/stat.h>.
-   May also define off_t to a 64-bit type on native Windows.  */
+   May also define off_t to a 64-bit type on native Windows.
+   Also defines off64_t on macOS, NetBSD, OpenBSD, MSVC, Cygwin, Haiku.  */
 #include <sys/types.h>
 /* On some systems other than glibc, <sys/stat.h> is a prerequisite of
    <fcntl.h>.  On glibc systems, we would like to avoid namespace pollution.
@@ -74,6 +75,11 @@
 #ifndef _@GUARD_PREFIX@_FCNTL_H
 #define _@GUARD_PREFIX@_FCNTL_H
 
+/* This file uses GNULIB_POSIXCHECK, HAVE_RAW_DECL_*.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
+
 #ifndef __GLIBC__ /* Avoid namespace pollution on glibc systems.  */
 # include <unistd.h>
 #endif
@@ -94,9 +100,15 @@
 #   undef creat
 #   define creat rpl_creat
 #  endif
-_GL_FUNCDECL_RPL (creat, int, (const char *filename, mode_t mode)
+_GL_FUNCDECL_RPL (creat, int, (const char *filename, mode_t mode),
                              _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_RPL (creat, int, (const char *filename, mode_t mode));
+# elif defined _WIN32 && !defined __CYGWIN__
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef creat
+#   define creat _creat
+#  endif
+_GL_CXXALIAS_MDA (creat, int, (const char *filename, mode_t mode));
 # else
 _GL_CXXALIAS_SYS (creat, int, (const char *filename, mode_t mode));
 # endif
@@ -106,6 +118,21 @@ _GL_CXXALIASWARN (creat);
 /* Assume creat is always declared.  */
 _GL_WARN_ON_USE (creat, "creat is not always POSIX compliant - "
                  "use gnulib module creat for portability");
+#elif @GNULIB_MDA_CREAT@
+/* On native Windows, map 'creat' to '_creat', so that -loldnames is not
+   required.  In C++ with GNULIB_NAMESPACE, avoid differences between
+   platforms by defining GNULIB_NAMESPACE::creat always.  */
+# if defined _WIN32 && !defined __CYGWIN__
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef creat
+#   define creat _creat
+#  endif
+/* Need to cast, because in mingw the last argument is 'int mode'.  */
+_GL_CXXALIAS_MDA_CAST (creat, int, (const char *filename, mode_t mode));
+# else
+_GL_CXXALIAS_SYS (creat, int, (const char *filename, mode_t mode));
+# endif
+_GL_CXXALIASWARN (creat);
 #endif
 
 #if @GNULIB_FCNTL@
@@ -114,14 +141,14 @@ _GL_WARN_ON_USE (creat, "creat is not always POSIX compliant - "
 #   undef fcntl
 #   define fcntl rpl_fcntl
 #  endif
-_GL_FUNCDECL_RPL (fcntl, int, (int fd, int action, ...));
+_GL_FUNCDECL_RPL (fcntl, int, (int fd, int action, ...), );
 _GL_CXXALIAS_RPL (fcntl, int, (int fd, int action, ...));
 #  if !GNULIB_defined_rpl_fcntl
 #   define GNULIB_defined_rpl_fcntl 1
 #  endif
 # else
 #  if !@HAVE_FCNTL@
-_GL_FUNCDECL_SYS (fcntl, int, (int fd, int action, ...));
+_GL_FUNCDECL_SYS (fcntl, int, (int fd, int action, ...), );
 #   if !GNULIB_defined_fcntl
 #    define GNULIB_defined_fcntl 1
 #   endif
@@ -143,9 +170,15 @@ _GL_WARN_ON_USE (fcntl, "fcntl is not always POSIX compliant - "
 #   undef open
 #   define open rpl_open
 #  endif
-_GL_FUNCDECL_RPL (open, int, (const char *filename, int flags, ...)
+_GL_FUNCDECL_RPL (open, int, (const char *filename, int flags, ...),
                              _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_RPL (open, int, (const char *filename, int flags, ...));
+# elif defined _WIN32 && !defined __CYGWIN__
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef open
+#   define open _open
+#  endif
+_GL_CXXALIAS_MDA (open, int, (const char *filename, int flags, ...));
 # else
 _GL_CXXALIAS_SYS (open, int, (const char *filename, int flags, ...));
 # endif
@@ -159,6 +192,22 @@ _GL_CXXALIASWARN (open);
 /* Assume open is always declared.  */
 _GL_WARN_ON_USE (open, "open is not always POSIX compliant - "
                  "use gnulib module open for portability");
+#elif @GNULIB_MDA_OPEN@
+/* On native Windows, map 'open' to '_open', so that -loldnames is not
+   required.  In C++ with GNULIB_NAMESPACE, avoid differences between
+   platforms by defining GNULIB_NAMESPACE::open always.  */
+# if defined _WIN32 && !defined __CYGWIN__
+#  if !(defined __cplusplus && defined GNULIB_NAMESPACE)
+#   undef open
+#   define open _open
+#  endif
+_GL_CXXALIAS_MDA (open, int, (const char *filename, int flags, ...));
+# else
+_GL_CXXALIAS_SYS (open, int, (const char *filename, int flags, ...));
+# endif
+# if !defined __hpux
+_GL_CXXALIASWARN (open);
+# endif
 #endif
 
 #if @GNULIB_OPENAT@
@@ -168,14 +217,14 @@ _GL_WARN_ON_USE (open, "open is not always POSIX compliant - "
 #   define openat rpl_openat
 #  endif
 _GL_FUNCDECL_RPL (openat, int,
-                  (int fd, char const *file, int flags, /* mode_t mode */ ...)
+                  (int fd, char const *file, int flags, /* mode_t mode */ ...),
                   _GL_ARG_NONNULL ((2)));
 _GL_CXXALIAS_RPL (openat, int,
                   (int fd, char const *file, int flags, /* mode_t mode */ ...));
 # else
 #  if !@HAVE_OPENAT@
 _GL_FUNCDECL_SYS (openat, int,
-                  (int fd, char const *file, int flags, /* mode_t mode */ ...)
+                  (int fd, char const *file, int flags, /* mode_t mode */ ...),
                   _GL_ARG_NONNULL ((2)));
 #  endif
 _GL_CXXALIAS_SYS (openat, int,
@@ -392,6 +441,10 @@ _GL_WARN_ON_USE (openat, "openat is not portable - "
 # define AT_EACCESS 4
 #endif
 
+/* Ignore this flag if not supported.  */
+#ifndef AT_NO_AUTOMOUNT
+# define AT_NO_AUTOMOUNT 0
+#endif
 
 #endif /* _@GUARD_PREFIX@_FCNTL_H */
 #endif /* _@GUARD_PREFIX@_FCNTL_H */

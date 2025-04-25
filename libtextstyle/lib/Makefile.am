@@ -1,5 +1,5 @@
 ## Makefile for the lib subdirectory of GNU libtextstyle.
-## Copyright (C) 2009-2020 Free Software Foundation, Inc.
+## Copyright (C) 2009-2024 Free Software Foundation, Inc.
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 ## Process this file with automake to produce Makefile.in.
 
-AUTOMAKE_OPTIONS = 1.13 gnits subdir-objects no-dependencies
+AUTOMAKE_OPTIONS = 1.13 gnits subdir-objects
 EXTRA_DIST =
 BUILT_SOURCES =
 MOSTLYCLEANFILES = core *.stackdump
@@ -36,9 +36,9 @@ nobase_nodist_include_HEADERS =
 
 noinst_HEADERS = notinline.h
 
+# Note that Automake's $(DEFAULT_INCLUDES) already contains
+# -I. -I$(srcdir) -I$(top_builddir).
 AM_CPPFLAGS = \
-  -I. -I$(srcdir) \
-  -I$(top_builddir) -I$(top_srcdir) \
   -Iglib \
   -DIN_LIBTEXTSTYLE
 
@@ -55,6 +55,9 @@ if WOE32
 # to the libgcc_s_sjlj DLL (through the symbols __udivdi3, __umoddi3).
 AM_CPPFLAGS += -D__USE_MINGW_ANSI_STDIO=0
 endif
+
+# Enable more warning options in this directory.
+AM_CFLAGS = @WARN_CFLAGS@
 
 # Rules generated and collected by gnulib-tool.
 include Makefile.gnulib
@@ -146,8 +149,7 @@ HEADERS_WITH_EXTERNS = \
 # List of declared exported symbols.
 # We extract it from the header files that get installed.
 # This file has the same format as the one expected by the libtool option
-# '-export-symbols', but we don't use this option, because it may prevent us
-# from building some of the unit tests.
+# '-export-symbols'.
 $(srcdir)/libtextstyle.sym.in : $(HEADERS_WITH_EXTERNS)
 	if \
 	  for f in $(HEADERS_WITH_EXTERNS); do \
@@ -184,7 +186,7 @@ EXTRA_DIST           += libtextstyle.sym.in declared.sh
 libtextstyle.sym : $(srcdir)/libtextstyle.sym.in
 	cat $(srcdir)/libtextstyle.sym.in \
 	  | case "@host_os@" in \
-	      mingw*) cat ;; \
+	      mingw* | windows*) cat ;; \
 	      *) grep -v '^libtextstyle_isatty$$' ;; \
 	    esac \
 	  > $@-t
@@ -214,9 +216,6 @@ config.h: $(BUILT_SOURCES) libtextstyle.sym
 	  echo '#include "../config.h"'; \
 	  echo; \
 	  echo '#endif /* LIBTEXTSTYLE_CONFIG_H */'; \
-	  case "@host_os@" in \
-	    mingw*) echo '#define isatty libtextstyle_isatty' ;; \
-	  esac; \
 	} > config.h && \
 	if test -n "$(NAMESPACING)" && test -n "$(HAVE_GLOBAL_SYMBOL_PIPE)"; then \
 	  { \
@@ -228,8 +227,8 @@ config.h: $(BUILT_SOURCES) libtextstyle.sym
 	            sf=`echo "$$f" | sed -e 's,\\.[^.]*$$,,'`.c; \
 	            test -f $$sf || sf=$(srcdir)/$$sf; \
 	            of=`echo "$$f" | sed -e 's,^.*/,,' -e 's,\\.[^.]*$$,,'`.$(OBJEXT); \
-	            echo "$(COMPILE) -c $$sf" 1>&6; \
-	            $(COMPILE) -c $$sf || { rm -f config.h; exit 1; }; \
+	            echo "$(COMPILE) $(GL_CFLAG_INHIBIT_WARNINGS) -c $$sf" 1>&6; \
+	            $(COMPILE) $(GL_CFLAG_INHIBIT_WARNINGS) -c $$sf || { rm -f config.h; exit 1; }; \
 	            sh ./exported.sh $$of 1>&5; \
 	            rm -f $$of `echo "$$of" | sed -e 's,\\.$(OBJEXT)$$,.lo,'`; \
 	            ;; \
@@ -237,7 +236,7 @@ config.h: $(BUILT_SOURCES) libtextstyle.sym
 	      done; \
 	    } 5>&1 1>&2 \
 	      | sed -e 's,.* ,,' | grep -v '@' | LC_ALL=C sort | LC_ALL=C uniq \
-	      | LC_ALL=C join -v 1 - libtextstyle.sym \
+	      | LC_ALL=C $(top_srcdir)/build-aux/join-v-1 - libtextstyle.sym \
 	      | sed -e 's,^\(.*\)$$,#define \1 libtextstyle_\1,' > config.h-t; \
 	  } 6>&1 && \
 	  if test -f config.h; then \
@@ -283,9 +282,9 @@ AM_CPPFLAGS += -DDEPENDS_ON_LIBICONV=1
 
 # Libtool's library version information for libtextstyle.
 # See the libtool documentation, section "Library interface versions".
-LTV_CURRENT=1
-LTV_REVISION=1
-LTV_AGE=1
+LTV_CURRENT=2
+LTV_REVISION=3
+LTV_AGE=2
 
 # How to build libtextstyle.la.
 libtextstyle_la_LDFLAGS += \

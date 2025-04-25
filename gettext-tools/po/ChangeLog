@@ -1,3 +1,247 @@
+2024-12-31  Bruno Haible  <bruno@clisp.org>
+
+	Update translations from TP.
+
+2024-12-31  Bruno Haible  <bruno@clisp.org>
+
+	Use new approach for gnulib localizations.
+	* gettext-runtime/po/POTFILES.in: Remove files that come from gnulib.
+	* gettext-tools/po/POTFILES.in: Likewise.
+	* gettext-runtime/src/envsubst.c (main): Invoke bindtextdomain for the domain
+	'gnulib'.
+	* gettext-runtime/src/gettext.c (main): Likewise.
+	* gettext-runtime/src/ngettext.c (main): Likewise.
+	* gettext-tools/src/cldr-plurals.c (main): Likewise.
+	* gettext-tools/src/hostname.c (main): Likewise.
+	* gettext-tools/src/msgattrib.c (main): Likewise.
+	* gettext-tools/src/msgcat.c (main): Likewise.
+	* gettext-tools/src/msgcmp.c (main): Likewise.
+	* gettext-tools/src/msgcomm.c (main): Likewise.
+	* gettext-tools/src/msgconv.c (main): Likewise.
+	* gettext-tools/src/msgen.c (main): Likewise.
+	* gettext-tools/src/msgexec.c (main): Likewise.
+	* gettext-tools/src/msgfilter.c (main): Likewise.
+	* gettext-tools/src/msgfmt.c (main): Likewise.
+	* gettext-tools/src/msggrep.c (main): Likewise.
+	* gettext-tools/src/msginit.c (main): Likewise.
+	* gettext-tools/src/msgmerge.c (main): Likewise.
+	* gettext-tools/src/msgunfmt.c (main): Likewise.
+	* gettext-tools/src/msguniq.c (main): Likewise.
+	* gettext-tools/src/recode-sr-latin.c (main): Likewise.
+	* gettext-tools/src/urlget.c (main): Likewise.
+	* gettext-tools/src/xgettext.c (main): Likewise.
+
+2024-12-01  Bruno Haible  <bruno@clisp.org>
+
+	Update translations from TP.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-tools/po/*.po: Update from TP.
+	* gettext-tools/po/LINGUAS: Add ka.
+	* gettext-tools/examples/po/*.po: Update from TP.
+
+2024-09-29  Bruno Haible  <bruno@clisp.org>
+
+	Refactor: Rename locating-rule.[hc].
+	* gettext-tools/src/locating-rules.h: Renamed from gettext-tools/src/locating-rule.h.
+	* gettext-tools/src/locating-rules.c: Renamed from gettext-tools/src/locating-rule.c.
+	* gettext-tools/src/FILES: Update.
+	* gettext-tools/src/Makefile.am (noinst_HEADERS, libgettextsrc_la_SOURCES): Update.
+	* gettext-tools/src/msgfmt.c: Update.
+	* gettext-tools/src/xgettext.c: Update.
+	* gettext-tools/po/POTFILES.in: Update.
+
+2024-08-05  Bruno Haible  <bruno@clisp.org>
+
+	Refactor: Remove code duplication.
+	* gettext-tools/src/po-xerror.h: Include xerror-handler.h. Remove all
+	declarations.
+	(PO_SEVERITY_*): Define as aliases of CAT_SEVERITY_*.
+	(po_xerror, po_xerror2): New macros.
+	* gettext-tools/src/po-xerror.c: Remove file.
+	* gettext-tools/src/Makefile.am (COMMON_SOURCE): Remove po-xerror.c.
+	* gettext-tools/src/msgmerge.c (silent_xerror2): New function.
+	(match_domain): Pass a stack-allocated xerror_handler to check_plural_eval.
+	* gettext-tools/woe32dll/gettextsrc-exports.c (po_xerror, po_xerror2): Remove
+	exports.
+	* gettext-tools/po/POTFILES.in: Add src/xerror-handler.c. Remove
+	src/po-xerror.c.
+
+2024-08-02  Bruno Haible  <bruno@clisp.org>
+
+	Rename some files.
+	* gettext-tools/src/read-po-internal.h: Renamed from
+	gettext-tools/src/po-gram.h.
+	* gettext-tools/src/read-po-lex.h: Renamed from gettext-tools/src/po-lex.h.
+	* gettext-tools/src/read-po-lex.c: Renamed from gettext-tools/src/po-lex.c.
+	* gettext-tools/src/read-po-gram.y: Renamed from
+	gettext-tools/src/po-gram-gen.y.
+	* gettext-tools/src/*.h: Update.
+	* gettext-tools/src/*.c: Update.
+	* gettext-tools/src/FILES: Update.
+	* gettext-tools/src/Makefile.am: Update.
+	* gettext-tools/libgettextpo/Makefile.am: Update.
+
+2023-11-11  Bruno Haible  <bruno@clisp.org>
+
+	libgettextpo: Remove static variable bullet_stack.
+	* gettext-tools/src/xg-check.h: New file, extracted from
+	gettext-tools/src/msgl-check.h.
+	* gettext-tools/src/xg-check.c: New file, extracted from
+	gettext-tools/src/msgl-check.c.
+	* gettext-tools/src/msgl-check.h (syntax_check_message_list): Remove
+	declaration.
+	* gettext-tools/src/msgl-check.c: Don't include quote.h, sentence.h, unictype.h,
+	unistr.h.
+	(struct callback_arg, struct bullet_ty, struct bullet_stack_ty,
+	syntax_check_function): Remove types.
+	(bullet_stack, sc_funcs): Remove variables.
+	(syntax_check_ellipsis_unicode, syntax_check_space_ellipsis,
+	syntax_check_quote_unicode_callback, syntax_check_quote_unicode,
+	syntax_check_bullet_unicode, syntax_check_message, syntax_check_message_list):
+	Remove functions.
+	* gettext-tools/src/xgettext.c: Include xg-check.h instead of msgl-check.h.
+	* gettext-tools/src/Makefile.am (noinst_HEADERS): Add xg-check.h.
+	(xgettext_SOURCES): Add xg-check.c.
+	* gettext-tools/src/FILES: Mention xg-check.h, xg-check.c.
+	* gettext-tools/po/POTFILES.in: Add src/xg-check.c.
+
+2023-10-07  Bruno Haible  <bruno@clisp.org>
+
+	xgettext: Simplify code that emits diagnostics.
+	Also, for Perl input, clarify some diagnostics as errors vs. warnings.
+
+	* gettext-tools/src/if-error.h: New file.
+	* gettext-tools/src/if-error.c: New file.
+	* gettext-tools/src/xg-mixed-string.c: Include if-error.h instead of
+	error-progname.h.
+	(mixed_string_buffer_append_lone_surrogate): Invoke 'if_error' instead of
+	'error'.
+	* gettext-tools/src/x-awk.c: Include if-error.h instead of error-progname.h.
+	(phase7_getc, x_awk_lex, extract_parenthesized): Invoke 'if_error' instead of
+	'error'.
+	* gettext-tools/src/x-c.c: Include if-error.h instead of error-progname.h.
+	(phase7_getc, phase5_get, extract_parenthesized): Invoke 'if_error' instead of
+	'error'.
+	* gettext-tools/src/x-csharp.c: Include if-error.h instead of error-progname.h.
+	(do_getc_unicode_escaped, accumulate_escaped, extract_parenthesized): Invoke
+	'if_error' instead of 'error'.
+	* gettext-tools/src/x-elisp.c: Include if-error.h instead of error-progname.h.
+	(do_getc_escaped, read_object): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-java.c: Include if-error.h instead of error-progname.h.
+	(accumulate_escaped, phase5_get, extract_parenthesized): Invoke 'if_error'
+	instead of 'error'.
+	* gettext-tools/src/x-javascript.c: Include if-error.h instead of
+	error-progname.h.
+	(phase7_getuc, phase5_scan_regexp, phase5_scan_xml_markup, phase5_get,
+	extract_balanced): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-librep.c: Include if-error.h instead of error-progname.h.
+	(read_object): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-lisp.c: Include if-error.h instead of error-progname.h.
+	(read_object): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-lua.c: Include if-error.h instead of error-progname.h.
+	(extract_balanced): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-perl.c: Include if-error.h instead of error-progname.h.
+	(get_here_document, extract_quotelike_pass3, interpolate_keywords, x_perl_lex,
+	extract_balanced): Invoke 'if_error' instead of 'error'.
+	(interpolate_keywords): Update extract_quotelike_pass3 invocations.
+	(extract_balanced): Update collect_message invocations. Call fflush before
+	abort (needed for MSVC).
+	* gettext-tools/src/x-php.c: Include if-error.h instead of error-progname.h.
+	(extract_balanced): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-python.c: Include if-error.h instead of error-progname.h.
+	(phase7_getuc, extract_balanced): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-rst.c: Include if-error.h instead of error-progname.h.
+	(extract_rst, extract_rsj): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-scheme.c: Include if-error.h instead of error-progname.h.
+	(read_object): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-sh.c: Include if-error.h instead of error-progname.h.
+	(read_word, read_command_list): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-tcl.c: Include if-error.h instead of error-progname.h.
+	(accumulate_word, read_word): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/x-vala.c: Include if-error.h instead of error-progname.h.
+	(phase7_getc, phase3_scan_regex, phase3_get, extract_balanced): Invoke
+	'if_error' instead of 'error'.
+	* gettext-tools/src/x-ycp.c: Include if-error.h instead of error-progname.h.
+	(extract_parenthesized): Invoke 'if_error' instead of 'error'.
+	* gettext-tools/src/xg-arglist-parser.c: Include if-error.h instead of error.h,
+	error-progname.h.
+	(arglist_parser_done): Invoke 'if_error' instead of 'error_at_line'.
+	* gettext-tools/src/xg-message.c: Include if-error.h instead of
+	error-progname.h.
+	(set_format_flags_from_context, warn_format_string, remember_a_message): Invoke
+	'if_error' instead of 'multiline_warning'.
+	* gettext-tools/src/Makefile.am (noinst_HEADERS): Add if-error.h.
+	(xgettext_SOURCES): Add if-error.c.
+	* gettext-tools/src/FILES: Mention if-error.h, if-error.c.
+	* gettext-tools/po/Makevars (XGETTEXT_OPTIONS): Add option regarding the
+	'if_error' function.
+	* gettext-tools/po/POTFILES.in: Add src/if-error.c.
+
+2023-09-19  Bruno Haible  <bruno@clisp.org>
+
+	Merge from 0.22.x branch: Update translations from TP.
+
+2023-06-17  Bruno Haible  <bruno@clisp.org>
+
+	Update translations from TP.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-runtime/po/LINGUAS: Add ka.
+	* gettext-tools/po/*.po: Update from TP.
+	* gettext-tools/po/LINGUAS: Add hr.
+	* gettext-tools/examples/po/*.po: Update from TP.
+
+2023-06-17  Bruno Haible  <bruno@clisp.org>
+
+	Update POTFILES.in.
+	* gettext-runtime/po/POTFILES.in: Update.
+	* gettext-tools/po/POTFILES.in: Update.
+
+2023-03-14  Bruno Haible  <bruno@clisp.org>
+
+	po: In the Makefiles, enable --quiet by default when possible.
+	This is possible because msgmerge became faster
+	- through an index-based fuzzy search (msgl-fsearch.c) in 2006,
+	- through OpenMP parallelization in 2006,
+	- through processor speedups over the years.
+	The only case where msgmerge is still slow is when a compendium is in use.
+
+	Suggested by Marcus Müller <marcus_savannah@hostalia.de> in
+	<https://lists.gnu.org/archive/html/bug-gnulib/2023-03/msg00034.html>.
+
+	* gettext-runtime/po/Makefile.in.in ($(POFILES), update-po): If msgmerge has
+	version ≥ 0.11, pass option --quiet.
+	* gettext-runtime/po/Makevars (MSGMERGE_OPTIONS): Don't suggest --quiet any
+	more.
+	* gettext-tools/po/Makevars (MSGMERGE_OPTIONS): Likewise.
+	* gettext-tools/examples/hello-*/po/Makevars (MSGMERGE_OPTIONS): Likewise.
+	* gettext-tools/examples/hello-*/po/Makefile.am ($(POFILES), update-po): If
+	msgmerge has version ≥ 0.11, pass option --quiet.
+	(MSGMERGE_OPTIONS): Don't suggest --quiet any more.
+	* gettext-tools/examples/hello-objc-gnustep/po/GNUmakefile: Likewise.
+	* gettext-tools/examples/po/Makefile.am ($(POFILES), update-po): Pass option
+	--quiet to msgmerge.
+	(MSGMERGE_OPTIONS): Don't suggest --quiet any more.
+
+2022-10-10  Bruno Haible  <bruno@clisp.org>
+
+	Merge from 0.21.x branch: Prepare for 0.21.1 release: Update translations.
+	* gettext-runtime/po/*.po: Update from TP.
+	* gettext-tools/po/*.po: Likewise.
+	* gettext-tools/examples/po/*.po: Likewise.
+	* gettext-tools/examples/po/LINGUAS: Add 'ka'.
+	* gettext-tools/examples/hello-*/po/LINGUAS: Likewise.
+	* gettext-tools/examples/Makefile.am (EXAMPLESPOFILES): Add ka.po.
+
+2022-09-13  Bruno Haible  <bruno@clisp.org>
+
+	Update after gnulib changed.
+	* gettext-tools/po/POTFILES.in: Update.
+
+2020-12-04  Bruno Haible  <bruno@clisp.org>
+
+	Update after gnulib changed.
+	* gettext-tools/po/POTFILES.in: Update.
+
 2020-07-26  Bruno Haible  <bruno@clisp.org>
 
 	Update translations (from the TP).
@@ -46,6 +290,8 @@
 	* gettext-tools/libgettextpo/Makefile.am (libgettextpo_la_AUXSOURCES): Update.
 	* gettext-tools/tests/Makefile.am (TESTS): Reorder.
 
+2020-05-10  Bruno Haible  <bruno@clisp.org>
+
 	i18n: Update list of files.
 	* gettext-tools/po/POTFILES.in: Add missing files.
 
@@ -62,6 +308,8 @@
 2019-05-12  Bruno Haible  <bruno@clisp.org>
 
 	Update translations (from the TP).
+
+2019-05-12  Bruno Haible  <bruno@clisp.org>
 
 	Update bug reporting instructions.
 	* README: Tell users to report bugs in the bug tracker or by email. Use the
@@ -194,6 +442,8 @@
 2016-12-11  Bruno Haible  <bruno@clisp.org>
 
 	Merge all .gitignore files into a single .gitignore file.
+
+2016-12-11  Bruno Haible  <bruno@clisp.org>
 
 	Update and organize the .gitignore files.
 

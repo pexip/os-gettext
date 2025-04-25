@@ -1,20 +1,20 @@
-/* Copyright (C) 1991, 1994, 1997-1998, 2000, 2003-2020 Free Software
+/* Copyright (C) 1991, 1994, 1997-1998, 2000, 2003-2024 Free Software
    Foundation, Inc.
 
    NOTE: The canonical source of this file is maintained with the GNU C
    Library.  Bugs can be reported to bug-glibc@prep.ai.mit.edu.
 
-   This program is free software: you can redistribute it and/or modify it
-   under the terms of the GNU General Public License as published by the
-   Free Software Foundation; either version 3 of the License, or any
-   later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
+   You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
@@ -64,61 +64,6 @@ __libc_lock_define_initialized (static, envlock)
 # define SetEnvironmentVariable SetEnvironmentVariableA
 #endif
 
-static int
-_unsetenv (const char *name)
-{
-  size_t len;
-#if !HAVE_DECL__PUTENV
-  char **ep;
-#endif
-
-  if (name == NULL || *name == '\0' || strchr (name, '=') != NULL)
-    {
-      __set_errno (EINVAL);
-      return -1;
-    }
-
-  len = strlen (name);
-
-#if HAVE_DECL__PUTENV
-  {
-    int putenv_result, putenv_errno;
-    char *name_ = malloc (len + 2);
-    memcpy (name_, name, len);
-    name_[len] = '=';
-    name_[len + 1] = 0;
-    putenv_result = _putenv (name_);
-    putenv_errno = errno;
-    free (name_);
-    __set_errno (putenv_errno);
-    return putenv_result;
-  }
-#else
-
-  LOCK;
-
-  ep = environ;
-  while (*ep != NULL)
-    if (!strncmp (*ep, name, len) && (*ep)[len] == '=')
-      {
-        /* Found it.  Remove this pointer by moving later ones back.  */
-        char **dp = ep;
-
-        do
-          dp[0] = dp[1];
-        while (*dp++);
-        /* Continue the loop in case NAME appears again.  */
-      }
-    else
-      ++ep;
-
-  UNLOCK;
-
-  return 0;
-#endif
-}
-
-
 /* Put STRING, which is of the form "NAME=VALUE", in the environment.
    If STRING contains no '=', then remove STRING from the environment.  */
 int
@@ -130,13 +75,21 @@ putenv (char *string)
   if (name_end == NULL)
     {
       /* Remove the variable from the environment.  */
-      return _unsetenv (string);
+      return unsetenv (string);
     }
 
-#if HAVE_DECL__PUTENV
-  /* Rely on _putenv to allocate the new environment.  If other
-     parts of the application use _putenv, the !HAVE_DECL__PUTENV code
-     would fight over who owns the environ vector, causing a crash.  */
+#if HAVE_DECL__PUTENV /* native Windows */
+  /* The Microsoft documentation
+     <https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/putenv-wputenv>
+     says:
+       "Don't change an environment entry directly: instead,
+        use _putenv or _wputenv to change it."
+     Note: Microsoft's _putenv updates not only the contents of _environ but
+     also the contents of _wenviron, so that both are in kept in sync.
+
+     If we didn't follow this advice, our code and other parts of the
+     application (that use _putenv) would fight over who owns the environ vector
+     and thus cause a crash.  */
   if (name_end[1])
     return _putenv (string);
   else
@@ -144,7 +97,7 @@ putenv (char *string)
       /* _putenv ("NAME=") unsets NAME, so invoke _putenv ("NAME= ")
          to allocate the environ vector and then replace the new
          entry with "NAME=".  */
-      int putenv_result, putenv_errno;
+      int putenv_result;
       char *name_x = malloc (name_end - string + sizeof "= ");
       if (!name_x)
         return -1;
@@ -152,7 +105,6 @@ putenv (char *string)
       name_x[name_end - string + 1] = ' ';
       name_x[name_end - string + 2] = 0;
       putenv_result = _putenv (name_x);
-      putenv_errno = errno;
       for (ep = environ; *ep; ep++)
         if (strcmp (*ep, name_x) == 0)
           {
@@ -166,11 +118,10 @@ putenv (char *string)
              fix that by calling SetEnvironmentVariable directly.  */
           name_x[name_end - string] = 0;
           putenv_result = SetEnvironmentVariable (name_x, "") ? 0 : -1;
-          putenv_errno = ENOMEM; /* ENOMEM is the only way to fail.  */
+          errno = ENOMEM; /* ENOMEM is the only way to fail.  */
         }
 # endif
       free (name_x);
-      __set_errno (putenv_errno);
       return putenv_result;
     }
 #else

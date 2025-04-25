@@ -1,5 +1,5 @@
 /* Output stream that produces HTML output.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
 
 #ifndef _HTML_OSTREAM_H
 #define _HTML_OSTREAM_H
+
+#include <stdbool.h>
 
 #include "ostream.h"
 
@@ -45,6 +47,9 @@ methods:
      to the underlying stream, and they will be rendered like strings passed
      to 'ostream_write_mem', 'ostream_write_str', or 'ostream_write_printf'.  */
   void flush_to_current_style (html_ostream_t stream);
+
+  /* Accessors.  */
+  ostream_t get_destination (html_ostream_t stream);
 };
 
 
@@ -61,6 +66,10 @@ extern "C" {
    Note that the resulting stream must be closed before DESTINATION can be
    closed.  */
 extern html_ostream_t html_ostream_create (ostream_t destination);
+
+
+/* Test whether a given output stream is a html_ostream.  */
+extern bool is_instance_of_html_ostream (ostream_t stream);
 
 
 #ifdef __cplusplus

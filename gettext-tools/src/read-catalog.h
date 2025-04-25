@@ -1,6 +1,5 @@
-/* Reading PO files.
-   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2015 Free
-   Software Foundation, Inc.
+/* Reading textual message catalogs (such as PO files).
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    This file was written by Bruno Haible <haible@clisp.cons.org>.
 
    This program is free software: you can redistribute it and/or modify
@@ -21,15 +20,11 @@
 
 #include "message.h"
 #include "read-catalog-abstract.h"
+#include "xerror-handler.h"
 
 #include <stdbool.h>
 #include <stdio.h>
 
-
-/* For including this file in C++ mode.  */
-#ifdef __cplusplus
-# define this thiss
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,8 +33,14 @@ extern "C" {
 
 /* The following pair of structures cooperate to create a derived class from
    class abstract_catalog_reader_ty.  (See read-catalog-abstract.h for an
-   explanation.)  It implements the default behaviour of reading a PO file
-   and converting it to an 'msgdomain_list_ty *'.  */
+   explanation.)
+
+   This derived class stores the contents of the message catalog in memory,
+   converting it to an 'msgdomain_list_ty *'.
+
+   It is called the "default" catalog reader because useful variants can be
+   implemented with little effort by creating a derived class of class
+   default_catalog_reader_ty.  */
 
 /* Forward declaration.  */
 struct default_catalog_reader_ty;
@@ -52,10 +53,11 @@ struct default_catalog_reader_class_ty
   struct abstract_catalog_reader_class_ty super;
 
   /* How to change the current domain.  */
-  void (*set_domain) (struct default_catalog_reader_ty *pop, char *name);
+  void (*set_domain) (struct default_catalog_reader_ty *dcatr,
+                      char *name, lex_pos_ty *name_pos);
 
   /* How to add a message to the list.  */
-  void (*add_message) (struct default_catalog_reader_ty *pop,
+  void (*add_message) (struct default_catalog_reader_ty *dcatr,
                        char *msgctxt,
                        char *msgid, lex_pos_ty *msgid_pos, char *msgid_plural,
                        char *msgstr, size_t msgstr_len, lex_pos_ty *msgstr_pos,
@@ -65,7 +67,7 @@ struct default_catalog_reader_class_ty
                        bool force_fuzzy, bool obsolete);
 
   /* How to modify a new message before adding it to the list.  */
-  void (*frob_new_message) (struct default_catalog_reader_ty *pop,
+  void (*frob_new_message) (struct default_catalog_reader_ty *dcatr,
                             message_ty *mp,
                             const lex_pos_ty *msgid_pos,
                             const lex_pos_ty *msgstr_pos);
@@ -122,13 +124,13 @@ struct default_catalog_reader_ty
   DEFAULT_CATALOG_READER_TY
 };
 
-extern void default_constructor (abstract_catalog_reader_ty *that);
-extern void default_destructor (abstract_catalog_reader_ty *that);
-extern void default_parse_brief (abstract_catalog_reader_ty *that);
-extern void default_parse_debrief (abstract_catalog_reader_ty *that);
-extern void default_directive_domain (abstract_catalog_reader_ty *that,
-                                      char *name);
-extern void default_directive_message (abstract_catalog_reader_ty *that,
+extern void default_constructor (abstract_catalog_reader_ty *catr);
+extern void default_destructor (abstract_catalog_reader_ty *catr);
+extern void default_parse_brief (abstract_catalog_reader_ty *catr);
+extern void default_parse_debrief (abstract_catalog_reader_ty *catr);
+extern void default_directive_domain (abstract_catalog_reader_ty *catr,
+                                      char *name, lex_pos_ty *name_pos);
+extern void default_directive_message (abstract_catalog_reader_ty *catr,
                                        char *msgctxt,
                                        char *msgid,
                                        lex_pos_ty *msgid_pos,
@@ -139,15 +141,16 @@ extern void default_directive_message (abstract_catalog_reader_ty *that,
                                        char *prev_msgid,
                                        char *prev_msgid_plural,
                                        bool force_fuzzy, bool obsolete);
-extern void default_comment (abstract_catalog_reader_ty *that, const char *s);
-extern void default_comment_dot (abstract_catalog_reader_ty *that,
+extern void default_comment (abstract_catalog_reader_ty *catr, const char *s);
+extern void default_comment_dot (abstract_catalog_reader_ty *catr,
                                  const char *s);
-extern void default_comment_filepos (abstract_catalog_reader_ty *that,
-                                     const char *name, size_t line);
-extern void default_comment_special (abstract_catalog_reader_ty *that,
+extern void default_comment_filepos (abstract_catalog_reader_ty *catr,
+                                     const char *file_name, size_t line_number);
+extern void default_comment_special (abstract_catalog_reader_ty *catr,
                                      const char *s);
-extern void default_set_domain (default_catalog_reader_ty *this, char *name);
-extern void default_add_message (default_catalog_reader_ty *this,
+extern void default_set_domain (default_catalog_reader_ty *dcatr,
+                                char *name, lex_pos_ty *name_pos);
+extern void default_add_message (default_catalog_reader_ty *dcatr,
                                  char *msgctxt,
                                  char *msgid,
                                  lex_pos_ty *msgid_pos,
@@ -162,7 +165,8 @@ extern void default_add_message (default_catalog_reader_ty *this,
 /* Allocate a fresh default_catalog_reader_ty (or derived class) instance and
    call its constructor.  */
 extern default_catalog_reader_ty *
-       default_catalog_reader_alloc (default_catalog_reader_class_ty *method_table);
+       default_catalog_reader_alloc (default_catalog_reader_class_ty *method_table,
+                                     xerror_handler_ty xerror_handler);
 
 
 /* If false, duplicate msgids in the same domain and file generate an error.
@@ -175,15 +179,8 @@ extern msgdomain_list_ty *
        read_catalog_stream (FILE *fp,
                             const char *real_filename,
                             const char *logical_filename,
-                            catalog_input_format_ty input_syntax);
-
-/* Read the input file with the name INPUT_NAME.  The ending .po is added
-   if necessary.  If INPUT_NAME is not an absolute file name and the file is
-   not found, the list of directories in "dir-list.h" is searched.  Returns
-   a list of messages.  */
-extern msgdomain_list_ty *
-       read_catalog_file (const char *input_name,
-                          catalog_input_format_ty input_syntax);
+                            catalog_input_format_ty input_syntax,
+                            xerror_handler_ty xerror_handler);
 
 
 #ifdef __cplusplus
