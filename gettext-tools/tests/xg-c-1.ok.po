@@ -39,6 +39,10 @@ msgid "no input file given"
 msgstr ""
 
 #, c-format
+msgid "The option '%s' is deprecated."
+msgstr ""
+
+#, c-format
 msgid ""
 "Cannot convert from \"%s\" to \"%s\". %s relies on iconv(), and iconv() does "
 "not support this conversion."
@@ -120,8 +124,8 @@ msgstr ""
 
 #, c-format
 msgid ""
-"  -d, --default-domain=NAME   use NAME.po for output (instead of messages."
-"po)\n"
+"  -d, --default-domain=NAME   use NAME.po for output (instead of "
+"messages.po)\n"
 msgstr ""
 
 #, c-format
@@ -146,10 +150,12 @@ msgid ""
 "  -L, --language=NAME         recognise the specified language\n"
 "                                (C, C++, ObjectiveC, PO, Shell, Python, "
 "Lisp,\n"
-"                                EmacsLisp, librep, Scheme, Smalltalk, Java,\n"
-"                                JavaProperties, C#, awk, YCP, Tcl, Perl, "
-"PHP,\n"
-"                                Ruby, GCC-source, NXStringTable, RST, RSJ,\n"
+"                                EmacsLisp, librep, Scheme, Guile, "
+"Smalltalk,\n"
+"                                Java, JavaProperties, C#, awk, YCP, Tcl, "
+"Perl,\n"
+"                                PHP, Ruby, GCC-source, NXStringTable, RST, "
+"RSJ,\n"
 "                                Glade, Lua, JavaScript, Vala, Desktop)\n"
 msgstr ""
 
@@ -261,11 +267,24 @@ msgid ""
 msgstr ""
 
 #, c-format
+msgid ""
+"      --tag=WORD:FORMAT       defines the behaviour of tagged template "
+"literals\n"
+"                              with tag WORD\n"
+msgstr ""
+
+#, c-format
+msgid "                                (only language JavaScript)\n"
+msgstr ""
+
+#, c-format
 msgid "  -T, --trigraphs             understand ANSI C trigraphs for input\n"
 msgstr ""
 
 #, c-format
-msgid "                                (only languages C, C++, ObjectiveC)\n"
+msgid ""
+"                                (deprecated; only languages C, C++, "
+"ObjectiveC)\n"
 msgstr ""
 
 #, c-format
@@ -369,7 +388,7 @@ msgid ""
 msgstr ""
 
 #, c-format
-msgid "  -s, --sort-output           generate sorted output\n"
+msgid "  -s, --sort-output           generate sorted output (deprecated)\n"
 msgstr ""
 
 #, c-format
@@ -476,6 +495,10 @@ msgstr ""
 
 #, c-format
 msgid "no input file should be given if %s and %s are specified"
+msgstr ""
+
+#, c-format
+msgid "%s is only valid with %s"
 msgstr ""
 
 #, c-format
@@ -687,6 +710,13 @@ msgid "  --template=TEMPLATE         an XML file used as a template\n"
 msgstr ""
 
 #, c-format
+msgid ""
+"  --replace-text              output XML with translated text replacing the\n"
+"                              original text, not augmenting the original "
+"text\n"
+msgstr ""
+
+#, c-format
 msgid "Input file syntax:\n"
 msgstr ""
 
@@ -739,6 +769,17 @@ msgstr ""
 
 #, c-format
 msgid "  -f, --use-fuzzy             use fuzzy entries in output\n"
+msgstr ""
+
+#, c-format
+msgid ""
+"      --no-convert            don't convert the messages to UTF-8 encoding\n"
+msgstr ""
+
+#, c-format
+msgid ""
+"      --no-redundancy         don't pre-expand ISO C 99 <inttypes.h>\n"
+"                                format string directive macros\n"
 msgstr ""
 
 #, c-format

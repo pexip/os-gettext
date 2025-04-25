@@ -1,6 +1,6 @@
 # Makefile variables for PO directory in any package using GNU gettext.
 #
-# Copyright (C) 2003-2019 Free Software Foundation, Inc.
+# Copyright (C) 2003-2023 Free Software Foundation, Inc.
 # This file, Makevars, is free software; the Free Software Foundation
 # gives unlimited permission to use, copy, distribute, and modify it.
 
@@ -20,7 +20,8 @@ XGETTEXT_OPTIONS = \
   --flag=asprintf:2:c-format --flag=vasprintf:2:c-format \
   --flag=xasprintf:1:c-format --flag=error_logger:1:c-format \
   --flag=po_error:3:c-format --flag=po_error_at_line:5:c-format \
-  --flag=po_gram_error:1:c-format --flag=po_gram_error_at_line:2:c-format
+  --flag=po_gram_error:1:c-format --flag=po_gram_error_at_line:2:c-format \
+  --flag=if_error:6:c-format
 
 # This is the copyright holder that gets inserted into the header of the
 # $(DOMAIN).pot file.  Set this to the copyright holder of the surrounding
@@ -67,8 +68,7 @@ USE_MSGCTXT = no
 
 # These options get passed to msgmerge.
 # Useful options are in particular:
-#   --previous            to keep previous msgids of translated messages,
-#   --quiet               to reduce the verbosity.
+#   --previous            to keep previous msgids of translated messages
 MSGMERGE_OPTIONS =
 
 # These options get passed to msginit.

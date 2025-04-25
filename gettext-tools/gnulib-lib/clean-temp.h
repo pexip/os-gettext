@@ -1,10 +1,10 @@
 /* Temporary directories and temporary files with automatic cleanup.
-   Copyright (C) 2006, 2011-2020 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2011-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -18,7 +18,11 @@
 #ifndef _CLEAN_TEMP_H
 #define _CLEAN_TEMP_H
 
-#include <stdbool.h>
+/* This file uses _GL_ATTRIBUTE_DEALLOC.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
+
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -37,10 +41,11 @@ extern "C" {
    and the temporary directories can be removed, because only on Unix
    (excluding Cygwin) can one remove directories containing open files.
 
-   This module provides support for
-     - temporary directories and temporary files inside these temporary
-       directories,
-     - temporary files without temporary directories.
+   There are two modules:
+     - 'clean-temp' provides support for temporary directories and temporary
+       files inside these temporary directories,
+     - 'clean-temp-simple' provides support for temporary files without
+       temporary directories.
    The temporary directories and files are automatically cleaned up (at the
    latest) when the program exits or dies from a fatal signal such as SIGINT,
    SIGTERM, SIGHUP, but not if it dies from a fatal signal such as SIGQUIT,
@@ -64,21 +69,7 @@ extern "C" {
 
 /* ============= Temporary files without temporary directories ============= */
 
-/* Register the given ABSOLUTE_FILE_NAME as being a file that needs to be
-   removed.
-   Should be called before the file ABSOLUTE_FILE_NAME is created.  */
-extern void register_temporary_file (const char *absolute_file_name);
-
-/* Unregister the given ABSOLUTE_FILE_NAME as being a file that needs to be
-   removed.
-   Should be called when the file ABSOLUTE_FILE_NAME could not be created.  */
-extern void unregister_temporary_file (const char *absolute_file_name);
-
-/* Remove the given ABSOLUTE_FILE_NAME and unregister it.
-   CLEANUP_VERBOSE determines whether errors are reported to standard error.
-   Return 0 upon success, or -1 if there was some problem.  */
-extern int cleanup_temporary_file (const char *absolute_file_name,
-                                   bool cleanup_verbose);
+#include "clean-temp-simple.h"
 
 /* ========= Temporary directories and temporary files inside them ========= */
 
@@ -91,6 +82,11 @@ struct temp_dir
   /* More fields are present here, but not public.  */
 };
 
+/* Remove all registered files and subdirectories inside DIR and DIR itself.
+   DIR cannot be used any more after this call.
+   Return 0 upon success, or -1 if there was some problem.  */
+extern int cleanup_temp_dir (struct temp_dir *dir);
+
 /* Create a temporary directory.
    PREFIX is used as a prefix for the name of the temporary directory. It
    should be short and still give an indication about the program.
@@ -102,7 +98,8 @@ struct temp_dir
    is shown and NULL is returned.  */
 extern struct temp_dir * create_temp_dir (const char *prefix,
                                           const char *parentdir,
-                                          bool cleanup_verbose);
+                                          bool cleanup_verbose)
+  _GL_ATTRIBUTE_DEALLOC (cleanup_temp_dir, 1);
 
 /* Register the given ABSOLUTE_FILE_NAME as being a file inside DIR, that
    needs to be removed before DIR can be removed.
@@ -142,11 +139,6 @@ extern int cleanup_temp_subdir (struct temp_dir *dir,
 /* Remove all registered files and subdirectories inside DIR.
    Return 0 upon success, or -1 if there was some problem.  */
 extern int cleanup_temp_dir_contents (struct temp_dir *dir);
-
-/* Remove all registered files and subdirectories inside DIR and DIR itself.
-   DIR cannot be used any more after this call.
-   Return 0 upon success, or -1 if there was some problem.  */
-extern int cleanup_temp_dir (struct temp_dir *dir);
 
 /* ================== Opening and closing temporary files ================== */
 

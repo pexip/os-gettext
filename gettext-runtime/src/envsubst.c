@@ -1,5 +1,5 @@
 /* Substitution of environment variables in shell format strings.
-   Copyright (C) 2003-2007, 2012, 2018-2020 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,13 +28,15 @@
 #include <unistd.h>
 #include <locale.h>
 
+#include <error.h>
+#include "attribute.h"
 #include "noreturn.h"
 #include "closeout.h"
-#include "error.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "xalloc.h"
+#include "string-buffer.h"
 #include "propername.h"
 #include "binary-io.h"
 #include "gettext.h"
@@ -77,6 +79,7 @@ main (int argc, char *argv[])
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   textdomain (PACKAGE);
 
   /* Ensure that write errors on stdout are detected.  */
@@ -112,7 +115,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2003-2020", "https://gnu.org/licenses/gpl.html");
+              "2003-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Bruno Haible"));
       exit (EXIT_SUCCESS);
     }
@@ -343,8 +346,8 @@ string_list_append (string_list_ty *slp, const char *s)
 static int
 cmp_string (const void *pstr1, const void *pstr2)
 {
-  const char *str1 = *(const char **)pstr1;
-  const char *str2 = *(const char **)pstr2;
+  const char *str1 = *(const char * const *)pstr1;
+  const char *str2 = *(const char * const *)pstr2;
 
   return strcmp (str1, str2);
 }
@@ -358,7 +361,7 @@ string_list_sort (string_list_ty *slp)
 }
 
 /* Test whether a string list contains a given string.  */
-static inline int
+MAYBE_UNUSED static inline int
 string_list_member (const string_list_ty *slp, const char *s)
 {
   size_t j;
@@ -402,7 +405,7 @@ sorted_string_list_member (const string_list_ty *slp, const char *s)
 }
 
 /* Destroy a list of strings.  */
-static inline void
+MAYBE_UNUSED static inline void
 string_list_destroy (string_list_ty *slp)
 {
   size_t j;
@@ -465,9 +468,6 @@ do_ungetc (int c)
 static void
 subst_from_stdin ()
 {
-  static char *buffer;
-  static size_t bufmax;
-  static size_t buflen;
   int c;
 
   for (;;)
@@ -489,19 +489,14 @@ subst_from_stdin ()
             }
           if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_')
             {
+              struct string_buffer buffer;
               bool valid;
 
               /* Accumulate the VARIABLE in buffer.  */
-              buflen = 0;
+              sb_init (&buffer);
               do
                 {
-                  if (buflen >= bufmax)
-                    {
-                      bufmax = 2 * bufmax + 10;
-                      buffer = xrealloc (buffer, bufmax);
-                    }
-                  buffer[buflen++] = c;
-
+                  sb_xappend1 (&buffer, c);
                   c = do_getc ();
                 }
               while ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
@@ -529,23 +524,19 @@ subst_from_stdin ()
               if (valid)
                 {
                   /* Terminate the variable in the buffer.  */
-                  if (buflen >= bufmax)
-                    {
-                      bufmax = 2 * bufmax + 10;
-                      buffer = xrealloc (buffer, bufmax);
-                    }
-                  buffer[buflen] = '\0';
+                  const char *variable = sb_xcontents_c (&buffer);
 
                   /* Test whether the variable shall be substituted.  */
                   if (!all_variables
-                      && !sorted_string_list_member (&variables_set, buffer))
+                      && !sorted_string_list_member (&variables_set, variable))
                     valid = false;
                 }
 
               if (valid)
                 {
                   /* Substitute the variable's value from the environment.  */
-                  const char *env_value = getenv (buffer);
+                  const char *variable = sb_xcontents_c (&buffer);
+                  const char *env_value = getenv (variable);
 
                   if (env_value != NULL)
                     fputs (env_value, stdout);
@@ -558,10 +549,12 @@ subst_from_stdin ()
                   putchar ('$');
                   if (opening_brace)
                     putchar ('{');
-                  fwrite (buffer, buflen, 1, stdout);
+                  string_desc_fwrite (stdout, sb_contents (&buffer));
                   if (closing_brace)
                     putchar ('}');
                 }
+
+              sb_free (&buffer);
             }
           else
             {

@@ -5,7 +5,7 @@
 #endif
 #line 1 "styled-ostream.oo.c"
 /* Abstract output stream for CSS styled text.
-   Copyright (C) 2006 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,15 @@ static const typeinfo_t * const styled_ostream_superclasses[] =
 
 #line 28 "styled-ostream.oo.c"
 
-#line 43 "styled-ostream.c"
+/* Instanceof test.  */
+
+bool
+is_instance_of_styled_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, styled_ostream);
+}
+
+#line 51 "styled-ostream.c"
 void styled_ostream__write_mem (styled_ostream_t first_arg, const void *data, size_t len);
 void
 styled_ostream__write_mem (styled_ostream_t first_arg, const void *data, size_t len)

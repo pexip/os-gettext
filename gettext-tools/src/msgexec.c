@@ -1,5 +1,5 @@
 /* Pass translations to a subprocess.
-   Copyright (C) 2001-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -31,17 +31,17 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "dir-list.h"
-#include "error.h"
 #include "xvasprintf.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "message.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "read-po.h"
 #include "read-properties.h"
 #include "read-stringtable.h"
@@ -69,7 +69,7 @@ static const char *sub_name;
 static const char *sub_path;
 
 /* Argument list for the subprogram.  */
-static char **sub_argv;
+static const char **sub_argv;
 static int sub_argc;
 
 static bool newline;
@@ -110,12 +110,14 @@ main (int argc, char **argv)
   /* Set program name for messages.  */
   set_program_name (argv[0]);
   error_print_progname = maybe_print_progname;
+  gram_max_allowed_errors = 20;
 
   /* Set locale via LC_ALL.  */
   setlocale (LC_ALL, "");
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -185,7 +187,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2001-2020", "https://gnu.org/licenses/gpl.html");
+              "2001-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Bruno Haible"));
       exit (EXIT_SUCCESS);
     }
@@ -201,7 +203,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
 
   /* Build argument list for the program.  */
   sub_argc = argc - optind;
-  sub_argv = XNMALLOC (sub_argc + 1, char *);
+  sub_argv = XNMALLOC (sub_argc + 1, const char *);
   for (i = 0; i < sub_argc; i++)
     sub_argv[i] = argv[optind + i];
   sub_argv[i] = NULL;
@@ -236,7 +238,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
       sub_path = find_in_path (sub_name);
 
       /* Finish argument list for the program.  */
-      sub_argv[0] = (char *) sub_path;
+      sub_argv[0] = sub_path;
     }
 
   exitcode = 0; /* = EXIT_SUCCESS */
@@ -406,8 +408,8 @@ process_string (const message_ty *mp, const char *str, size_t len)
         unsetenv ("MSGEXEC_PREV_MSGID_PLURAL");
 
       /* Open a pipe to a subprocess.  */
-      child = create_pipe_out (sub_name, sub_path, sub_argv, NULL, false, true,
-                               true, fd);
+      child = create_pipe_out (sub_name, sub_path, sub_argv, NULL, NULL,
+                               NULL, false, true, true, fd);
 
       /* Ignore SIGPIPE here.  We don't care if the subprocesses terminates
          successfully without having read all of the input that we feed it.  */

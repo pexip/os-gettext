@@ -1,6 +1,5 @@
 /* Reading Java ResourceBundles.
-   Copyright (C) 2001-2003, 2006-2008, 2010-2011, 2017, 2019 Free Software
-   Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -28,6 +27,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <error.h>
 #include "msgunfmt.h"
 #include "relocatable.h"
 #include "javaexec.h"
@@ -35,7 +35,7 @@
 #include "wait-process.h"
 #include "read-catalog.h"
 #include "read-po.h"
-#include "error.h"
+#include "xerror-handler.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
@@ -53,7 +53,8 @@ struct locals
 
 static bool
 execute_and_read_po_output (const char *progname,
-                            const char *prog_path, char **prog_argv,
+                            const char *prog_path,
+                            const char * const *prog_argv,
                             void *private_data)
 {
   struct locals *l = (struct locals *) private_data;
@@ -63,15 +64,16 @@ execute_and_read_po_output (const char *progname,
   int exitstatus;
 
   /* Open a pipe to the JVM.  */
-  child = create_pipe_in (progname, prog_path, prog_argv, DEV_NULL, false,
-                          true, true, fd);
+  child = create_pipe_in (progname, prog_path, prog_argv, NULL, NULL,
+                          DEV_NULL, false, true, true, fd);
 
   fp = fdopen (fd[0], "r");
   if (fp == NULL)
     error (EXIT_FAILURE, errno, _("fdopen() failed"));
 
   /* Read the message list.  */
-  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po);
+  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po,
+                                 textmode_xerror_handler);
 
   fclose (fp);
 

@@ -1,6 +1,5 @@
 /* GNU gettext - internationalization aids
-   Copyright (C) 1995-1998, 2000-2003, 2006, 2008, 2014, 2018-2019 Free Software
-   Foundation, Inc.
+   Copyright (C) 1995-1998, 2000-2003, 2006, 2008, 2014, 2018-2019, 2021, 2023 Free Software Foundation, Inc.
 
    This file was written by Peter Miller <millerp@canb.auug.org.au>
 
@@ -24,6 +23,7 @@
 
 #include <textstyle.h>
 
+#include "attribute.h"
 #include "message.h"
 
 
@@ -40,14 +40,16 @@ enum filepos_comment_type
   };
 
 /* These functions are used to output a #, flags line.  */
-extern const char *
+extern char *
        make_format_description_string (enum is_format is_format,
-                                       const char *lang, bool debug);
+                                       const char *lang, bool debug)
+       ATTRIBUTE_MALLOC;
 extern bool
        significant_format_p (enum is_format is_format);
 
 extern char *
-       make_range_description_string (struct argument_range range);
+       make_range_description_string (struct argument_range range)
+       ATTRIBUTE_MALLOC;
 
 /* These functions output parts of a message, as comments.  */
 extern void
@@ -56,7 +58,8 @@ extern void
        message_print_comment_dot (const message_ty *mp, ostream_t stream);
 extern void
        message_print_comment_filepos (const message_ty *mp, ostream_t stream,
-                                      bool uniforum, size_t page_width);
+                                      const char *charset, bool uniforum,
+                                      size_t page_width);
 extern void
        message_print_comment_flags (const message_ty *mp, ostream_t stream,
                                     bool debug);

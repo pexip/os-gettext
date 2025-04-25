@@ -1,10 +1,10 @@
 /* Tests for opening a file without destroying an old file with the same name.
 
-   Copyright (C) 2020 Free Software Foundation, Inc.
+   Copyright (C) 2020-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -30,7 +30,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
     ASSERT (stat (filename, &statbuf) < 0);
 
     struct supersede_final_action action;
-    int fd = open_supersede (filename, O_RDWR | O_TRUNC, 0666,
+    int fd = open_supersede (filename, O_RDWR | O_BINARY | O_TRUNC, 0666,
                              supersede_if_exists, supersede_if_does_not_exist,
                              &action);
     ASSERT (fd >= 0);
@@ -56,7 +56,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
     ino_t orig_ino = statbuf.st_ino;
 
     struct supersede_final_action action;
-    int fd = open_supersede (filename, O_RDWR | O_TRUNC, 0666,
+    int fd = open_supersede (filename, O_RDWR | O_BINARY | O_TRUNC, 0666,
                              supersede_if_exists, supersede_if_does_not_exist,
                              &action);
     ASSERT (fd >= 0);
@@ -90,7 +90,9 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
         /* Verify that the file now has a different inode number, on the same
            device.  */
 #if !(defined _WIN32 && !defined __CYGWIN__)
-        ASSERT (memcmp (&orig_dev, &statbuf.st_dev, sizeof (dev_t)) == 0);
+        /* Note: On Linux/mips, statbuf.st_dev is smaller than a dev_t!  */
+        dev_t new_dev = statbuf.st_dev;
+        ASSERT (memcmp (&orig_dev, &new_dev, sizeof (dev_t)) == 0);
         ASSERT (memcmp (&orig_ino, &statbuf.st_ino, sizeof (ino_t)) != 0);
 #endif
       }
@@ -101,7 +103,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
     ASSERT (stat (DEV_NULL, &statbuf) == 0);
 
     struct supersede_final_action action;
-    int fd = open_supersede (DEV_NULL, O_RDWR | O_TRUNC, 0666,
+    int fd = open_supersede (DEV_NULL, O_RDWR | O_BINARY | O_TRUNC, 0666,
                              supersede_if_exists, supersede_if_does_not_exist,
                              &action);
     ASSERT (fd >= 0);
@@ -125,7 +127,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
 
         struct supersede_final_action action;
         int fd =
-          open_supersede (linkname, O_RDWR | O_TRUNC, 0666,
+          open_supersede (linkname, O_RDWR | O_BINARY | O_TRUNC, 0666,
                           supersede_if_exists, supersede_if_does_not_exist,
                           &action);
         ASSERT (fd >= 0);
@@ -159,7 +161,9 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
             /* Verify that the file now has a different inode number, on the
                same device.  */
 #if !(defined _WIN32 && !defined __CYGWIN__)
-            ASSERT (memcmp (&orig_dev, &statbuf.st_dev, sizeof (dev_t)) == 0);
+            /* Note: On Linux/mips, statbuf.st_dev is smaller than a dev_t!  */
+            dev_t new_dev = statbuf.st_dev;
+            ASSERT (memcmp (&orig_dev, &new_dev, sizeof (dev_t)) == 0);
             ASSERT (memcmp (&orig_ino, &statbuf.st_ino, sizeof (ino_t)) != 0);
 #endif
           }
@@ -180,7 +184,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
 
         struct supersede_final_action action;
         int fd =
-          open_supersede (linkname, O_RDWR | O_TRUNC, 0666,
+          open_supersede (linkname, O_RDWR | O_BINARY | O_TRUNC, 0666,
                           supersede_if_exists, supersede_if_does_not_exist,
                           &action);
         ASSERT (fd >= 0);
@@ -209,7 +213,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
 
         struct supersede_final_action action;
         int fd =
-          open_supersede (linkname, O_RDWR | O_TRUNC, 0666,
+          open_supersede (linkname, O_RDWR | O_BINARY | O_TRUNC, 0666,
                           supersede_if_exists, supersede_if_does_not_exist,
                           &action);
         ASSERT (fd >= 0);
@@ -243,7 +247,7 @@ test_open_supersede (bool supersede_if_exists, bool supersede_if_does_not_exist)
 
         struct supersede_final_action action;
         int fd =
-          open_supersede (linkname, O_RDWR | O_TRUNC, 0666,
+          open_supersede (linkname, O_RDWR | O_BINARY | O_TRUNC, 0666,
                           supersede_if_exists, supersede_if_does_not_exist,
                           &action);
         ASSERT (fd < 0);

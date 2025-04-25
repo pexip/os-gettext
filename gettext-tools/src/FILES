@@ -24,6 +24,7 @@ lang-table.c
                 Language names according to ISO 639.
 
 pos.h
+pos.c
                 Source file positions.
 
 message.h
@@ -36,10 +37,16 @@ msgl-ascii.h
 msgl-ascii.c
                 Message list test for ASCII character set.
 
+msgl-ofn.h
+msgl-ofn.c
+                Message list test for ordinary file names.
+
 po-error.h
 po-error.c
 po-xerror.h
 po-xerror.c
+xerror-handler.h
+xerror-handler.c
                 Error handling during writing and reading of PO files.
 
 +-------------- Writing PO files
@@ -56,9 +63,6 @@ po-xerror.c
 | write-stringtable.c
 |               Output of a list-of-messages to a NeXTstep/GNUstep .strings
 |               file.
-| write-desktop.h
-| write-desktop.c
-|               Output of a list-of-messages to a .desktop file.
 +-------------- Writing PO files
 
 +-------------- Reading PO files
@@ -70,13 +74,15 @@ po-xerror.c
 | po-charset.c
 |               Charset handling while reading PO files.
 |
-| po-lex.h
-| po-lex.c
-|               Lexical analysis of PO files.
+| read-catalog-special.h
+| read-catalog-special.c
+|               Parsing of special comments (#, comments).
 |
 | read-catalog-abstract.h
-| po-gram.h
-| po-gram-gen.y
+| read-po-internal.h
+| read-po-lex.h
+| read-po-lex.c
+| read-po-gram.y
 | read-po.h
 | read-po.c
 | read-properties.h
@@ -88,9 +94,12 @@ po-xerror.c
 |              .strings files.
 |         read-catalog-abstract.h
 |                       General parser structure.
-|         po-gram.h
-|         po-gram-gen.y
-|                       Parsing of PO files, based on po-lex.{h,c}.
+|         read-po-internal.h
+|         read-po-lex.h
+|         read-po-lex.c
+|                       Lexical analysis of PO files.
+|         read-po-gram.y
+|                       Parsing of PO files, based on read-po-lex.{h,c}.
 |         read-po.h
 |         read-po.c
 |                       Parsing of PO files.
@@ -105,12 +114,18 @@ po-xerror.c
 |
 | read-catalog.h
 | read-catalog.c
+| read-catalog-file.h
+| read-catalog-file.c
 |               Reading of a PO file, returning a list-of-messages.
 |
 | read-desktop.h
 | read-desktop.c
 |               Reading of a .desktop file, returning a list-of-messages.
 +-------------- Reading PO files
+
+msgl-header.h
+msgl-header.c
+                Message list header manipulation.
 
 msgl-iconv.h
 msgl-iconv.c
@@ -122,6 +137,10 @@ msgl-cat.c
                 of duplicate msgids.
 
 msgcmp.c        Main source for the 'msgcmp' program.
+
+msgl-charset.h
+msgl-charset.c
+                Checking the encoding of a list-of-messages.
 
 +-------------- The 'msgmerge' program
 | msgl-equal.h
@@ -135,20 +154,11 @@ msgcmp.c        Main source for the 'msgcmp' program.
 |
 +-------------- The 'msgmerge' program
 
-msgl-header.h
-msgl-header.c
-                Message list header manipulation.
-
 msgcomm.c       Main source for the 'msgcomm' program.
 msgattrib.c     Main source for the 'msgattrib' program.
 msgcat.c        Main source for the 'msgcat' program.
 msgconv.c       Main source for the 'msgconv' program.
 msguniq.c       Main source for the 'msguniq' program.
-
-msgl-charset.h
-msgl-charset.c
-                Compare the encoding of a list-of-messages with the locale
-                encoding.
 
 msgexec.c       Main source for the 'msgexec' program.
 msgfilter.c     Main source for the 'msgfilter' program.
@@ -215,6 +225,7 @@ format.h        Declarations of the language dependent format string handlers.
 format-invalid.h  Declarations of some error messages for invalid strings.
 format-c.c             Format string handling for C.
 format-c-parse.h         Format string handling for C, parsing routine.
+format-c++-brace.c     Format string handling for C++.
 format-python.c        Format string handling for Python.
 format-python-brace.c  Format string handling for Python, braced syntax.
 format-java.c          Format string handling for Java.
@@ -255,6 +266,19 @@ msgl-check.h
 msgl-check.c
                 Checking of messages.
 
++-------------- Internationalization of XML files
+| search-path.h
+| search-path.c
+|               Search path for locating *.loc and *.its files.
+| locating-rules.h
+| locating-rules.c
+|               Determining the appropriate *.its file for a given input.
+| its.h
+| its.c
+|               Internationalization Tag Set: Interpretation of a *.its file
+|               for processing an XML file.
++-------------- Internationalization of XML files
+
 +-------------- The 'msgfmt' program
 | msgfmt.h
 |               Declarations.
@@ -277,6 +301,12 @@ msgl-check.c
 | write-qt.h
 | write-qt.c
 |               Generating Qt .qm files.
+| write-desktop.h
+| write-desktop.c
+|               Writing a .desktop file.
+| write-xml.h
+| write-xml.c
+|               Writing to an XML file.
 | msgfmt.c
 |               Main source for the 'msgfmt' program.
 |
@@ -285,6 +315,9 @@ msgl-check.c
 +-------------- The 'xgettext' program
 | xgettext.h
 |               Declarations used by the backends.
+| if-error.h
+| if-error.c
+|               Error handling during reading of input files.
 | rc-str-list.h
 |               A reference-counted list-of-immutable-strings type.
 | xg-pos.h
@@ -297,6 +330,9 @@ msgl-check.c
 | xg-mixed-string.c
 |               Handling strings that are given partially in the source
 |               encoding and partially in Unicode.
+| xg-formatstring.h
+| xg-formatstring.c
+|               Recognizing language-dependent format strings.
 | xg-arglist-context.h
 | xg-arglist-context.c
 |               Keeping track of the flags that apply to a string extracted
@@ -312,6 +348,9 @@ msgl-check.c
 | xg-message.h
 | xg-message.c
 |               Extracting a message.  Accumulating the message list.
+| xg-check.h
+| xg-check.c
+|               Syntax checks on the extracted messages.
 | x-po.h
 | x-properties.h
 | x-stringtable.h
@@ -385,7 +424,6 @@ msgl-check.c
 | x-glade.c
 |               String extractor from .glade files, GNOME GUI descriptions.
 | x-gsettings.h
-| x-gsettings.c
 |               String extractor for GSettings schema file.
 | x-appdata.h
 | x-appdata.c

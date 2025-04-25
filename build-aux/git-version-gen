@@ -1,12 +1,12 @@
 #!/bin/sh
 # Print a version string.
-scriptversion=2019-10-13.15; # UTC
+scriptversion=2024-12-28.20; # UTC
 
-# Copyright (C) 2007-2020 Free Software Foundation, Inc.
+# Copyright (C) 2007-2024 Free Software Foundation, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
@@ -18,13 +18,20 @@ scriptversion=2019-10-13.15; # UTC
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # This script is derived from GIT-VERSION-GEN from GIT: https://git-scm.com/.
-# It may be run two ways:
+
+# It may be run in the following ways, presuming the script is invoked
+# like "./git-version-gen .tarball-version":
+#
 # - from a git repository in which the "git describe" command below
 #   produces useful output (thus requiring at least one signed tag)
-# - from a non-git-repo directory containing a .tarball-version file, which
-#   presumes this script is invoked like "./git-version-gen .tarball-version".
+#
+# - from a "make dist" non-git-repo directory containing a
+#   .tarball-version file
+#
+# - from a "git archive" non-git-repo directory containing a
+#   .tarball-version-git file
 
-# In order to use intra-version strings in your project, you will need two
+# In order to use intra-version strings in your project, you will need some
 # separate generated version string files:
 #
 # .tarball-version - present only in a distribution tarball, and not in
@@ -36,6 +43,12 @@ scriptversion=2019-10-13.15; # UTC
 #   Therefore, it cannot be used in any dependencies.  GNUmakefile has
 #   hooks to force a reconfigure at distribution time to get the value
 #   correct, without penalizing normal development with extra reconfigures.
+#
+# .tarball-version-git - a file committed to git containing a single
+#   line with the string $Format:%(describe)$ and that the file is
+#   marked in .gitattributes with ".tarball-version-git export-subst".
+#   If the file doesn't exist or the export-subst keyword wasn't
+#   effective, the file is ignored.
 #
 # .version - present in a checked-out repository and in a distribution
 #   tarball.  Usable in dependencies, particularly for files that don't
@@ -65,20 +78,27 @@ scriptversion=2019-10-13.15; # UTC
 # EXTRA_DIST = $(top_srcdir)/.version
 # BUILT_SOURCES = $(top_srcdir)/.version
 # $(top_srcdir)/.version:
-#	echo $(VERSION) > $@-t && mv $@-t $@
+#	echo '$(VERSION)' > $@-t
+#	mv $@-t $@
 # dist-hook:
-#	echo $(VERSION) > $(distdir)/.tarball-version
-
+#	echo '$(VERSION)' > $(distdir)/.tarball-version
+#
+# To setup support for "git archive" tarballs, use the following:
+#
+# echo '$Format:%(describe)$' > .tarball-version-git
+# echo '.tarball-version-git export-subst' >> .gitattributes
+# git add .tarball-version-git .gitattributes
+# git commit -m "Add .tarball-version-git for git-version-gen."
 
 me=$0
 
 year=`expr "$scriptversion" : '\([^-]*\)'`
 version="git-version-gen $scriptversion
 
-Copyright $year Free Software Foundation, Inc.
-There is NO warranty.  You may redistribute this software
-under the terms of the GNU General Public License.
-For more information about these matters, see the files named COPYING."
+Copyright (C) ${year} Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law."
 
 usage="\
 Usage: $me [OPTION]... \$srcdir/.tarball-version [TAG-NORMALIZATION-SED-SCRIPT]
@@ -93,7 +113,7 @@ Options:
    --help             display this help and exit
    --version          output version information and exit
 
-Running without arguments will suffice in most cases."
+Send patches and bug reports to <bug-gnulib@gnu.org>."
 
 prefix=v
 fallback=
@@ -137,9 +157,9 @@ v_from_git=
 
 # First see if there is a tarball-only version file.
 # then try "git describe", then default.
-if test -f $tarball_version_file
+if test -f "$tarball_version_file"
 then
-    v=`cat $tarball_version_file` || v=
+    v=`cat "$tarball_version_file"` || v=
     case $v in
         *$nl*) v= ;; # reject multi-line output
     esac
@@ -183,16 +203,24 @@ then
             test "$commit_list" = failed && v=UNKNOWN
             ;;
     esac
-
-    # Change the penultimate "-" to ".", for version-comparing tools.
-    # Remove the "g" to save a byte.
-    v=`echo "$v" | sed 's/-\([^-]*\)-g\([^-]*\)$/.\1-\2/'`;
     v_from_git=1
 elif test "x$fallback" = x || git --version >/dev/null 2>&1; then
     v=UNKNOWN
 else
     v=$fallback
 fi
+
+if test "x$v" = xUNKNOWN \
+        && test -f "$tarball_version_file"-git \
+        && v=$(head -1 "$tarball_version_file"-git); then
+    case $v in
+        *Format*) v=UNKNOWN ;;
+    esac
+fi
+
+# Change the penultimate "-" to ".", for version-comparing tools.
+# Remove the "g" to save a byte.
+v=`echo "$v" | sed 's/-\([^-]*\)-g\([^-]*\)$/.\1-\2/'`;
 
 v=`echo "$v" |sed "s/^$prefix//"`
 
@@ -218,7 +246,7 @@ fi
 printf %s "$v"
 
 # Local variables:
-# eval: (add-hook 'before-save-hook 'time-stamp)
+# eval: (add-hook 'before-save-hook 'time-stamp nil t)
 # time-stamp-start: "scriptversion="
 # time-stamp-format: "%:y-%02m-%02d.%02H"
 # time-stamp-time-zone: "UTC0"

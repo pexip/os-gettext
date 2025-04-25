@@ -1,5 +1,5 @@
 /* xgettext common functions.
-   Copyright (C) 2001-2003, 2005-2006, 2008-2009, 2011, 2013-2014, 2018, 2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2005-2006, 2008-2009, 2011, 2013-2014, 2018, 2020, 2023 Free Software Foundation, Inc.
    Written by Peter Miller <millerp@canb.auug.org.au>
    and Bruno Haible <haible@clisp.cons.org>, 2001.
 
@@ -55,14 +55,12 @@ extern int verbose;
 
 extern enum is_syntax_check default_syntax_check[NSYNTAXCHECKS];
 
-/* Language dependent format string parser.
-   NULL if the language has no notion of format strings.  */
-extern struct formatstring_parser *current_formatstring_parser1;
-extern struct formatstring_parser *current_formatstring_parser2;
-extern struct formatstring_parser *current_formatstring_parser3;
 
-
-/* Record a flag in the appropriate backend's table.  */
+/* Record a flag in the appropriate backend's table.
+   OPTIONSTRING has the syntax WORD:ARG:FLAG (as documented)
+   or                          WORD:ARG:FLAG!BACKEND.
+   The latter syntax is undocumented and only needed for format string types
+   that are used by multiple backends.  */
 extern void xgettext_record_flag (const char *optionstring);
 
 

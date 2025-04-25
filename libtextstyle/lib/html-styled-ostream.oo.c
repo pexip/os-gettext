@@ -1,5 +1,5 @@
 /* Output stream for CSS styled text, producing HTML output.
-   Copyright (C) 2006-2007, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 # define O_TEXT 0
 #endif
 
-#include "error.h"
+#include <error.h>
 #include "safe-read.h"
 #include "xalloc.h"
 #include "gettext.h"
@@ -45,6 +45,8 @@ struct html_styled_ostream : struct styled_ostream
 fields:
   /* The destination stream.  */
   ostream_t destination;
+  /* The CSS filename.  */
+  char *css_filename;
   /* A HTML aware wrapper around the destination stream.  */
   html_ostream_t html_destination;
   /* The current hyperlink id.  */
@@ -73,6 +75,7 @@ html_styled_ostream::free (html_styled_ostream_t stream)
   ostream_write_str (stream->destination, "</body>\n");
   ostream_write_str (stream->destination, "</html>\n");
   free (stream->hyperlink_id);
+  free (stream->css_filename);
   free (stream);
 }
 
@@ -131,6 +134,7 @@ html_styled_ostream_create (ostream_t destination, const char *css_filename)
 
   stream->base.base.vtable = &html_styled_ostream_vtable;
   stream->destination = destination;
+  stream->css_filename = xstrdup (css_filename);
   stream->html_destination = html_ostream_create (destination);
   stream->hyperlink_id = NULL;
 
@@ -189,4 +193,32 @@ html_styled_ostream_create (ostream_t destination, const char *css_filename)
   ostream_write_str (stream->destination, "<body>\n");
 
   return stream;
+}
+
+/* Accessors.  */
+
+static ostream_t
+html_styled_ostream::get_destination (html_styled_ostream_t stream)
+{
+  return stream->destination;
+}
+
+static html_ostream_t
+html_styled_ostream::get_html_destination (html_styled_ostream_t stream)
+{
+  return stream->html_destination;
+}
+
+static const char *
+html_styled_ostream::get_css_filename (html_styled_ostream_t stream)
+{
+  return stream->css_filename;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_html_styled_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, html_styled_ostream);
 }

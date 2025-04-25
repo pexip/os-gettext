@@ -1,5 +1,5 @@
 /* Writing Desktop Entry files.
-   Copyright (C) 1995-1998, 2000-2003, 2005-2006, 2008-2009, 2014-2016, 2019-2020 Free Software Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    This file was written by Daiki Ueno <ueno@gnu.org>.
 
    This program is free software: you can redistribute it and/or modify
@@ -27,8 +27,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "error.h"
+
+#include <error.h>
 #include "msgl-iconv.h"
+#include "xerror-handler.h"
 #include "msgl-header.h"
 #include "po-charset.h"
 #include "read-catalog.h"
@@ -125,7 +127,7 @@ msgfmt_desktop_handle_blank (struct desktop_reader_ty *reader, const char *s)
   fputc ('\n', msgfmt_reader->output_file);
 }
 
-desktop_reader_class_ty msgfmt_methods =
+static desktop_reader_class_ty msgfmt_methods =
   {
     sizeof (msgfmt_desktop_reader_ty),
     NULL,
@@ -202,7 +204,8 @@ msgdomain_write_desktop (message_list_ty *mlp,
   msgfmt_operand_list_ty operands;
 
   /* Convert the messages to Unicode.  */
-  iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL);
+  iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL,
+                      textmode_xerror_handler);
 
   /* Support for "reproducible builds": Delete information that may vary
      between builds in the same conditions.  */

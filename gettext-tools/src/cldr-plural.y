@@ -1,5 +1,5 @@
-/* Unicode CLDR plural rule parser and converter
-   Copyright (C) 2015, 2020 Free Software Foundation, Inc.
+/* Unicode CLDR plural rule parser and converter.
+   Copyright (C) 2015-2024 Free Software Foundation, Inc.
 
    This file was written by Daiki Ueno <ueno@gnu.org>, 2015.
 
@@ -24,16 +24,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include "unistr.h"
 #include "xalloc.h"
+#include "string-buffer.h"
 
 #include "cldr-plural-exp.h"
-#include "cldr-plural.h"
-
-/* Prototypes for local functions.  */
-static int yylex (YYSTYPE *lval, struct cldr_plural_parse_args *arg);
-static void yyerror (struct cldr_plural_parse_args *arg, const char *str);
 
 /* Allocation of expressions.  */
 
@@ -118,6 +113,25 @@ new_range (struct cldr_plural_operand_ty *start,
   result->end = end;
   return result;
 }
+
+/* Internal state of the Bison-generated parser.  */
+
+struct cldr_plural_parse_args
+{
+  /* The lifetime of cp, cp_end is limited to the cldr_plural_parse
+     invocation.  */
+  const char *cp;
+  const char *cp_end;
+
+  struct cldr_plural_rule_list_ty *result;
+};
+
+#include "cldr-plural.h"
+
+/* Prototypes for local functions, that must come after the rules.  */
+static int yylex (YYSTYPE *lval, struct cldr_plural_parse_args *arg);
+static void yyerror (struct cldr_plural_parse_args *arg, const char *str);
+
 %}
 
 %require "3.0"
@@ -271,16 +285,18 @@ sample_ellipsis: %empty
         ;
 
 sample_range: DECIMAL
-	{ free ($1); }
+        { free ($1); }
         | DECIMAL '~' DECIMAL
         { free ($1); free ($3); }
         | INTEGER
         { free ($1); }
         | INTEGER '~' INTEGER
-	{ free ($1); free ($3); }
+        { free ($1); free ($3); }
         ;
 
 %%
+
+/* Functions invoked by the Bison-generated parser.  */
 
 static int
 yylex (YYSTYPE *lval, struct cldr_plural_parse_args *arg)
@@ -289,9 +305,6 @@ yylex (YYSTYPE *lval, struct cldr_plural_parse_args *arg)
   ucs4_t uc;
   int length;
   int result;
-  static char *buffer;
-  static size_t bufmax;
-  size_t bufpos;
 
   while (1)
     {
@@ -384,67 +397,64 @@ yylex (YYSTYPE *lval, struct cldr_plural_parse_args *arg)
     case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n':
     case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u':
     case 'v': case 'w': case 'x': case 'y': case 'z':
-      bufpos = 0;
-      for (;;)
-        {
-          if (bufpos >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          buffer[bufpos++] = result;
-          result = *exp;
-          switch (result)
-            {
-            case 'a': case 'b': case 'c': case 'd': case 'e':
-            case 'f': case 'g': case 'h': case 'i': case 'j':
-            case 'k': case 'l': case 'm': case 'n': case 'o':
-            case 'p': case 'q': case 'r': case 's': case 't':
-            case 'u': case 'v': case 'w': case 'x': case 'y':
-            case 'z':
-              ++exp;
-              continue;
-            default:
-              break;
-            }
-          break;
-        }
+      {
+        struct string_buffer buffer;
 
-      if (bufpos >= bufmax)
-        {
-          bufmax = 2 * bufmax + 10;
-          buffer = xrealloc (buffer, bufmax);
-        }
-      buffer[bufpos] = '\0';
+        sb_init (&buffer);
+        for (;;)
+          {
+            sb_xappend1 (&buffer, result);
+            result = *exp;
+            switch (result)
+              {
+              case 'a': case 'b': case 'c': case 'd': case 'e':
+              case 'f': case 'g': case 'h': case 'i': case 'j':
+              case 'k': case 'l': case 'm': case 'n': case 'o':
+              case 'p': case 'q': case 'r': case 's': case 't':
+              case 'u': case 'v': case 'w': case 'x': case 'y':
+              case 'z':
+                ++exp;
+                continue;
+              default:
+                break;
+              }
+            break;
+          }
 
-      /* Operands.  */
-      if (bufpos == 1)
-        {
-          switch (buffer[0])
-            {
-            case 'n': case 'i': case 'f': case 't': case 'v': case 'w':
-              arg->cp = exp;
-              lval->ival = buffer[0];
-              return OPERAND;
-            default:
-              break;
-            }
-        }
+        const char *ident = sb_xcontents_c (&buffer);
 
-      /* Keywords.  */
-      if (strcmp (buffer, "and") == 0)
-        {
-          arg->cp = exp;
-          return AND;
-        }
-      else if (strcmp (buffer, "or") == 0)
-        {
-          arg->cp = exp;
-          return OR;
-        }
+        /* Operands.  */
+        if (strlen (ident) == 1)
+          {
+            switch (ident[0])
+              {
+              case 'n': case 'i': case 'f': case 't': case 'v': case 'w':
+                arg->cp = exp;
+                lval->ival = ident[0];
+                sb_free (&buffer);
+                return OPERAND;
+              default:
+                break;
+              }
+          }
 
-      lval->sval = xstrdup (buffer);
-      result = KEYWORD;
+        /* Keywords.  */
+        if (strcmp (ident, "and") == 0)
+          {
+            arg->cp = exp;
+            sb_free (&buffer);
+            return AND;
+          }
+        else if (strcmp (ident, "or") == 0)
+          {
+            arg->cp = exp;
+            sb_free (&buffer);
+            return OR;
+          }
+
+        lval->sval = sb_xdupfree_c (&buffer);
+        result = KEYWORD;
+      }
       break;
     case '!':
       if (exp[0] == '=')
@@ -468,4 +478,23 @@ static void
 yyerror (struct cldr_plural_parse_args *arg, char const *s)
 {
   fprintf (stderr, "%s\n", s);
+}
+
+/* Entry point to the parser.  */
+
+struct cldr_plural_rule_list_ty *
+cldr_plural_parse (const char *input)
+{
+  struct cldr_plural_parse_args arg;
+
+  memset (&arg, 0, sizeof (struct cldr_plural_parse_args));
+  arg.cp = input;
+  arg.cp_end = input + strlen (input);
+  arg.result = XMALLOC (struct cldr_plural_rule_list_ty);
+  memset (arg.result, 0, sizeof (struct cldr_plural_rule_list_ty));
+
+  if (yyparse (&arg) != 0)
+    return NULL;
+
+  return arg.result;
 }

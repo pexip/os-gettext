@@ -1,8 +1,8 @@
-# Copyright (C) 2002-2020 Free Software Foundation, Inc.
+# Copyright (C) 2002-2024 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3 of the License, or
+# the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
 # This file is distributed in the hope that it will be useful,
@@ -27,7 +27,8 @@
 
 
 # Specification in the form of a command-line invocation:
-# gnulib-tool --import --local-dir=gnulib-local \
+# gnulib-tool --import \
+#  --local-dir=gnulib-local \
 #  --lib=libgrt \
 #  --source-base=gnulib-lib \
 #  --m4-base=gnulib-m4 \
@@ -39,9 +40,10 @@
 #  --macro-prefix=gl \
 #  ansi-c++-opt \
 #  atexit \
+#  attribute \
 #  basename-lgpl \
 #  binary-io \
-#  bison \
+#  bool \
 #  closeout \
 #  csharpcomp-script \
 #  error \
@@ -51,6 +53,7 @@
 #  havelib \
 #  java \
 #  javacomp-script \
+#  manywarnings \
 #  memmove \
 #  noreturn \
 #  progname \
@@ -58,22 +61,23 @@
 #  relocatable-prog \
 #  setlocale \
 #  sigpipe \
-#  stdbool \
-#  stdio \
-#  stdlib \
+#  stdio-h \
+#  stdlib-h \
 #  strtoul \
-#  unistd \
+#  unistd-h \
 #  unlocked-io \
-#  xalloc
+#  xalloc \
+#  xstring-buffer
 
 # Specification in the form of a few gnulib-tool.m4 macro invocations:
 gl_LOCAL_DIR([../gnulib-local])
 gl_MODULES([
   ansi-c++-opt
   atexit
+  attribute
   basename-lgpl
   binary-io
-  bison
+  bool
   closeout
   csharpcomp-script
   error
@@ -83,6 +87,7 @@ gl_MODULES([
   havelib
   java
   javacomp-script
+  manywarnings
   memmove
   noreturn
   progname
@@ -90,13 +95,13 @@ gl_MODULES([
   relocatable-prog
   setlocale
   sigpipe
-  stdbool
-  stdio
-  stdlib
+  stdio-h
+  stdlib-h
   strtoul
-  unistd
+  unistd-h
   unlocked-io
   xalloc
+  xstring-buffer
 ])
 gl_AVOID([])
 gl_SOURCE_BASE([gnulib-lib])

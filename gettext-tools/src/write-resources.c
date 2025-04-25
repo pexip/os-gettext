@@ -1,6 +1,5 @@
 /* Writing C# .resources files.
-   Copyright (C) 2003-2005, 2007-2009, 2010-2011, 2016 Free Software
-   Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -29,7 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "error.h"
+#include <error.h>
 #include "xerror.h"
 #include "relocatable.h"
 #include "csharpexec.h"
@@ -38,11 +37,13 @@
 #include "message.h"
 #include "msgfmt.h"
 #include "msgl-iconv.h"
+#include "xerror-handler.h"
 #include "msgl-header.h"
 #include "po-charset.h"
 #include "xalloc.h"
 #include "concat-filename.h"
 #include "fwriteerror.h"
+#include "cygpath.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
@@ -61,7 +62,7 @@ struct locals
 
 static bool
 execute_writing_input (const char *progname,
-                       const char *prog_path, char **prog_argv,
+                       const char *prog_path, const char * const *prog_argv,
                        void *private_data)
 {
   struct locals *l = (struct locals *) private_data;
@@ -71,8 +72,8 @@ execute_writing_input (const char *progname,
   int exitstatus;
 
   /* Open a pipe to the C# execution engine.  */
-  child = create_pipe_out (progname, prog_path, prog_argv, NULL, false,
-                           true, true, fd);
+  child = create_pipe_out (progname, prog_path, prog_argv, NULL, NULL,
+                           NULL, false, true, true, fd);
 
   fp = fdopen (fd[0], "wb");
   if (fp == NULL)
@@ -157,11 +158,15 @@ but the C# .resources format doesn't support plural handling\n")));
       }
 
       /* Convert the messages to Unicode.  */
-      iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL);
+      iconv_message_list (mlp, canon_encoding, po_charset_utf8, NULL,
+                          textmode_xerror_handler);
 
       /* Support for "reproducible builds": Delete information that may vary
          between builds in the same conditions.  */
       message_list_delete_header_field (mlp, "POT-Creation-Date:");
+
+      /* On Windows, assume a native Windows implementation of C#.  */
+      char *file_name_converted = cygpath_w (file_name);
 
       /* Execute the WriteResource program.  */
       {
@@ -171,7 +176,7 @@ but the C# .resources format doesn't support plural handling\n")));
         struct locals locals;
 
         /* Prepare arguments.  */
-        args[0] = file_name;
+        args[0] = file_name_converted;
         args[1] = NULL;
 
         /* Make it possible to override the .exe location.  This is
@@ -194,6 +199,8 @@ but the C# .resources format doesn't support plural handling\n")));
 
         free (assembly_path);
       }
+
+      free (file_name_converted);
     }
 
   return 0;

@@ -1,5 +1,5 @@
 dnl Configuration for the toplevel directory of GNU libtextstyle
-dnl Copyright (C) 2009-2019 Free Software Foundation, Inc.
+dnl Copyright (C) 2009-2023 Free Software Foundation, Inc.
 dnl
 dnl This program is free software: you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@ dnl along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.63])
+AC_PREREQ([2.64])
 AC_INIT
 AC_CONFIG_SRCDIR([version.sh])
 AC_CONFIG_AUX_DIR([build-aux])
 . $srcdir/version.sh
 gl_INIT_PACKAGE([libtextstyle], [$VERSION_NUMBER])
 AM_INIT_AUTOMAKE([1.13 silent-rules])
-AM_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 dnl Override automake's tar command used for creating distributions.
 am__tar='${AMTAR} chof - --owner=root --group=root "$$tardir"'
@@ -50,6 +50,9 @@ AC_EXEEXT
 
 dnl Check for build configuration.
 
+gt_MORE_WARNINGS
+gl_CC_INHIBIT_WARNINGS
+
 gl_WOE32_DLL
 
 LT_INIT([win32-dll])
@@ -58,10 +61,10 @@ dnl Prepares the libtool configuration for handling of Windows resources, and
 dnl sets the RC variable to a program that compiles Windows resource files.
 LT_LANG([Windows Resource])
 
-dnl On mingw and Cygwin, we can activate special Makefile rules which add
-dnl version information to the shared libraries and executables.
+dnl On native Windows and Cygwin, we can activate special Makefile rules which
+dnl add version information to the shared libraries and executables.
 case "$host_os" in
-  mingw* | cygwin*) is_woe32=yes ;;
+  mingw* | windows* | cygwin*) is_woe32=yes ;;
   *) is_woe32=no ;;
 esac
 AM_CONDITIONAL([WOE32], [test $is_woe32 = yes])
@@ -72,9 +75,11 @@ lts_INIT
 
 dnl Arrange that the gnulib-generated <unistd.h> does not declare isatty(). The
 dnl adhoc-tests want to get this declaration from <textstyle.h>, not <unistd.h>.
-GNULIB_ISATTY=0
+GL_LTS_GNULIB_ISATTY=0
+GL_LTS_GNULIB_MDA_ISATTY=0
 
-dnl Compilation on mingw and Cygwin needs special Makefile rules, because
+dnl Compilation on native Windows and Cygwin needs special Makefile rules,
+dnl because
 dnl 1. when we install a shared library, we must arrange to export
 dnl    auxiliary pointer variables for every exported variable,
 dnl 2. when we install a shared library and a static library simultaneously,
@@ -83,7 +88,7 @@ dnl    must arrange to define the auxiliary pointer variables for the
 dnl    exported variables _also_ in the static library.
 if test "$enable_shared" = yes; then
   case "$host_os" in
-    mingw* | cygwin*) is_woe32dll=yes ;;
+    mingw* | windows* | cygwin*) is_woe32dll=yes ;;
     *) is_woe32dll=no ;;
   esac
 else

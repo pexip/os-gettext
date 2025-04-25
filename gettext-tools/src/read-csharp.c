@@ -1,5 +1,5 @@
 /* Reading C# satellite assemblies.
-   Copyright (C) 2003-2004, 2006-2008, 2010-2011 Free Software Foundation, Inc.
+   Copyright (C) 2003-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2003.
 
    This program is free software: you can redistribute it and/or modify
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <error.h>
 #include "msgunfmt.h"
 #include "relocatable.h"
 #include "csharpexec.h"
@@ -34,9 +35,10 @@
 #include "wait-process.h"
 #include "read-catalog.h"
 #include "read-po.h"
+#include "xerror-handler.h"
 #include "xalloc.h"
 #include "concat-filename.h"
-#include "error.h"
+#include "cygpath.h"
 #include "gettext.h"
 
 #define _(str) gettext (str)
@@ -54,7 +56,8 @@ struct locals
 
 static bool
 execute_and_read_po_output (const char *progname,
-                            const char *prog_path, char **prog_argv,
+                            const char *prog_path,
+                            const char * const *prog_argv,
                             void *private_data)
 {
   struct locals *l = (struct locals *) private_data;
@@ -64,15 +67,16 @@ execute_and_read_po_output (const char *progname,
   int exitstatus;
 
   /* Open a pipe to the C# execution engine.  */
-  child = create_pipe_in (progname, prog_path, prog_argv, DEV_NULL, false,
-                          true, true, fd);
+  child = create_pipe_in (progname, prog_path, prog_argv, NULL, NULL,
+                          DEV_NULL, false, true, true, fd);
 
   fp = fdopen (fd[0], "r");
   if (fp == NULL)
     error (EXIT_FAILURE, errno, _("fdopen() failed"));
 
   /* Read the message list.  */
-  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po);
+  l->mdlp = read_catalog_stream (fp, "(pipe)", "(pipe)", &input_format_po,
+                                 textmode_xerror_handler);
 
   fclose (fp);
 
@@ -91,6 +95,7 @@ msgdomain_list_ty *
 msgdomain_read_csharp (const char *resource_name, const char *locale_name,
                        const char *directory)
 {
+  char *directory_converted;
   char *culture_name;
   const char *args[4];
   const char *gettextexedir;
@@ -102,6 +107,8 @@ msgdomain_read_csharp (const char *resource_name, const char *locale_name,
   /* Assign a default value to the resource name.  */
   if (resource_name == NULL)
     resource_name = "Messages";
+
+  directory_converted = cygpath_w (directory);
 
   /* Convert the locale name to a .NET specific culture name.  */
   culture_name = xstrdup (locale_name);
@@ -133,7 +140,7 @@ msgdomain_read_csharp (const char *resource_name, const char *locale_name,
   }
 
   /* Prepare arguments.  */
-  args[0] = directory;
+  args[0] = directory_converted;
   args[1] = resource_name;
   args[2] = culture_name;
   args[3] = NULL;
@@ -163,6 +170,7 @@ msgdomain_read_csharp (const char *resource_name, const char *locale_name,
 
   free (assembly_path);
   free (culture_name);
+  free (directory_converted);
 
   return locals.mdlp;
 }

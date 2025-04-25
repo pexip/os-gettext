@@ -6,7 +6,6 @@ msgid ""
 msgstr ""
 "Project-Id-Version: hello-c++-wxwidgets 0.15-pre5\n"
 "Report-Msgid-Bugs-To: bug-gettext@gnu.org\n"
-"POT-Creation-Date: 2020-07-27 01:11+0200\n"
 "PO-Revision-Date: 2006-07-05 15:40+0800\n"
 "Last-Translator: Abel Cheung <abelcheung@gmail.com>\n"
 "Language-Team: Chinese (Hong Kong) <community@linuxhall.org>\n"
@@ -16,11 +15,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Bugs: Report translation errors to the Language-Team address.\n"
 
-#: hello.cc:68
+#: hello.cc:73
 msgid "Hello, world!"
 msgstr "你好！"
 
-#: hello.cc:71
+#: hello.cc:76
 #, c-format
 msgid "This program is running as process number %d."
 msgstr "本程式正在執行中，進程編號為 %d。"

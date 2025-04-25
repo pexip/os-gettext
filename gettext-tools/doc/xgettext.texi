@@ -1,5 +1,5 @@
 @c This file is part of the GNU gettext manual.
-@c Copyright (C) 1995-2020 Free Software Foundation, Inc.
+@c Copyright (C) 1995-2024 Free Software Foundation, Inc.
 @c See the file gettext.texi for copying conditions.
 
 @pindex xgettext
@@ -75,6 +75,7 @@ is written to standard output.
 Specifies the language of the input files.  The supported languages
 are @code{C}, @code{C++}, @code{ObjectiveC}, @code{PO}, @code{Shell},
 @code{Python}, @code{Lisp}, @code{EmacsLisp}, @code{librep}, @code{Scheme},
+@code{Guile},
 @code{Smalltalk}, @code{Java}, @code{JavaProperties}, @code{C#}, @code{awk},
 @code{YCP}, @code{Tcl}, @code{Perl}, @code{PHP}, @code{Ruby},
 @code{GCC-source}, @code{NXStringTable}, @code{RST}, @code{RSJ}, @code{Glade},
@@ -129,8 +130,9 @@ Place comment blocks starting with @var{tag} and preceding keyword lines
 in the output file.  Without a @var{tag}, the option means to put @emph{all}
 comment blocks preceding keyword lines in the output file.
 
-Note that comment blocks supposed to be extracted must be adjacent to
-keyword lines.  For example, in the following C source code:
+Note that comment blocks are only extracted if there is no program code
+between the comment and the string that gets extracted.
+For example, in the following C source code:
 
 @example
 /* This is the first comment.  */
@@ -143,10 +145,17 @@ gettext (
 gettext (
   /* This is the third comment.  */
   "baz");
+
+/* This is the fourth comment.  */
+
+gettext ("I love blank lines in my programs");
 @end example
 
-The second comment line will not be extracted, because there is one
-blank line between the comment line and the keyword.
+@noindent
+the second comment line will not be extracted, because there is a line
+with some tokens between the comment line and the line that contains
+the string.  But the fourth comment is extracted, because between it and
+the line with the string there is merely a blank line.
 
 @item --check[=@var{CHECK}]
 @opindex --check@r{, @code{xgettext} option}
@@ -266,7 +275,7 @@ GCC-source, Glade, Lua, JavaScript, Vala, GSettings, Desktop.
 The default keyword specifications, which are always looked for if not
 explicitly disabled, are language dependent.  They are:
 
-@itemize
+@itemize @bullet
 @item
 For C, C++, and GCC-source: @code{gettext}, @code{dgettext:2},
 @code{dcgettext:2}, @code{ngettext:1,2}, @code{dngettext:2,3},
@@ -297,7 +306,7 @@ For EmacsLisp: @code{_}.
 For librep: @code{_}.
 
 @item
-For Scheme: @code{gettext}, @code{ngettext:1,2}, @code{gettext-noop}.
+For Scheme and Guile: @code{gettext}, @code{ngettext:1,2}, @code{gettext-noop}.
 
 @item
 For Java: @code{GettextResource.gettext:2},
@@ -397,15 +406,32 @@ translators cannot accidentally use format string directives that would
 lead to a crash at runtime.
 @*
 This option has an effect with most languages, namely C, C++, ObjectiveC,
-Shell, Python, Lisp, EmacsLisp, librep, Scheme, Java, C#, awk, YCP, Tcl, Perl, PHP,
-GCC-source, Lua, JavaScript, Vala.
+Shell, Python, Lisp, EmacsLisp, librep, Scheme, Guile, Java, C#, awk,
+YCP, Tcl, Perl, PHP, GCC-source, Lua, JavaScript, Vala.
+
+@item --tag=@var{word}:@var{format}
+@opindex --tag@r{, @code{xgettext} option}
+Defines the behaviour of tagged template literals with tag @var{word}.
+This option has an effect only with language JavaScript.
+@*
+@var{format} is a symbolic description
+of the first step of the JavaScript function named @var{word},
+namely how this function constructs a format string
+based on the parts of the template literal.
+Currently only one value is supported: @code{javascript-gnome-format},
+which describes the construction of a format string with numbered placeholders
+@code{@{0@}}, @code{@{1@}}, @code{@{2@}}, etc.
+For example, @code{javascript-gnome-format} transforms the template literal
+@code{@var{word}`My name is $@{id.name@} and I am $@{id.age@} years old.`}
+into the format string @code{"My name is @{0@} and I am @{1@} years old."}.
 
 @item -T
 @itemx --trigraphs
 @opindex -T@r{, @code{xgettext} option}
 @opindex --trigraphs@r{, @code{xgettext} option}
 @cindex C trigraphs
-Understand ANSI C trigraphs for input.
+Understand ANSI C trigraphs for input
+(deprecated, since trigraphs have been removed from ISO C 23).
 @*
 This option has an effect only with the languages C, C++, ObjectiveC.
 
@@ -446,6 +472,40 @@ not have to care about these details.
 This implementation of @code{xgettext} is able to process a few awkward
 cases, like strings in preprocessor macros, ANSI concatenation of
 adjacent strings, and escaped end of lines for continued strings.
+
+@subsection Options for XML input files
+
+When some of the input files are XML files
+and they are not of one of the types covered
+by the system-wide installed *.its files,
+a *.its file is needed for each such file type,
+so that @code{xgettext} can handle them.
+There are two ways to specify such a file:
+
+@itemize @bullet
+@item
+@table @samp
+@item --its=@var{file}
+@opindex --its@r{, @code{xgettext} option}
+Use the ITS rules defined in @var{file}.
+@end table
+
+@item
+The environment variable @code{GETTEXTDATADIRS}.
+Together with the *.its file, you need a corresponding *.loc file
+(@pxref{Preparing ITS Rules}).
+Furthermore you need to store these files
+in a directory @file{@var{parent_dir}/its/}
+@vindex GETTEXTDATADIRS@r{, environment variable}
+and set the environment variable @code{GETTEXTDATADIRS} to include
+@code{@var{parent_dir}}.
+More generally, the value of @code{GETTEXTDATADIRS} should be
+a colon-separated list of directory names.
+@end itemize
+
+Note that when the option @code{--its} is specified,
+the system-wide installed *.its files are ignored
+and the environment variable @code{GETTEXTDATADIRS} has no effect either.
 
 @subsection Output details
 
@@ -508,11 +568,6 @@ obsolete messages.
 Write out a NeXTstep/GNUstep localized resource file in @code{.strings} syntax.
 Note that this file format doesn't support plural forms.
 
-@item --its=@var{file}
-@opindex --its@r{, @code{xgettext} option}
-Use ITS rules defined in @var{file}.
-Note that this is only effective with XML files.
-
 @item --itstool
 @opindex --itstool@r{, @code{xgettext} option}
 Write out comments recognized by itstool (@uref{http://itstool.org}).
@@ -537,8 +592,8 @@ lines which are wider than the output page width will be split.
 @opindex -s@r{, @code{xgettext} option}
 @opindex --sort-output@r{, @code{xgettext} option}
 @cindex sorting output of @code{xgettext}
-Generate sorted output.  Note that using this option makes it much harder
-for the translator to understand each message's context.
+Generate sorted output (deprecated).  Note that using this option makes it
+much harder for the translator to understand each message's context.
 
 @item -F
 @itemx --sort-by-file
@@ -549,6 +604,8 @@ Sort output by file location.
 @item --omit-header
 @opindex --omit-header@r{, @code{xgettext} option}
 Don't write header with @samp{msgid ""} entry.
+Note: Using this option may lead to an error in subsequent operations
+if the output contains non-ASCII characters.
 
 @cindex testing @file{.po} files for equivalence
 This is useful for testing purposes because it eliminates a source
@@ -649,3 +706,18 @@ Output version information and exit.
 Increase verbosity level.
 
 @end table
+
+@subsection Example
+
+A sample invocation of @code{xgettext}, in a project
+that has a single source file @file{src/hello.c}
+that uses @samp{_} as shorthand for the @code{gettext} function,
+could be:
+
+@example
+xgettext -o hello.pot \
+         --add-comments=TRANSLATORS: \
+         --keyword=_ --flag=_:1:pass-c-format \
+         --directory=.. \
+         src/hello.c
+@end example

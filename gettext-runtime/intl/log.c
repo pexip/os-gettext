@@ -1,5 +1,5 @@
 /* Log file output.
-   Copyright (C) 2003, 2005, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2003-2023 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published by
@@ -20,15 +20,18 @@
 # include <config.h>
 #endif
 
+/* Specification.  */
+#include "gettextP.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* Handle multi-threaded applications.  */
 #ifdef _LIBC
-# include <bits/libc-lock.h>
+# include <libc-lock.h>
 #else
-# include "lock.h"
+# include "glthread/lock.h"
 #endif
 
 /* Separator between msgctxt and msgid in .mo files.  */

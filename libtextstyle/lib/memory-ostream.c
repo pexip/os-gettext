@@ -5,7 +5,7 @@
 #endif
 #line 1 "memory-ostream.oo.c"
 /* Output stream that accumulates the output in memory.
-   Copyright (C) 2006-2007, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "error.h"
+#include <error.h>
 #include "xalloc.h"
 #include "xsize.h"
 #include "gettext.h"
@@ -87,7 +87,7 @@ memory_ostream__free (memory_ostream_t stream)
 
 /* Implementation of memory_ostream_t methods.  */
 
-void
+static void
 memory_ostream__contents (memory_ostream_t stream,
                           const void **bufp, size_t *buflenp)
 {
@@ -110,7 +110,15 @@ memory_ostream_create (void)
   return stream;
 }
 
-#line 114 "memory-ostream.c"
+/* Instanceof test.  */
+
+bool
+is_instance_of_memory_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, memory_ostream);
+}
+
+#line 122 "memory-ostream.c"
 
 const struct memory_ostream_implementation memory_ostream_vtable =
 {

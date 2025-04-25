@@ -19,9 +19,8 @@ if test -n "$obgnome_prefix"; then
 fi
 AC_SUBST([OBGNOME_INCLUDES])
 
-AC_CHECK_HEADERS([unistd.h])
 AM_GNU_GETTEXT([external])
-AM_GNU_GETTEXT_VERSION([0.21])
+AM_GNU_GETTEXT_VERSION([0.23])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([m4/Makefile])

@@ -5,7 +5,7 @@
 #endif
 #line 1 "file-ostream.oo.c"
 /* Output stream referring to an stdio FILE.
-   Copyright (C) 2006, 2019 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2019-2020 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -119,7 +119,23 @@ file_ostream_create (FILE *fp)
   return stream;
 }
 
-#line 123 "file-ostream.c"
+/* Accessors.  */
+
+static FILE *
+file_ostream__get_stdio_stream (file_ostream_t stream)
+{
+  return stream->fp;
+}
+
+/* Instanceof test.  */
+
+bool
+is_instance_of_file_ostream (ostream_t stream)
+{
+  return IS_INSTANCE (stream, ostream, file_ostream);
+}
+
+#line 139 "file-ostream.c"
 
 const struct file_ostream_implementation file_ostream_vtable =
 {
@@ -129,6 +145,7 @@ const struct file_ostream_implementation file_ostream_vtable =
   file_ostream__write_mem,
   file_ostream__flush,
   file_ostream__free,
+  file_ostream__get_stdio_stream,
 };
 
 #if !HAVE_INLINE
@@ -157,6 +174,14 @@ file_ostream_free (file_ostream_t first_arg)
   const struct file_ostream_implementation *vtable =
     ((struct file_ostream_representation_header *) (struct file_ostream_representation *) first_arg)->vtable;
   vtable->free (first_arg);
+}
+
+FILE *
+file_ostream_get_stdio_stream (file_ostream_t first_arg)
+{
+  const struct file_ostream_implementation *vtable =
+    ((struct file_ostream_representation_header *) (struct file_ostream_representation *) first_arg)->vtable;
+  return vtable->get_stdio_stream (first_arg);
 }
 
 #endif

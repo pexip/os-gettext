@@ -9,7 +9,12 @@
 #include <glib/gi18n.h>
 
 /* Get getpid() declaration.  */
-#if HAVE_UNISTD_H
+#if defined _WIN32 && !defined __CYGWIN__
+/* native Windows API */
+# include <process.h>
+# define getpid _getpid
+#else
+/* POSIX API */
 # include <unistd.h>
 #endif
 
@@ -89,18 +94,9 @@ hello_application_window_init (HelloApplicationWindow *window)
 }
 
 static void
-hello_application_window_dispose (GObject *object)
-{
-  HelloApplicationWindow *window = HELLO_APPLICATION_WINDOW (object);
-  g_clear_object (&window->settings);
-}
-
-static void
 hello_application_window_class_init (HelloApplicationWindowClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  gobject_class->dispose = hello_application_window_dispose;
 
   gtk_widget_class_set_template_from_resource (GTK_WIDGET_CLASS (klass),
                                                UI_PATH);
@@ -174,8 +170,12 @@ main (int argc, char *argv[])
   GApplication *application;
   int status;
 
-  /* Load the GSettings schema from the current directory.  */
-  g_setenv ("GSETTINGS_SCHEMA_DIR", ".", FALSE);
+  /* Load the compiled GSettings schema
+     - from PKGDATADIR (so that it works after "make install"),
+     - from the current directory (so that it works in the build directory,
+       before "make install").  */
+  g_setenv ("GSETTINGS_SCHEMA_DIR", PKGDATADIR G_SEARCHPATH_SEPARATOR_S ".",
+            FALSE);
 
   /* Initializations.  */
   textdomain ("hello-c-gnome3");

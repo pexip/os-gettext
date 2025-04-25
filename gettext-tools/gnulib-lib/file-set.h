@@ -1,9 +1,9 @@
 /* Very specialized set-of-files code.
-   Copyright (C) 2007-2020 Free Software Foundation, Inc.
+   Copyright (C) 2007-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -18,16 +18,25 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <stdbool.h>
 
 #include "hash.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 extern void record_file (Hash_table *ht, char const *file,
                          struct stat const *stats)
-#if defined __GNUC__ && ((__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || __GNUC__ > 3)
-  __attribute__ ((nonnull (2, 3)))
+#if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || defined __clang__
+  __attribute__ ((__nonnull__ (2, 3)))
 #endif
 ;
 
 extern bool seen_file (Hash_table const *ht, char const *file,
                        struct stat const *stats);
+
+
+#ifdef __cplusplus
+}
+#endif

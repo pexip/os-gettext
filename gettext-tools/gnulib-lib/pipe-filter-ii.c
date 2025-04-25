@@ -1,10 +1,10 @@
 /* Filtering of data through a subprocess.
-   Copyright (C) 2001-2003, 2008-2020 Free Software Foundation, Inc.
+   Copyright (C) 2001-2003, 2008-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2009.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -21,12 +21,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 #if defined _WIN32 && ! defined __CYGWIN__
 # include <windows.h>
+# include <process.h> /* _beginthreadex, _endthreadex */
 #elif defined __KLIBC__
 # define INCL_DOS
 # include <os2.h>
@@ -97,7 +97,7 @@ CloseHandle (HANDLE h)
 # define _endthreadex(x) return (x)
 # define TerminateThread(h, e) DosKillThread (h->tid)
 
-# define GetLastError()  -1
+# define GetLastError()  (-1)
 
 # ifndef ERROR_NO_DATA
 #  define ERROR_NO_DATA 232
@@ -153,12 +153,12 @@ WaitForMultipleObjects (DWORD nCount, const HANDLE *pHandles, BOOL bWaitAll,
 # include <sys/select.h>
 #endif
 
-#include "error.h"
+#include <error.h>
 #include "spawn-pipe.h"
 #include "wait-process.h"
 #include "gettext.h"
 
-#define _(str) gettext (str)
+#define _(msgid) dgettext ("gnulib", msgid)
 
 #include "pipe-filter-aux.h"
 
@@ -254,7 +254,7 @@ reader_thread_func (void *thread_arg)
 
 int
 pipe_filter_ii_execute (const char *progname,
-                        const char *prog_path, const char **prog_argv,
+                        const char *prog_path, const char * const *prog_argv,
                         bool null_stderr, bool exit_on_error,
                         prepare_write_fn prepare_write,
                         done_write_fn done_write,
@@ -269,8 +269,8 @@ pipe_filter_ii_execute (const char *progname,
 #endif
 
   /* Open a bidirectional pipe to a subprocess.  */
-  child = create_pipe_bidi (progname, prog_path, (char **) prog_argv,
-                            null_stderr, true, exit_on_error,
+  child = create_pipe_bidi (progname, prog_path, prog_argv, NULL,
+                            NULL, null_stderr, true, exit_on_error,
                             fd);
   if (child == -1)
     return -1;

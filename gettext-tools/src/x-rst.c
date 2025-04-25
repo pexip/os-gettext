@@ -1,5 +1,5 @@
 /* xgettext RST/RSJ backend.
-   Copyright (C) 2001-2003, 2005-2009, 2018-2019 Free Software Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
 
    This file was written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include <error.h>
 #include "c-ctype.h"
 #include "po-charset.h"
 #include "message.h"
@@ -37,9 +38,9 @@
 #include "xg-encoding.h"
 #include "xg-mixed-string.h"
 #include "xg-message.h"
-#include "error.h"
-#include "error-progname.h"
+#include "if-error.h"
 #include "xalloc.h"
+#include "string-buffer.h"
 #include "gettext.h"
 
 #define _(s) gettext(s)
@@ -69,8 +70,6 @@ extract_rst (FILE *f,
              flag_context_list_table_ty *flag_table,
              msgdomain_list_ty *mdlp)
 {
-  static char *buffer;
-  static int bufmax;
   message_list_ty *mlp = mdlp->item[0]->messages;
   int line_number;
 
@@ -78,7 +77,6 @@ extract_rst (FILE *f,
   for (;;)
     {
       int c;
-      int bufpos;
       char *location;
       char *msgid;
       lex_pos_ty pos;
@@ -107,128 +105,110 @@ extract_rst (FILE *f,
         }
 
       /* Read ModuleName.ConstName.  */
-      bufpos = 0;
-      for (;;)
-        {
-          if (c == EOF || c == '\n')
-            {
-              error_with_progname = false;
-              error (EXIT_FAILURE, 0, _("%s:%d: invalid string definition"),
-                     logical_filename, line_number);
-              error_with_progname = true;
-            }
-          if (bufpos >= bufmax)
-            {
-              bufmax = 2 * bufmax + 10;
-              buffer = xrealloc (buffer, bufmax);
-            }
-          if (c == '=')
-            break;
-          buffer[bufpos++] = c;
-          c = getc (f);
-          if (c == EOF && ferror (f))
-            goto bomb;
-        }
-      buffer[bufpos] = '\0';
-      location = xstrdup (buffer);
+      {
+        struct string_buffer buffer;
+        sb_init (&buffer);
+        for (;;)
+          {
+            if (c == EOF || c == '\n')
+              if_error (IF_SEVERITY_FATAL_ERROR,
+                        logical_filename, line_number, (size_t)(-1), false,
+                        _("invalid string definition"));
+            if (c == '=')
+              break;
+            sb_xappend1 (&buffer, c);
+            c = getc (f);
+            if (c == EOF && ferror (f))
+              {
+                sb_free (&buffer);
+                goto bomb;
+              }
+          }
+        location = sb_xdupfree_c (&buffer);
+      }
 
       /* Read StringExpression.  */
-      bufpos = 0;
-      for (;;)
-        {
-          c = getc (f);
-          if (c == EOF)
-            break;
-          else if (c == '\n')
-            {
-              line_number++;
+      {
+        struct string_buffer buffer;
+        sb_init (&buffer);
+        for (;;)
+          {
+            c = getc (f);
+            if (c == EOF)
               break;
-            }
-          else if (c == '\'')
-            {
-              for (;;)
-                {
-                  c = getc (f);
-                  /* Embedded single quotes like 'abc''def' don't occur.
-                     See fpc-1.0.4/compiler/cresstr.pas.  */
-                  if (c == EOF || c == '\n' || c == '\'')
-                    break;
-                  if (bufpos >= bufmax)
-                    {
-                      bufmax = 2 * bufmax + 10;
-                      buffer = xrealloc (buffer, bufmax);
-                    }
-                  buffer[bufpos++] = c;
-                }
-              if (c == EOF)
-                break;
-              else if (c == '\n')
-                {
-                  line_number++;
-                  break;
-                }
-            }
-          else if (c == '#')
-            {
-              int n;
-              c = getc (f);
-              if (c == EOF && ferror (f))
-                goto bomb;
-              if (c == EOF || !c_isdigit (c))
-                {
-                  error_with_progname = false;
-                  error (EXIT_FAILURE, 0, _("%s:%d: missing number after #"),
-                         logical_filename, line_number);
-                  error_with_progname = true;
-                }
-              n = (c - '0');
-              for (;;)
-                {
-                  c = getc (f);
-                  if (c == EOF || !c_isdigit (c))
-                    break;
-                  n = n * 10 + (c - '0');
-                }
-              if (bufpos >= bufmax)
-                {
-                  bufmax = 2 * bufmax + 10;
-                  buffer = xrealloc (buffer, bufmax);
-                }
-              buffer[bufpos++] = (unsigned char) n;
-              if (c == EOF)
-                break;
-              ungetc (c, f);
-            }
-          else if (c == '+')
-            {
-              c = getc (f);
-              if (c == EOF)
-                break;
-              if (c == '\n')
+            else if (c == '\n')
+              {
                 line_number++;
-              else
+                break;
+              }
+            else if (c == '\'')
+              {
+                for (;;)
+                  {
+                    c = getc (f);
+                    /* Embedded single quotes like 'abc''def' don't occur.
+                       See fpc-1.0.4/compiler/cresstr.pas.  */
+                    if (c == EOF || c == '\n' || c == '\'')
+                      break;
+                    sb_xappend1 (&buffer, c);
+                  }
+                if (c == EOF)
+                  break;
+                else if (c == '\n')
+                  {
+                    line_number++;
+                    break;
+                  }
+              }
+            else if (c == '#')
+              {
+                int n;
+                c = getc (f);
+                if (c == EOF && ferror (f))
+                  {
+                    sb_free (&buffer);
+                    goto bomb;
+                  }
+                if (c == EOF || !c_isdigit (c))
+                  if_error (IF_SEVERITY_FATAL_ERROR,
+                            logical_filename, line_number, (size_t)(-1), false,
+                            _("missing number after #"));
+                n = (c - '0');
+                for (;;)
+                  {
+                    c = getc (f);
+                    if (c == EOF || !c_isdigit (c))
+                      break;
+                    n = n * 10 + (c - '0');
+                  }
+                sb_xappend1 (&buffer, (unsigned char) n);
+                if (c == EOF)
+                  break;
                 ungetc (c, f);
-            }
-          else
-            {
-              error_with_progname = false;
-              error (EXIT_FAILURE, 0, _("%s:%d: invalid string expression"),
-                     logical_filename, line_number);
-              error_with_progname = true;
-            }
-        }
-      if (bufpos >= bufmax)
-        {
-          bufmax = 2 * bufmax + 10;
-          buffer = xrealloc (buffer, bufmax);
-        }
-      buffer[bufpos] = '\0';
-      msgid = xstrdup (buffer);
+              }
+            else if (c == '+')
+              {
+                c = getc (f);
+                if (c == EOF)
+                  break;
+                if (c == '\n')
+                  line_number++;
+                else
+                  ungetc (c, f);
+              }
+            else
+              if_error (IF_SEVERITY_FATAL_ERROR,
+                        logical_filename, line_number, (size_t)(-1), false,
+                        _("invalid string expression"));
+          }
+        msgid = sb_xdupfree_c (&buffer);
+      }
 
       pos.file_name = location;
       pos.line_number = (size_t)(-1);
 
-      remember_a_message (mlp, NULL, msgid, false, false, null_context, &pos,
+      remember_a_message (mlp, NULL, msgid, false, false,
+                          null_context_region (), &pos,
                           NULL, NULL, false);
 
       /* Here c is the last read character: EOF or '\n'.  */
@@ -357,34 +337,27 @@ enum parse_result
   pr_syntax  /* syntax error inside the token */
 };
 
-static char *buffer;
-static int bufmax;
+static struct string_buffer buffer;
 
 /* Parses an integer.  Returns it in buffer, of length bufmax.
    Returns pr_parsed or pr_none.  */
 static enum parse_result
 parse_integer ()
+  _GL_ATTRIBUTE_ACQUIRE_CAPABILITY (buffer.data)
 {
   int c;
-  int bufpos;
 
+  sb_init (&buffer);
   c = phase2_getc ();
-  bufpos = 0;
   for (;;)
     {
-      if (bufpos >= bufmax)
-        {
-          bufmax = 2 * bufmax + 10;
-          buffer = xrealloc (buffer, bufmax);
-        }
       if (!(c >= '0' && c <= '9'))
         break;
-      buffer[bufpos++] = c;
+      sb_xappend1 (&buffer, c);
       c = phase1_getc ();
     }
   phase1_ungetc (c);
-  buffer[bufpos] = '\0';
-  return (bufpos == 0 ? pr_none : pr_parsed);
+  return (string_desc_length (sb_contents (&buffer)) == 0 ? pr_none : pr_parsed);
 }
 
 static struct mixed_string_buffer stringbuf;
@@ -515,9 +488,16 @@ extract_rsj (FILE *f,
             {
               /* Parse an integer.  */
               if (parse_integer () != pr_parsed)
-                goto invalid_rsj;
-              if (strcmp (buffer, "1") != 0)
-                goto invalid_rsj_version;
+                {
+                  sb_free (&buffer);
+                  goto invalid_rsj;
+                }
+              if (strcmp (sb_xcontents_c (&buffer), "1") != 0)
+                {
+                  sb_free (&buffer);
+                  goto invalid_rsj_version;
+                }
+              sb_free (&buffer);
             }
           else if (strcmp (s1, "strings") == 0)
             {
@@ -563,7 +543,11 @@ extract_rsj (FILE *f,
                                 {
                                   /* Parse an integer.  */
                                   if (parse_integer () != pr_parsed)
-                                    goto invalid_rsj;
+                                    {
+                                      sb_free (&buffer);
+                                      goto invalid_rsj;
+                                    }
+                                  sb_free (&buffer);
                                 }
                               else if (strcmp (s2, "name") == 0)
                                 {
@@ -592,7 +576,11 @@ extract_rsj (FILE *f,
                                         {
                                           /* Parse an integer.  */
                                           if (parse_integer () != pr_parsed)
-                                            goto invalid_rsj;
+                                            {
+                                              sb_free (&buffer);
+                                              goto invalid_rsj;
+                                            }
+                                          sb_free (&buffer);
 
                                           /* Parse a comma.  */
                                           c = phase2_getc ();
@@ -636,7 +624,7 @@ extract_rsj (FILE *f,
                       pos.line_number = (size_t)(-1);
 
                       remember_a_message (mlp, NULL, msgid, true, false,
-                                          null_context, &pos,
+                                          null_context_region (), &pos,
                                           NULL, NULL, false);
 
                       /* Parse a comma.  */
@@ -673,24 +661,20 @@ extract_rsj (FILE *f,
   return;
 
  invalid_json:
-  error_with_progname = false;
-  error (EXIT_FAILURE, 0, _("%s:%d: invalid JSON syntax"),
-         logical_filename, line_number);
-  error_with_progname = true;
+  if_error (IF_SEVERITY_FATAL_ERROR,
+            logical_filename, line_number, (size_t)(-1), false,
+            _("invalid JSON syntax"));
   return;
 
  invalid_rsj:
-  error_with_progname = false;
-  error (EXIT_FAILURE, 0, _("%s:%d: invalid RSJ syntax"),
-         logical_filename, line_number);
-  error_with_progname = true;
+  if_error (IF_SEVERITY_FATAL_ERROR,
+            logical_filename, line_number, (size_t)(-1), false,
+            _("invalid RSJ syntax"));
   return;
 
  invalid_rsj_version:
-  error_with_progname = false;
-  error (EXIT_FAILURE, 0,
-         _("%s:%d: invalid RSJ version. Only version 1 is supported."),
-         logical_filename, line_number);
-  error_with_progname = true;
+  if_error (IF_SEVERITY_FATAL_ERROR,
+            logical_filename, line_number, (size_t)(-1), false,
+            _("invalid RSJ version. Only version 1 is supported."));
   return;
 }

@@ -1,6 +1,5 @@
 /* Converts a translation catalog to a different character encoding.
-   Copyright (C) 2001-2007, 2009-2010, 2012, 2014, 2016, 2018-2020 Free Software
-   Foundation, Inc.
+   Copyright (C) 2001-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2001.
 
    This program is free software: you can redistribute it and/or modify
@@ -29,16 +28,16 @@
 
 #include <textstyle.h>
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
 #include "dir-list.h"
-#include "error.h"
 #include "error-progname.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
 #include "message.h"
-#include "read-catalog.h"
+#include "read-catalog-file.h"
 #include "read-po.h"
 #include "read-properties.h"
 #include "read-stringtable.h"
@@ -47,6 +46,7 @@
 #include "write-properties.h"
 #include "write-stringtable.h"
 #include "msgl-iconv.h"
+#include "xerror-handler.h"
 #include "localcharset.h"
 #include "propername.h"
 #include "gettext.h"
@@ -110,12 +110,14 @@ main (int argc, char **argv)
   /* Set program name for messages.  */
   set_program_name (argv[0]);
   error_print_progname = maybe_print_progname;
+  gram_max_allowed_errors = 20;
 
   /* Set locale via LC_ALL.  */
   setlocale (LC_ALL, "");
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   bindtextdomain ("bison-runtime", relocate (BISON_LOCALEDIR));
   textdomain (PACKAGE);
 
@@ -244,7 +246,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2001-2020", "https://gnu.org/licenses/gpl.html");
+              "2001-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s.\n"), proper_name ("Bruno Haible"));
       exit (EXIT_SUCCESS);
     }
@@ -278,7 +280,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
 
   /* Convert if and only if the output syntax supports different encodings.  */
   if (!output_syntax->requires_utf8)
-    result = iconv_msgdomain_list (result, to_code, true, input_file);
+    result = iconv_msgdomain_list (result, to_code, true, input_file,
+                                   textmode_xerror_handler);
 
   /* Sort the results.  */
   if (sort_by_filepos)
@@ -287,7 +290,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
     msgdomain_list_sort_by_msgid (result);
 
   /* Write the merged message list out.  */
-  msgdomain_list_print (result, output_file, output_syntax, force_po, false);
+  msgdomain_list_print (result, output_file, output_syntax,
+                        textmode_xerror_handler, force_po, false);
 
   exit (EXIT_SUCCESS);
 }

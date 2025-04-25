@@ -1,5 +1,5 @@
 dnl Configuration for the gettext-tools directory of GNU gettext
-dnl Copyright (C) 1995-2020 Free Software Foundation, Inc.
+dnl Copyright (C) 1995-2024 Free Software Foundation, Inc.
 dnl
 dnl This program is free software: you can redistribute it and/or modify
 dnl it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@ dnl along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 dnl Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.63])
+AC_PREREQ([2.64])
 AC_INIT([gettext-tools],
 	m4_esyscmd([../build-aux/git-version-gen ../.tarball-version]),
 	[bug-gettext@gnu.org])
@@ -26,22 +26,57 @@ AM_INIT_AUTOMAKE([1.11.1 silent-rules parallel-tests])
 AC_CONFIG_HEADERS([config.h])
 
 dnl Installation directories.
-test "$docdir" != '${datarootdir}/doc/${PACKAGE_TARNAME}' || docdir='${datarootdir}/doc/gettext'
+dnl They should have the suffix '/gettext' by default, not '/gettext-tools'.
+if test "$docdir" = '${datarootdir}/doc/${PACKAGE_TARNAME}'; then
+  docdir='${datarootdir}/doc/gettext'
+fi
+gl_CONFIGMAKE_PREP
+if test "$pkgdatadir" = '${datadir}/${PACKAGE}'; then
+  pkgdatadir='${datadir}/gettext'
+fi
+if test "$pkgincludedir" = '${includedir}/${PACKAGE}'; then
+  pkgincludedir='${includedir}/gettext'
+fi
+if test "$pkglibdir" = '${libdir}/${PACKAGE}'; then
+  pkglibdir='${libdir}/gettext'
+fi
+if test "$pkglibexecdir" = '${libexecdir}/${PACKAGE}'; then
+  pkglibexecdir='${libexecdir}/gettext'
+fi
+
+dnl Define bindir_c and bindir_c_make.
+gl_BUILD_TO_HOST_BINDIR
+dnl Define libdir_c and libdir_c_make.
+gl_BUILD_TO_HOST_LIBDIR
+dnl Define libexecdir_c and libexecdir_c_make.
+gl_BUILD_TO_HOST_LIBEXECDIR
+dnl Define pkgdatadir_c and pkgdatadir_c_make.
+gl_BUILD_TO_HOST_PKGDATADIR
+dnl Define pkglibdir_c and pkglibdir_c_make.
+gl_BUILD_TO_HOST_PKGLIBDIR
+dnl Define pkglibexecdir_c and pkglibexecdir_c_make.
+gl_BUILD_TO_HOST_PKGLIBEXECDIR
 
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
 
 gt_JAVA_CHOICE
-
-gt_JAVAEXEC
-gt_JAVACOMP([1.5])
-AC_CHECK_PROG([JAR], [jar], [jar])
-if test -n "$HAVE_JAVACOMP" && test -n "$JAR" && test "$JAVA_CHOICE" != no; then
-  BUILDJAVA=yes
-else
+AS_IF([test "$JAVA_CHOICE" != no], [
+  gt_JAVAEXEC
+  gt_JAVACOMP([1.8])
+  AC_CHECK_PROG([JAR], [jar], [jar])
+  if test -n "$HAVE_JAVACOMP" && test -n "$JAR" && test "$JAVA_CHOICE" != no; then
+    BUILDJAVA=yes
+  else
+    BUILDJAVA=no
+  fi
+], [
+  gt_JAVAEXEC_DISABLED
+  gt_JAVACOMP_DISABLED
+  JAR=
   BUILDJAVA=no
-fi
+])
 AC_SUBST([BUILDJAVA])
 if test -n "$HAVE_JAVAEXEC" && test $BUILDJAVA = yes; then
   TESTJAVA=yes
@@ -83,8 +118,12 @@ dnl Make sure we see all GNU and Solaris extensions.
 gl_EARLY
 grgl_EARLY
 gtpo_EARLY
+gttgl_EARLY
 
 dnl Check for build configuration.
+
+gt_MORE_WARNINGS
+gl_CC_INHIBIT_WARNINGS
 
 gl_WOE32_DLL
 
@@ -94,45 +133,55 @@ dnl Prepares the libtool configuration for handling of Windows resources, and
 dnl sets the RC variable to a program that compiles Windows resource files.
 LT_LANG([Windows Resource])
 
-dnl On mingw and Cygwin, we can activate special Makefile rules which add
-dnl version information to the shared libraries and executables.
+dnl On native Windows and Cygwin, we can activate special Makefile rules which
+dnl add version information to the shared libraries and executables.
 case "$host_os" in
-  mingw* | cygwin*) special_makefile_rules=woe32 ;;
+  mingw* | windows* | cygwin*) is_woe32=yes ;;
+  *) is_woe32=no ;;
+esac
+AM_CONDITIONAL([WOE32], [test $is_woe32 = yes])
+if test $is_woe32 = yes; then
+  dnl Check for a program that compiles Windows resource files.
+  AC_CHECK_TOOL([WINDRES], [windres])
+fi
+
+dnl Some other special Makefile rules exist for OS/2.
+case "$host_os" in
   os2*) special_makefile_rules=os2 ;;
   *) special_makefile_rules=none ;;
 esac
-AM_CONDITIONAL([WOE32], [test $special_makefile_rules = woe32])
 AM_CONDITIONAL([OS2], [test $special_makefile_rules = os2])
 
 dnl Some code is only meant to be compiled on native Windows.
 case "$host_os" in
-  mingw*) is_windows_native=yes ;;
+  mingw* | windows*) is_windows_native=yes ;;
   *) is_windows_native=no ;;
 esac
 AM_CONDITIONAL([WINDOWS_NATIVE], [test $is_windows_native = yes])
 
-dnl On Cygwin 1.7.10-1 or later, error_* variables are defined in the
-dnl Cygwin DLL.  To avoid any conflict with gettext DLLs, always link
-dnl to gnulib's error.c.  See GETTEXTLIB_EXPORTS_FLAGS setting below.
-case "$host_os" in
-  cygwin*) ac_cv_lib_error_at_line=no ;;
-esac
+dnl Package-private libraries do not need to be installed when we build only
+dnl static libraries. Don't install them in this case. This avoids a build
+dnl error on AIX with --enable-shared, when some other version of GNU gettext,
+dnl built with --disable-shared, is already installed in the same $prefix and
+dnl the CFLAGS or LDFLAGS happen to contain "-L$prefix/lib".
+AM_CONDITIONAL([INSTALL_PRIVATE_LIBRARIES], [test "$enable_shared" = yes])
 
 dnl Checks for libraries.
 
 dnl These are the only lines required to internationalize the package.
 dnl (OK, not quite, the AC_CONFIG_FILES has also some parts.)
-AM_GNU_GETTEXT([use-libtool], [need-ngettext])
-dnl Conditionals for the intl/ directory.
-AM_CONDITIONAL([USE_INCLUDED_LIBINTL], [test $USE_INCLUDED_LIBINTL = yes])
-AM_CONDITIONAL([BUILD_INCLUDED_LIBINTL], [test $BUILD_INCLUDED_LIBINTL = yes])
-AM_CONDITIONAL([PACKAGE_IS_GETTEXT_TOOLS], [true])
-AM_CONDITIONAL([PRELOADABLE_LIBINTL],
-  [test $USE_INCLUDED_LIBINTL = no && test $GLIBC2 = yes && test "$enable_shared" = yes])
+AM_GNU_GETTEXT([use-libtool], [need-ngettext], [\${top_builddir}/../gettext-runtime/intl])
+dnl When not cross-compiling, use the 'msgmerge' program from this package,
+dnl for output consistency with the 'msgfilter' program used to create
+dnl en@quot.po and en@boldquot.po.
+if test "$cross_compiling" != yes; then
+  MSGMERGE='msgmerge'
+  MSGMERGE_FOR_MSGFMT_OPTION='--for-msgfmt'
+fi
 
 dnl This option allows to build gettext-tools without (re)building libtextstyle.
 AC_ARG_WITH([installed-libtextstyle],
-  [AS_HELP_STRING([--with-installed-libtextstyle],
+  [AS_HELP_STRING([[--with-installed-libtextstyle]],
      [Use an already installed libtextstyle.])],
   [gt_use_installed_libtextstyle=$withval],
   [gt_use_installed_libtextstyle=no])
@@ -148,11 +197,11 @@ AM_CONDITIONAL([USE_INSTALLED_LIBTEXTSTYLE],
 
 dnl This option allows to build gettext-tools without (re)building GNU.Gettext.dll.
 AC_ARG_WITH([installed-csharp-dll],
-  [AS_HELP_STRING([--with-installed-csharp-dll],
+  [AS_HELP_STRING([[--with-installed-csharp-dll]],
      [Use an already installed C# DLL.])],
   [gt_use_installed_csharp_dll=$withval],
   [gt_use_installed_csharp_dll=no])
-if test "$gt_use_installed_csharp_dll" = no; then
+if test $BUILDCSHARP = yes && test "$gt_use_installed_csharp_dll" = no; then
   test -f ../gettext-runtime/intl-csharp/Makefile || {
     AC_MSG_WARN([When building the gettext-tools package without building the entire gettext package, you need to pass the --with-installed-csharp-dll option to configure.])
   }
@@ -170,24 +219,28 @@ dnl Test whether msgmerge must be linked against libm. This is the case on
 dnl most systems; but BeOS has all <math.h> functions in libc and doesn't have
 dnl a libm.
 MSGMERGE_LIBM=?
-AC_TRY_LINK([
-   #ifndef __NO_MATH_INLINES
-   # define __NO_MATH_INLINES 1 /* for glibc */
-   #endif
-   #include <math.h>
-   double x;],
-  [x = ceil(x); x = sqrt(x);],
-  [MSGMERGE_LIBM=])
-if test "$MSGMERGE_LIBM" = "?"; then
-  save_LIBS="$LIBS" 
-  LIBS="$LIBS -lm"
-  AC_TRY_LINK([
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([[
      #ifndef __NO_MATH_INLINES
      # define __NO_MATH_INLINES 1 /* for glibc */
      #endif
      #include <math.h>
-     double x;],
-    [x = ceil(x); x = sqrt(x);],
+     double x;
+     ]],
+     [[x = ceil(x); x = sqrt(x);]])],
+  [MSGMERGE_LIBM=])
+if test "$MSGMERGE_LIBM" = "?"; then
+  save_LIBS="$LIBS"
+  LIBS="$LIBS -lm"
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM([[
+       #ifndef __NO_MATH_INLINES
+       # define __NO_MATH_INLINES 1 /* for glibc */
+       #endif
+       #include <math.h>
+       double x;
+       ]],
+       [[x = ceil(x); x = sqrt(x);]])],
     [MSGMERGE_LIBM="-lm"])
   LIBS="$save_LIBS"
 fi
@@ -197,12 +250,20 @@ fi
 AC_SUBST([MSGMERGE_LIBM])
 
 dnl Test whether msgmerge can make use of OpenMP.
-AC_OPENMP
+if test "$gl_use_threads" != no; then
+  AC_OPENMP
+else
+  OPENMP_CFLAGS=
+fi
 
 dnl Checks for header files, functions and declarations.
 gl_INIT
 grgl_INIT
 gtpo_INIT
+gttgl_INIT
+
+dnl Allow libgrep/locale.h to use setlocale_null.h from gnulib-lib/.
+GL_GRGL_GNULIB_SETLOCALE_NULL=1
 
 dnl Checks for header files.
 AC_CHECK_HEADERS([pwd.h])
@@ -214,13 +275,9 @@ AC_TYPE_SIZE_T
 AC_CHECK_TYPES([ptrdiff_t])
 gt_TYPE_SSIZE_T
 AC_TYPE_PID_T
-gl_GLIBC21
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS([select])
-AC_FUNC_VFORK
-gt_SIGINFO
-gt_SETLOCALE
 
 AC_C_BIGENDIAN([endianness=1], [endianness=0],
   [echo "AC-C-BIGENDIAN fails to work on your system." | sed -e 's,-,_,g' 1>&2
@@ -248,13 +305,14 @@ gt_PREREQ_HOSTNAME
 
 dnl Parameterization of the 'libxml' module:
 dnl When INCLUDED_LIBXML is true and building static libraries, tell
-dnl libxml's xmlexports.h to omit '__declspec(dllimport)' on mingw and Cygwin.
+dnl libxml's xmlexports.h to omit '__declspec(dllimport)' on Windows.
 if test "$gl_cv_libxml_use_included" = yes && test "$enable_shared" != yes; then
   AC_DEFINE([LIBXML_STATIC], [1],
     [Define if libxml is being used as a static library.])
 fi
 
-dnl Compilation on mingw and Cygwin needs special Makefile rules, because
+dnl Compilation on native Windows and Cygwin needs special Makefile rules,
+dnl because
 dnl 1. when we install a shared library, we must arrange to export
 dnl    auxiliary pointer variables for every exported variable,
 dnl 2. when we install a shared library and a static library simultaneously,
@@ -263,17 +321,13 @@ dnl    must arrange to define the auxiliary pointer variables for the
 dnl    exported variables _also_ in the static library.
 if test "$enable_shared" = yes; then
   case "$host_os" in
-    mingw* | cygwin*) is_woe32dll=yes ;;
+    mingw* | windows* | cygwin*) is_woe32dll=yes ;;
     *) is_woe32dll=no ;;
   esac
 else
   is_woe32dll=no
 fi
 AM_CONDITIONAL([WOE32DLL], [test $is_woe32dll = yes])
-if test $is_woe32dll = yes; then
-  AC_DEFINE([WOE32DLL], [1],
-    [Define when --enable-shared is used on mingw or Cygwin.])
-fi
 
 GETTEXTLIB_EXPORTS_FLAGS=
 dnl woe32dll/gettextlib-exports.c needs to know whether the getopt facility
@@ -288,20 +342,18 @@ dnl gl_ERROR, inside gl_INIT.
 if test "$ac_cv_lib_error_at_line" = no; then
   GETTEXTLIB_EXPORTS_FLAGS="-DGNULIB_DEFINED_ERROR $GETTEXTLIB_EXPORTS_FLAGS"
 fi
-
-dnl 64-bit mingw does not prepend an underscore to C symbols.
-dnl USER_LABEL_PREFIX is set by gl_ASM_SYMBOL_PREFIX, inside gl_INIT.
-if test "$USER_LABEL_PREFIX" = _; then
-  GETTEXTLIB_EXPORTS_FLAGS="-DUSER_LABEL_PREFIX_UNDERSCORE $GETTEXTLIB_EXPORTS_FLAGS"
-fi
 AC_SUBST([GETTEXTLIB_EXPORTS_FLAGS])
 
-dnl Tell the source files that the error facility is replaced by
-dnl gnulib, to make sure to prepend "rpl_" prefix to the error_*
-dnl symbols.
+dnl Tell the source files that the error facility is overridden by gnulib,
+dnl to make sure to prepend "rpl_" prefix to the error_* symbols.
+dnl This is only necessary on Cygwin and on Android.
 if test "$ac_cv_lib_error_at_line" = no; then
-  AC_DEFINE([GNULIB_REPLACE_ERROR], [1],
-    [Define when the error facility is replaced by gnulib.])
+  case "$host_os" in
+    cygwin* | linux*-android*)
+      AC_DEFINE([GNULIB_REPLACE_ERROR], [1],
+        [Define when the error facility is replaced by gnulib.])
+      ;;
+  esac
 fi
 
 dnl Put some default definitions into config.h.
@@ -331,8 +383,13 @@ AH_BOTTOM([
    wrap the file position (#:) comments.  */
 #define PAGE_WIDTH 79
 
-/* On Windows, variables that may be in a DLL must be marked specially.  */
-#if defined WOE32DLL && !defined IN_RELOCWRAPPER
+/* On Windows, variables that may be in a DLL must be marked specially.
+   The symbols marked with DLL_VARIABLE should be exported if and only if the
+   object file gets included in a DLL.  Libtool, on Windows platforms, defines
+   the C macro DLL_EXPORT (together with PIC) when compiling for a shared
+   library (called DLL under Windows) and does not define it when compiling
+   an object file meant to be linked statically into some executable.  */
+#if (defined _WIN32 || defined __CYGWIN__) && defined DLL_EXPORT && !defined IN_RELOCWRAPPER
 # define DLL_VARIABLE __declspec (dllimport)
 #else
 # define DLL_VARIABLE
@@ -340,8 +397,18 @@ AH_BOTTOM([
 
 /* Extra OS/2 (emx+gcc) defines.  */
 #if defined __EMX__ && !defined __KLIBC__
-# include "intl/os2compat.h"
+# include "../gettext-runtime/intl/os2compat.h"
 #endif
+])
+dnl Rename some macros and functions used for locking.
+dnl Needed for compiling ../gettext-runtime/intl/localealias.c.
+AH_BOTTOM([
+#define __libc_lock_t                   gl_lock_t
+#define __libc_lock_define              gl_lock_define
+#define __libc_lock_define_initialized  gl_lock_define_initialized
+#define __libc_lock_init                gl_lock_init
+#define __libc_lock_lock                gl_lock_lock
+#define __libc_lock_unlock              gl_lock_unlock
 ])
 
 dnl Check for nm output filter that yields the exported symbols.
@@ -492,7 +559,7 @@ changequote([,])dnl
 fi
 AC_SUBST([ARCHIVE_FORMAT])
 
-ARCHIVE_VERSION=0.21
+ARCHIVE_VERSION=0.23.1
 AC_SUBST([ARCHIVE_VERSION])
 
 PACKAGE_SUFFIX="-$ARCHIVE_VERSION"
@@ -510,12 +577,18 @@ dnl Check for tools needed for formatting man pages.
 CROSS_COMPILING=$cross_compiling
 AC_SUBST([CROSS_COMPILING])
 
+dnl Checks for configuration that some tests/ depend on.
+gt_GLIBC2
+
 dnl Checks for optional programs for the tests/lang-*, tests/recode-* tests.
 gl_PROG_ANSI_CXX([CXX], [ANSICXX])
 gt_LOCALE_FR
 gt_LOCALE_FR_UTF8
 gt_LOCALE_JA
 gt_LOCALE_DE_UTF8
+dnl Test for gobjc before gcc, since that's what the EPEL 9 package 'gcc-objc'
+dnl installs (on systems where gcc does not support Objective C).
+AC_PROG_OBJC([gobjc gcc objcc objc cc CC clang])
 
 dnl Checks for functions for the tests/*.c tests.
 AC_CHECK_FUNCS_ONCE([getrlimit setrlimit uselocale])
@@ -543,20 +616,16 @@ dnl Check whether to execute tests of the system (vendor-provided) libintl API.
 dnl We execute these tests if and only if we don't install our own libintl.
 AM_CONDITIONAL([TEST_SYSTEM_LIBINTL], [test $USE_INCLUDED_LIBINTL = no])
 
+dnl Checks for optional programs for the its/* tests.
+AC_PATH_PROGS([XMLLINT], [xmllint], [:])
+AC_SUBST([HAVE_JAVAEXEC])
+
 AC_CONFIG_SUBDIRS([examples])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile],
+                [FIX_MAKEFILE_DISTRIB])
 
 AC_CONFIG_FILES([doc/Makefile])
-
-AC_CONFIG_FILES([intl/Makefile], [
-  # Change srcdir variable so that it points to ../gettext-runtime/intl.
-  sed -e 's|^srcdir =.*$|srcdir = $(top_srcdir)/../gettext-runtime/intl|' \
-      -e 's|^VPATH =.*$||' \
-      -e 's|^DISTFILES =.*|DISTFILES =|' \
-    < intl/Makefile > intl/Makefile.tmp
-  mv intl/Makefile.tmp intl/Makefile
-  ])
 
 AC_CONFIG_FILES([its/Makefile])
 
@@ -583,17 +652,22 @@ AC_CONFIG_FILES([misc/gettextize], [chmod a+x misc/gettextize])
 AC_CONFIG_FILES([misc/autopoint], [chmod a+x misc/autopoint])
 AC_CONFIG_FILES([misc/convert-archive], [chmod a+x misc/convert-archive])
 
-AC_CONFIG_FILES([man/Makefile],
-                [FIX_MAKEFILE_DISTRIB])
+AC_CONFIG_FILES([man/Makefile])
 AC_CONFIG_FILES([man/x-to-1])
 
 AC_CONFIG_FILES([m4/Makefile])
 
 AC_CONFIG_FILES([tests/Makefile])
 AC_CONFIG_FILES([tests/init-env])
+AC_CONFIG_FILES([tests/gnulib-lib/Makefile])
 
 AC_CONFIG_FILES([system-tests/Makefile])
 
 AC_CONFIG_FILES([gnulib-tests/Makefile])
+
+AC_CONFIG_FILES([build-aux/xml-validate-10],
+                [chmod a+x build-aux/xml-validate-10])
+AC_CONFIG_FILES([build-aux/xml-validate-11],
+                [chmod a+x build-aux/xml-validate-11])
 
 AC_OUTPUT

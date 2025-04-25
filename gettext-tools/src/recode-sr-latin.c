@@ -1,6 +1,5 @@
 /* Recode Serbian text from Cyrillic to Latin script.
-   Copyright (C) 2006-2007, 2010, 2012, 2018-2020 Free Software Foundation,
-   Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2006.
 
    This program is free software: you can redistribute it and/or modify
@@ -31,9 +30,9 @@
 #include <iconv.h>
 #endif
 
+#include <error.h>
 #include "noreturn.h"
 #include "closeout.h"
-#include "error.h"
 #include "progname.h"
 #include "relocatable.h"
 #include "basename-lgpl.h"
@@ -77,6 +76,7 @@ main (int argc, char *argv[])
 
   /* Set the text message domain.  */
   bindtextdomain (PACKAGE, relocate (LOCALEDIR));
+  bindtextdomain ("gnulib", relocate (GNULIB_LOCALEDIR));
   textdomain (PACKAGE);
 
   /* Ensure that write errors on stdout are detected.  */
@@ -109,7 +109,7 @@ License GPLv3+: GNU GPL version 3 or later <%s>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 "),
-              "2006-2020", "https://gnu.org/licenses/gpl.html");
+              "2006-2024", "https://gnu.org/licenses/gpl.html");
       printf (_("Written by %s and %s.\n"),
               /* TRANSLATORS: This is a proper name. The last name is
                  (with Unicode escapes) "\u0160egan" or (with HTML entities)
@@ -276,16 +276,9 @@ process (FILE *stream)
   if (need_code_conversion)
     {
 #if HAVE_ICONV
-      /* Avoid glibc-2.1 bug with EUC-KR.  */
-# if ((__GLIBC__ == 2 && __GLIBC_MINOR__ <= 1) && !defined __UCLIBC__) \
-     && !defined _LIBICONV_VERSION
-      if (strcmp (locale_code, "EUC-KR") != 0)
-# endif
-        {
-          conv_to_utf8 = iconv_open ("UTF-8", locale_code);
-          /* TODO:  Maybe append //TRANSLIT here?  */
-          conv_from_utf8 = iconv_open (locale_code, "UTF-8");
-        }
+      conv_to_utf8 = iconv_open ("UTF-8", locale_code);
+      /* TODO:  Maybe append //TRANSLIT here?  */
+      conv_from_utf8 = iconv_open (locale_code, "UTF-8");
       if (conv_to_utf8 == (iconv_t)(-1))
         error (EXIT_FAILURE, 0,
                _("Cannot convert from \"%s\" to \"%s\". %s relies on iconv(), and iconv() does not support this conversion."),

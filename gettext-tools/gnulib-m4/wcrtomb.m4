@@ -1,8 +1,10 @@
-# wcrtomb.m4 serial 16
-dnl Copyright (C) 2008-2020 Free Software Foundation, Inc.
+# wcrtomb.m4
+# serial 21
+dnl Copyright (C) 2008-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
+dnl This file is offered as-is, without any warranty.
 
 AC_DEFUN([gl_FUNC_WCRTOMB],
 [
@@ -15,15 +17,8 @@ AC_DEFUN([gl_FUNC_WCRTOMB],
   if test $ac_cv_func_wcrtomb = no; then
     HAVE_WCRTOMB=0
     AC_CHECK_DECLS([wcrtomb],,, [[
-/* Tru64 with Desktop Toolkit C has a bug: <stdio.h> must be included before
-   <wchar.h>.
-   BSD/OS 4.0.1 has a bug: <stddef.h>, <stdio.h> and <time.h> must be
-   included before <wchar.h>.  */
-#include <stddef.h>
-#include <stdio.h>
-#include <time.h>
-#include <wchar.h>
-]])
+      #include <wchar.h>
+    ]])
     if test $ac_cv_have_decl_wcrtomb = yes; then
       dnl On Minix 3.1.8, the system's <wchar.h> declares wcrtomb() although
       dnl it does not have the function. Avoid a collision with gnulib's
@@ -42,7 +37,7 @@ AC_DEFUN([gl_FUNC_WCRTOMB],
       dnl sometimes returns 0 instead of 1.
       AC_REQUIRE([AC_PROG_CC])
       AC_REQUIRE([gt_LOCALE_FR])
-      AC_REQUIRE([gt_LOCALE_FR_UTF8])
+      AC_REQUIRE([gt_LOCALE_EN_UTF8])
       AC_REQUIRE([gt_LOCALE_JA])
       AC_REQUIRE([gt_LOCALE_ZH_CN])
       AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
@@ -52,12 +47,6 @@ AC_DEFUN([gl_FUNC_WCRTOMB],
            [AC_LANG_SOURCE([[
 #include <string.h>
 #include <stdlib.h>
-/* Tru64 with Desktop Toolkit C has a bug: <stdio.h> must be included before
-   <wchar.h>.
-   BSD/OS 4.0.1 has a bug: <stddef.h>, <stdio.h> and <time.h> must be
-   included before <wchar.h>.  */
-#include <stddef.h>
-#include <stdio.h>
 #include <wchar.h>
 int main ()
 {
@@ -95,34 +84,31 @@ int main ()
 changequote(,)dnl
           case "$host_os" in
             # Guess no on AIX 4, OSF/1, Solaris, native Windows.
-            aix4* | osf* | solaris* | mingw*) gl_cv_func_wcrtomb_retval="guessing no" ;;
+            aix4* | osf* | solaris* | mingw* | windows*)
+              gl_cv_func_wcrtomb_retval="guessing no" ;;
             # Guess yes otherwise.
-            *)                                gl_cv_func_wcrtomb_retval="guessing yes" ;;
+            *)
+              gl_cv_func_wcrtomb_retval="guessing yes" ;;
           esac
 changequote([,])dnl
-          if test $LOCALE_FR != none || test $LOCALE_FR_UTF8 != none || test $LOCALE_JA != none || test $LOCALE_ZH_CN != none; then
+          if test $LOCALE_FR != none || test "$LOCALE_EN_UTF8" != none || test $LOCALE_JA != none || test $LOCALE_ZH_CN != none; then
             AC_RUN_IFELSE(
               [AC_LANG_SOURCE([[
 #include <locale.h>
 #include <string.h>
-/* Tru64 with Desktop Toolkit C has a bug: <stdio.h> must be included before
-   <wchar.h>.
-   BSD/OS 4.0.1 has a bug: <stddef.h>, <stdio.h> and <time.h> must be
-   included before <wchar.h>.  */
-#include <stddef.h>
-#include <stdio.h>
-#include <time.h>
 #include <wchar.h>
 #include <stdlib.h>
 int main ()
 {
   int result = 0;
-  if (setlocale (LC_ALL, "$LOCALE_FR") != NULL)
+  if (strcmp ("$LOCALE_FR", "none") != 0
+      && setlocale (LC_ALL, "$LOCALE_FR") != NULL)
     {
       if (wcrtomb (NULL, 0, NULL) != 1)
         result |= 1;
     }
-  if (setlocale (LC_ALL, "$LOCALE_FR_UTF8") != NULL)
+  if (strcmp ("$LOCALE_EN_UTF8", "none") != 0
+      && setlocale (LC_ALL, "$LOCALE_EN_UTF8") != NULL)
     {
       if (wcrtomb (NULL, 0, NULL) != 1)
         result |= 2;
@@ -133,12 +119,14 @@ int main ()
             result |= 2;
       }
     }
-  if (setlocale (LC_ALL, "$LOCALE_JA") != NULL)
+  if (strcmp ("$LOCALE_JA", "none") != 0
+      && setlocale (LC_ALL, "$LOCALE_JA") != NULL)
     {
       if (wcrtomb (NULL, 0, NULL) != 1)
         result |= 4;
     }
-  if (setlocale (LC_ALL, "$LOCALE_ZH_CN") != NULL)
+  if (strcmp ("$LOCALE_ZH_CN", "none") != 0
+      && setlocale (LC_ALL, "$LOCALE_ZH_CN") != NULL)
     {
       if (wcrtomb (NULL, 0, NULL) != 1)
         result |= 8;

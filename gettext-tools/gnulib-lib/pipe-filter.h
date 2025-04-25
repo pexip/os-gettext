@@ -1,11 +1,11 @@
 /* Filtering of data through a subprocess.  -*- coding: utf-8 -*-
-   Copyright (C) 2009-2020 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
    Written by Bruno Haible <haible@clisp.cons.org>, 2009,
    and Paolo Bonzini <bonzini@gnu.org>, 2009.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -19,9 +19,12 @@
 #ifndef _PIPE_FILTER_H
 #define _PIPE_FILTER_H
 
-#include <stdbool.h>
-#include <stddef.h>
+/* This file uses _GL_ATTRIBUTE_DEALLOC.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
 
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,7 +136,8 @@ typedef void (*done_read_fn) (void *data_read, size_t num_bytes_read,
    - the positive exit code of the subprocess if that failed.  */
 extern int
        pipe_filter_ii_execute (const char *progname,
-                               const char *prog_path, const char **prog_argv,
+                               const char *prog_path,
+                               const char * const *prog_argv,
                                bool null_stderr, bool exit_on_error,
                                prepare_write_fn prepare_write,
                                done_write_fn done_write,
@@ -151,6 +155,23 @@ struct pipe_filter_ig;
 
 struct pipe_filter_gi;
 
+/* Finish reading the output via the prepare_read/done_read functions
+   specified to pipe_filter_gi_create.
+
+   Note that the prepare_read/done_read functions may be called in a
+   different thread than the current thread (depending on the platform).
+   However, they will always be called before pipe_filter_gi_close has
+   returned.
+
+   The write side of the pipe is closed as soon as pipe_filter_gi_close
+   starts, while the read side will be closed just before it finishes.
+
+   Return 0 upon success, or (only if exit_on_error is false):
+   - -1 with errno set upon failure,
+   - the positive exit code of the subprocess if that failed.  */
+extern int
+       pipe_filter_gi_close (struct pipe_filter_gi *filter);
+
 /* Create a subprocess and pipe some data through it.
    Arguments:
    - progname is the program name used in error messages.
@@ -164,7 +185,7 @@ struct pipe_filter_gi;
    - If exit_on_error is true, any error will cause the main process to
      exit with an error status.
    If the subprocess does not start correctly, exit if exit_on_error is
-   true, otherwise return NULL and set errno.
+   true.
 
    The caller will write to the subprocess through pipe_filter_gi_write
    and finally call pipe_filter_gi_close.  During such calls, the
@@ -179,11 +200,13 @@ struct pipe_filter_gi;
    Return the freshly created 'struct pipe_filter_gi'.  */
 extern struct pipe_filter_gi *
        pipe_filter_gi_create (const char *progname,
-                              const char *prog_path, const char **prog_argv,
+                              const char *prog_path,
+                              const char * const *prog_argv,
                               bool null_stderr, bool exit_on_error,
                               prepare_read_fn prepare_read,
                               done_read_fn done_read,
-                              void *private_data);
+                              void *private_data)
+  _GL_ATTRIBUTE_DEALLOC (pipe_filter_gi_close, 1);
 
 /* Write size bytes starting at buf into the pipe and in the meanwhile
    possibly call the prepare_read and done_read functions specified to
@@ -204,23 +227,6 @@ extern struct pipe_filter_gi *
 extern int
        pipe_filter_gi_write (struct pipe_filter_gi *filter,
                              const void *buf, size_t size);
-
-/* Finish reading the output via the prepare_read/done_read functions
-   specified to pipe_filter_gi_create.
-
-   Note that the prepare_read/done_read functions may be called in a
-   different thread than the current thread (depending on the platform).
-   However, they will always be called before pipe_filter_gi_close has
-   returned.
-
-   The write side of the pipe is closed as soon as pipe_filter_gi_close
-   starts, while the read side will be closed just before it finishes.
-
-   Return 0 upon success, or (only if exit_on_error is false):
-   - -1 with errno set upon failure,
-   - the positive exit code of the subprocess if that failed.  */
-extern int
-       pipe_filter_gi_close (struct pipe_filter_gi *filter);
 
 
 /* ============================ pipe_filter_gg ============================ */
