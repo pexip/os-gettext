@@ -2,7 +2,7 @@ Source: gettext
 Section: devel
 Priority: optional
 Maintainer: Santiago Vila <sanvila@debian.org>
-Standards-Version: 4.7.0
+Standards-Version: 4.7.2
 Build-Depends: bison,
                debhelper-compat (= 13),
                default-jdk [!hppa !hurd-any !kfreebsd-any] <!nojava>,
@@ -39,7 +39,7 @@ Multi-Arch: foreign
 Depends: gettext-base, ${misc:Depends}, ${shlibs:Depends}
 Recommends: curl | wget | lynx
 Breaks: autopoint (<= 0.17-11)
-Suggests: autopoint, gettext-doc, libasprintf-dev, libgettextpo-dev
+Suggests: autopoint, gettext-doc, libasprintf-dev, libgettextpo-dev, gnulib-l10n
 Description: GNU Internationalization utilities
  Interesting for authors or maintainers of other packages or programs
  which they want to see internationalized.
