@@ -1,0 +1,53 @@
+From: Bruno Haible <bruno@clisp.org>
+Subject: xgettext: JavaScript: Parse recursive JSX expressions correctly.
+Origin: upstream, https://git.savannah.gnu.org/gitweb/?p=gettext.git;a=commitdiff;h=1605149adc78736c7fde0ef58aa6863aa8b266e1
+
+--- a/gettext-tools/src/x-javascript.c
++++ b/gettext-tools/src/x-javascript.c
+@@ -1478,12 +1478,10 @@
+         case '<':
+           {
+             /* We assume:
+-               - XMLMarkup and XMLElement are not allowed after an expression,
+-               - embedded JavaScript expressions in XML do not recurse.
++               XMLMarkup and XMLElement are not allowed after an expression.
+              */
+             if (level_type () == level_xml_element
+-                || (level_type () != level_embedded_js_in_xml
+-                    && ! is_after_expression ()))
++                || ! is_after_expression ())
+               {
+                 /* Recognize XML markup: XML comment, CDATA, Processing
+                    Instruction.  */
+--- a/gettext-tools/tests/xgettext-javascript-6
++++ b/gettext-tools/tests/xgettext-javascript-6
+@@ -64,6 +64,13 @@
+ var s17 = _("Expected translation string #17");
+ var s18 = `begin${ <div> _("Expected translation string #18") </div> }end`;
+ var s19 = _("Expected translation string #19");
++const s20 = () => (
++  <Foo
++    a1={_("Expected translation string #20")}
++    a2={foo && <div>_("Expected translation string #21")</div>}
++    a3={_("Expected translation string #22")}
++  />
++);
+ EOF
+ 
+ : ${XGETTEXT=xgettext}
+@@ -149,6 +156,15 @@
+ 
+ msgid "Expected translation string #19"
+ msgstr ""
++
++msgid "Expected translation string #20"
++msgstr ""
++
++msgid "Expected translation string #21"
++msgstr ""
++
++msgid "Expected translation string #22"
++msgstr ""
+ EOF
+ 
+ : ${DIFF=diff}

@@ -1,3 +1,12 @@
+gettext (0.23.1-2) unstable; urgency=medium
+
+  * Parse recursive JSX expressions correctly.
+    (Upstream fix backported from 0.24).
+  * Add suggest on gnulib-l10n to gettext.
+  * Update Standards-Version.
+
+ -- Santiago Vila <sanvila@debian.org>  Sat, 26 Apr 2025 19:45:00 +0200
+
 gettext (0.23.1-1+pexip25u1) pexip-trixie; urgency=medium
 
   * Initial trixie build
